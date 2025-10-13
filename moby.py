@@ -2,7 +2,6 @@ import os, re, math, requests, uuid
 from dataclasses import dataclass
 from typing import List, Dict, Any, Iterable
 
-import tiktoken
 from dotenv import load_dotenv
 from openai import OpenAI
 
