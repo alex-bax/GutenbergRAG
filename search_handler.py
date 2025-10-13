@@ -1,11 +1,15 @@
 import os
+from dotenv import load_dotenv
 from azure.core.credentials import AzureKeyCredential
+
+from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.indexes.models import (
     SearchIndex, SimpleField, SearchField, SearchFieldDataType,
     VectorSearch, HnswAlgorithmConfiguration, VectorSearchProfile, ExhaustiveKnnAlgorithmConfiguration,
-    SemanticSettings, SemanticField, SemanticConfiguration, SemanticPrioritizedFields # type: ignore
+    SemanticSearch, SemanticField, SemanticConfiguration, SemanticPrioritizedFields # type: ignore
 )
+
 
 EMBEDDING_MODEL_SIZE = 3072
 
@@ -19,8 +23,8 @@ def _get_index_fields() -> list[SearchField]:
             SearchField(
                 name="contentVector",
                 type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
-                searchable=False,                                   # True when used for full text search, and we don't use the content as text here, but instead the embedding vector for similarity search 
-                vector_search_dimensions=EMBEDDING_MODEL_SIZE,      # match your embedding model
+                searchable=True,                                   
+                vector_search_dimensions=EMBEDDING_MODEL_SIZE,      # NB must match with embedding model dimension
                 vector_search_profile_name="vprofile"
             ),
         ]
@@ -37,8 +41,8 @@ def _get_vector_search(vector_search_alg_name="hnsw") -> VectorSearch:
     )
 
 
-def _get_semantinc_search_settings() -> SemanticSettings:
-    return SemanticSettings(
+def _get_semantinc_search_settings() -> SemanticSearch:
+    return SemanticSearch(
             configurations=[
                 SemanticConfiguration(
                     name="default",
@@ -49,18 +53,52 @@ def _get_semantinc_search_settings() -> SemanticSettings:
             ])
 
 
-def create_search_index(book_index="moby") -> None:
+def create_search_index(*, book_index_name="moby", search_index_client:SearchIndexClient) -> None:
+    indexes = [idx.name for idx in search_index_client.list_indexes()]
+
+    if book_index_name not in indexes:
+        new_index = SearchIndex(
+            name=book_index_name,
+            fields=_get_index_fields(),
+            vector_search=_get_vector_search(),
+            # semantic_search=_get_semantinc_search_settings()
+        )
+
+        search_index_client.create_index(index=new_index)
+        print(f"Created index: {book_index_name}")
+    else:
+        print(f"Index {book_index_name} already created")
+
+
+
+if __name__ == "__main__":      # Don't run when imported via import statement
+    load_dotenv()
+
+    doc = {
+        "id": "test-1",
+        "book": "Moby-Dick",
+        "chapter": "CHAPTER 1. Loomings.",
+        "chunk_id": 0,
+        "content": "Call me Ishmael. Some years ago—never mind how long precisely...",
+        "contentVector": [0.0]*3072  # placeholder—replace with a real embedding
+    }
+
     endpoint = os.environ["AZURE_SEARCH_ENDPOINT"]
     key = os.environ["AZURE_SEARCH_KEY"]
 
-    search_client = SearchIndexClient(endpoint, AzureKeyCredential(key))
-    indexes = [idx.name for idx in search_client.list_indexes()]
+    search_client = SearchClient(endpoint=endpoint, index_name="moby", credential=AzureKeyCredential(key))
+    search_index_client = SearchIndexClient(endpoint, AzureKeyCredential(key))
 
-    if book_index not in indexes:
-        index = SearchIndex(
-            name=book_index,
-            fields=_get_index_fields(),
-            vector_search=_get_vector_search(),
-            semantic_search=_get_semantinc_search_settings()
-        )
+    create_search_index(book_index_name="moby", search_index_client=search_index_client)
+    search_client.upload_documents(documents=[doc])
 
+    # Query (hybrid + semantic)
+    results = search_client.search(
+        search_text="Why does Ishmael go to sea?",
+        top=5,
+        # query_type="semantic",
+        # semantic_configuration_name="default"
+    )
+    
+    for r in results:
+        print(r["chapter"], r["@search.score"])
