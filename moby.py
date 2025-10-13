@@ -12,11 +12,10 @@ from azure.search.documents import SearchClient
 from azure.search.documents.indexes.models import (
     SearchIndex, SimpleField, SearchField, SearchFieldDataType,
     VectorSearch, HnswAlgorithmConfiguration, VectorSearchProfile,
-    SemanticSettings, SemanticConfiguration, SemanticPrioritizedFields
+    SemanticConfiguration, SemanticPrioritizedFields
 )
 
-
-load_dotenv()
+# load_dotenv()
 
 SEARCH_EP = os.environ["AZURE_SEARCH_ENDPOINT"]
 SEARCH_KEY = os.environ["AZURE_SEARCH_KEY"]
@@ -26,3 +25,6 @@ AOAI_EP = os.environ["AZURE_OPENAI_ENDPOINT"]
 AOAI_KEY = os.environ["AZURE_OPENAI_API_KEY"]
 EMBED_DEPLOY = os.environ["AZURE_OPENAI_EMBED_DEPLOYMENT"]
 CHAT_DEPLOY = os.environ["AZURE_OPENAI_CHAT_DEPLOYMENT"]
+
+
+
