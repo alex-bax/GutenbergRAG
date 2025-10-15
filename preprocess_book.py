@@ -1,5 +1,5 @@
 import re, tiktoken
-
+from openai import AzureOpenAI
 
 def extract_chapters(*, book_txt: str) -> dict[int, dict[str, str]]:
     """
@@ -48,3 +48,14 @@ def tiktoken_chunks(*, txt:str, max_tokens=600, overlap=60, encoding="cl100k_bas
         out.append(enc.decode(token_ids[i:i+max_tokens]))
     
     return out, token_ids
+
+
+
+def create_embeddings(*, llm_client:AzureOpenAI, model_deployed:str, texts:list[str]) -> list[list[float]]:
+    resp = llm_client.embeddings.create(
+        input=texts,
+        model=model_deployed
+    )
+
+    embeddings = [emb_obj.embedding for emb_obj in resp.data]
+    return embeddings
