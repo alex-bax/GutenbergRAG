@@ -10,14 +10,14 @@ from azure.search.documents.indexes.models import (
     VectorSearch, HnswAlgorithmConfiguration, VectorSearchProfile, ExhaustiveKnnAlgorithmConfiguration,
     SemanticSearch, SemanticField, SemanticConfiguration, SemanticPrioritizedFields # type: ignore
 )
+from openai import AzureOpenAI
 
 from load_book import download_or_load_from_cache
-from preprocess_book import extract_chapters, tiktoken_chunks
+from preprocess_book import create_embeddings, extract_chapters, tiktoken_chunks
 
 
 # TODO: use Pydantic Settings obj
-AZURE_SEARCH_ENDPOINT = os.environ["AZURE_SEARCH_ENDPOINT"]
-AZURE_SEARCH_KEY = os.environ["AZURE_SEARCH_KEY"]
+
 
 SMALL_EMBEDDING_VECTOR_SIZE = 1536
 MAX_TOKENS = 600
@@ -76,17 +76,19 @@ def create_missing_search_index(*, book_index_name="moby", search_index_client:S
         search_index_client.create_index(index=new_index)
         print(f"Created index: {book_index_name}")
     else:
-        print(f"Index {book_index_name} already created")
+        print(f"Index '{book_index_name}' already created")
 
 
 # TODO: make env var more elegant, instead of passing
 
 def is_book_in_index(*, search_client:SearchClient, book_name:str) -> bool:
     resp = search_client.search(
+                query_type="simple",
                 search_text="*",
                 filter="book eq 'Moby-Dick'",
                 select=["id", "book", "chapter", "chunk_id"],  # limit payload
-                top=5
+                top=0,
+                include_total_count=True
             )
     
     book_count = resp.get_count()
@@ -95,39 +97,57 @@ def is_book_in_index(*, search_client:SearchClient, book_name:str) -> bool:
     return book_count == 1
 
 
-def upload_to_index(*, search_client:SearchClient) -> None:
+def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI) -> list[uuid.UUID]:
     book_p = Path("books", "moby.txt")
     book = download_or_load_from_cache(book_path=book_p)
     chapters = extract_chapters(book_txt=book)
 
-    docs = []
-    ch_chunks = []
+    docs:list[dict] = []
+    # TODO: how ensure that order is identical between chunk and embedding??
+    all_chapter_chunks:list[list[str]] = []
+    uuids_added = []
+
+    chapter_contents = [ch["content"] for ch in chapters.values()]
+    embeddings = []
 
     for i, (ch_num_k, ch_content_v) in enumerate(chapters.items(), start=1):
-        ch_chunks.append(tiktoken_chunks(txt=ch_content_v['content'], 
-                                         max_tokens=MAX_TOKENS, 
-                                         overlap=OVERLAP))
+        chunked_chapter, token_ids = tiktoken_chunks(txt=ch_content_v['content'], 
+                                                    max_tokens=MAX_TOKENS, 
+                                                    overlap=OVERLAP)
         
-        vecs = (ch_chunks)
-        for i, (chunk, vec) in enumerate(zip(ch_chunks, vecs)):
-            docs.append({
-                "id": str(uuid.uuid4()),
-                "book": "Moby-Dick",
-                "chapter": ch_content_v['chapter_title'],
-                "chunk_id": i,
-                "content": chunk,
-                "contentVector": vec
-            })
+        embeddings = create_embeddings(embed_client=embed_client, 
+                                       model_deployed="text-embedding-3-small",
+                                       texts=chapter_contents)
+
+
+        all_chapter_chunks.append(chunked_chapter)
+
+    for i, (chunk, emb_v) in enumerate(zip(all_chapter_chunks, embeddings)):
+        doc_dict = {
+            "id": str(uuid.uuid4()),
+            "book": "Moby-Dick",
+            "chapter": ch_content_v['chapter_title'],
+            "chunk_id": i,
+            "content": chunk,
+            "contentVector": emb_v
+        }
+        docs.append(doc_dict)
+
+        uuids_added.append(doc_dict)
 
         # upload in batches of ~100 to keep payload small
         if len(docs) >= 100:
             search_client.upload_documents(docs)
             docs.clear()
 
+    return uuids_added
 
 
 if __name__ == "__main__":      # Don't run when imported via import statement
     load_dotenv()
+    AZURE_SEARCH_ENDPOINT = os.environ["AZURE_SEARCH_ENDPOINT"]
+    AZURE_SEARCH_KEY = os.environ["AZURE_SEARCH_KEY"]
+    
     dummy_ch_content = ["Call me Ishmael. Some years ago—never mind how long precisely..."]
 
     dummy_doc = {

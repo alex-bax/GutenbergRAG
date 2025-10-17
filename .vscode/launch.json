@@ -5,12 +5,13 @@
     "version": "0.2.0",
     "configurations": [
 
+
         {
-            "name": "Python Debugger: Current File",
+            "name": "Python Debug - moby.py",
             "justMyCode": false,
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "${workspaceFolder}/moby.py",
             "console": "integratedTerminal"
         }
     ]
