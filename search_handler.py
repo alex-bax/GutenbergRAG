@@ -13,15 +13,11 @@ from azure.search.documents.indexes.models import (
 from openai import AzureOpenAI
 
 from load_book import download_or_load_from_cache
+from constants import EmbeddingDimension
 from preprocess_book import create_embeddings, extract_chapters#, tiktoken_chunks
 from chunking import fixed_size_chunks
 
 # TODO: use Pydantic Settings obj
-
-
-SMALL_EMBEDDING_VECTOR_SIZE = 1536
-MAX_TOKENS = 600
-OVERLAP = 60
 
 def _get_index_fields() -> list[SearchField]:
     return [
@@ -34,7 +30,7 @@ def _get_index_fields() -> list[SearchField]:
                 name="contentVector",
                 type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
                 searchable=True,                                   
-                vector_search_dimensions=SMALL_EMBEDDING_VECTOR_SIZE,      # NB must match with embedding model dimension
+                vector_search_dimensions=EmbeddingDimension.SMALL,      # NB must match with embedding model dimension
                 vector_search_profile_name="vprofile"
             ),
         ]
@@ -117,23 +113,24 @@ def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI) -> 
                                                 texts=chunks))
         
 
-    for i, (ch_chunks, ch_embed) in enumerate(zip(chapter_chunks, chapter_embeds)):
-        doc_dict = {
-            "id": str(uuid.uuid4()),
-            "book": "Moby-Dick",
-            "chapter": ch_content_v['chapter_title'],
-            "chunk_id": i,
-            "content": ch_chunks,
-            "contentVector": ch_embed
-        }
-        docs.append(doc_dict)
+    for i, (ch_chunks, embed_vecs) in enumerate(zip(chapter_chunks, chapter_embeds)):
+        for chunk, emb_vec in (ch_chunks, embed_vecs):
+            doc_dict = {
+                "id": str(uuid.uuid4()),
+                "book": "Moby-Dick",
+                "chapter": ch_content_v['chapter_title'],
+                "chunk_id": i,
+                "content": chunk,
+                "contentVector": emb_vec
+            }
+            docs.append(doc_dict)
 
-        uuids_added.append(doc_dict)
+            uuids_added.append(doc_dict)
 
-        # upload in batches of ~100 to keep payload small
-        if len(docs) >= 100:
-            search_client.upload_documents(docs)
-            docs.clear()
+            # upload in batches of ~100 to keep payload small
+            if len(docs) >= 100:
+                search_client.upload_documents(docs)
+                docs.clear()
 
     return uuids_added
 
@@ -182,7 +179,11 @@ if __name__ == "__main__":      # Don't run when imported via import statement
     for doc in resp:
         print(doc["id"], doc["chapter"], doc["chunk_id"])
     
-    # upload_book_to_index(search_client=search_client)
+    emb_client = AzureOpenAI(azure_endpoint=AZ_OPENAI_EMBED_ENDPOINT,
+                            api_version="2024-12-01-preview",
+                            api_key=AZ_OPENAI_EMBED_KEY)
+
+    upload_to_index(search_client=search_client, embed_client=emb_client)
     # search_client.upload_documents(documents=[dummy_doc])
 
     # # Query (hybrid + semantic)

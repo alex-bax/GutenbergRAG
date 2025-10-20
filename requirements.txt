@@ -3,3 +3,9 @@ openai
 tiktoken 
 python-dotenv 
 requests
+pydantic
+pydantic-settings 
+python-dotenv
+
+langchain-text-splitters
+langchain-core
