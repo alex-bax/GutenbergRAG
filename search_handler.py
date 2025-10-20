@@ -16,6 +16,7 @@ from load_book import download_or_load_from_cache
 from constants import EmbeddingDimension
 from preprocess_book import create_embeddings, extract_chapters#, tiktoken_chunks
 from chunking import fixed_size_chunks
+from settings import get_settings
 
 # TODO: use Pydantic Settings obj
 
@@ -114,7 +115,7 @@ def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI) -> 
         
 
     for i, (ch_chunks, embed_vecs) in enumerate(zip(chapter_chunks, chapter_embeds)):
-        for chunk, emb_vec in (ch_chunks, embed_vecs):
+        for chunk, emb_vec in zip(ch_chunks, embed_vecs):
             doc_dict = {
                 "id": str(uuid.uuid4()),
                 "book": "Moby-Dick",
@@ -127,18 +128,20 @@ def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI) -> 
 
             uuids_added.append(doc_dict)
 
-            # upload in batches of ~100 to keep payload small
-            if len(docs) >= 100:
-                search_client.upload_documents(docs)
-                docs.clear()
+        # upload after each chapter, max in batches of ~100 to keep payload small
+        if len(docs) >= 100:
+            search_client.upload_documents(docs)
+            docs.clear()
 
     return uuids_added
 
 
 if __name__ == "__main__":      # Don't run when imported via import statement
     load_dotenv()
-    AZURE_SEARCH_ENDPOINT = os.environ["AZURE_SEARCH_ENDPOINT"]
-    AZURE_SEARCH_KEY = os.environ["AZURE_SEARCH_KEY"]
+
+    sett = get_settings()
+    AZURE_SEARCH_ENDPOINT = sett.AZURE_SEARCH_ENDPOINT
+    AZURE_SEARCH_KEY = sett.AZURE_SEARCH_KEY
     
     dummy_ch_content = ["Call me Ishmael. Some years ago—never mind how long precisely..."]
 
@@ -179,9 +182,9 @@ if __name__ == "__main__":      # Don't run when imported via import statement
     for doc in resp:
         print(doc["id"], doc["chapter"], doc["chunk_id"])
     
-    emb_client = AzureOpenAI(azure_endpoint=AZ_OPENAI_EMBED_ENDPOINT,
+    emb_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
                             api_version="2024-12-01-preview",
-                            api_key=AZ_OPENAI_EMBED_KEY)
+                            api_key=sett.AZ_OPENAI_EMBED_KEY)
 
     upload_to_index(search_client=search_client, embed_client=emb_client)
     # search_client.upload_documents(documents=[dummy_doc])

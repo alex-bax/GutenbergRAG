@@ -6,14 +6,3 @@ OVERLAP = 60
 class EmbeddingDimension(int, Enum):
     SMALL = 1536
     LARGE = 3072
-
-
-# AZ_SEARCH_ENDPOINT = os.environ["AZURE_SEARCH_ENDPOINT"]
-# AZ_SEARCH_API_KEY = os.environ["AZURE_SEARCH_KEY"]
-
-# AZ_OPENAI_EMBED_ENDPOINT = os.environ["AZ_OPENAI_EMBED_ENDPOINT"]
-# AZ_OPENAI_EMBED_KEY = os.environ["AZ_OPENAI_EMBED_KEY"]
-
-# AZ_OPENAI_GPT_ENDPOINT = os.environ["AZ_OPENAI_GPT_ENDPOINT"]
-# AZ_OPENAI_GPT_KEY = os.environ["AZ_OPENAI_GPT_KEY"]
-
