@@ -13,8 +13,8 @@ from azure.search.documents.indexes.models import (
 from openai import AzureOpenAI
 
 from load_book import download_or_load_from_cache
-from preprocess_book import create_embeddings, extract_chapters, tiktoken_chunks
-
+from preprocess_book import create_embeddings, extract_chapters#, tiktoken_chunks
+from chunking import fixed_size_chunks
 
 # TODO: use Pydantic Settings obj
 
@@ -103,33 +103,28 @@ def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI) -> 
     chapters = extract_chapters(book_txt=book)
 
     docs:list[dict] = []
-    # TODO: how ensure that order is identical between chunk and embedding??
-    all_chapter_chunks:list[list[str]] = []
     uuids_added = []
 
-    chapter_contents = [ch["content"] for ch in chapters.values()]
-    embeddings = []
+    chapter_embeds:list[list[list[float]]] = []         # list[float] is an embed vec
+    chapter_chunks:list[list[str]] = []
 
     for i, (ch_num_k, ch_content_v) in enumerate(chapters.items(), start=1):
-        chunked_chapter, token_ids = tiktoken_chunks(txt=ch_content_v['content'], 
-                                                    max_tokens=MAX_TOKENS, 
-                                                    overlap=OVERLAP)
+        chunks = fixed_size_chunks(text=ch_content_v['content'])
+        chapter_chunks.append(chunks)
         
-        embeddings = create_embeddings(embed_client=embed_client, 
-                                       model_deployed="text-embedding-3-small",
-                                       texts=chapter_contents)
+        chapter_embeds.append(create_embeddings(embed_client=embed_client, 
+                                                model_deployed="text-embedding-3-small",
+                                                texts=chunks))
+        
 
-
-        all_chapter_chunks.append(chunked_chapter)
-
-    for i, (chunk, emb_v) in enumerate(zip(all_chapter_chunks, embeddings)):
+    for i, (ch_chunks, ch_embed) in enumerate(zip(chapter_chunks, chapter_embeds)):
         doc_dict = {
             "id": str(uuid.uuid4()),
             "book": "Moby-Dick",
             "chapter": ch_content_v['chapter_title'],
             "chunk_id": i,
-            "content": chunk,
-            "contentVector": emb_v
+            "content": ch_chunks,
+            "contentVector": ch_embed
         }
         docs.append(doc_dict)
 

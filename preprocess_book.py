@@ -38,23 +38,10 @@ def extract_chapters(*, book_txt: str) -> dict[int, dict[str, str]]:
     return chapters
 
 
-def tiktoken_chunks(*, txt:str, max_tokens=600, overlap=60, encoding="cl100k_base") -> tuple[list[str], list[int]]:
-    enc = tiktoken.get_encoding(encoding)
-    token_ids = enc.encode(txt)
-    step = max_tokens - overlap
-    decoded_chunks = []
-
-    for i in range(0, len(token_ids), step):
-        token = enc.decode(token_ids[i:i+max_tokens])
-        decoded_chunks.append(token)
-    
-    return decoded_chunks, token_ids
-
-
 
 def create_embeddings(*, embed_client:AzureOpenAI, model_deployed:str, texts:list[str]) -> list[list[float]]:
     resp = embed_client.embeddings.create(
-        input=texts[:3],
+        input=texts,
         model=model_deployed
     )
 
