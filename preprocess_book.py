@@ -1,4 +1,4 @@
-import re, tiktoken
+import re, unicodedata
 from openai import AzureOpenAI
 
 def extract_chapters(*, book_txt: str) -> dict[int, dict[str, str]]:
@@ -47,3 +47,20 @@ def create_embeddings(*, embed_client:AzureOpenAI, model_deployed:str, texts:lis
 
     embeddings = [emb_obj.embedding for emb_obj in resp.data]
     return embeddings
+
+
+def _norm(s: str) -> str:
+        s = unicodedata.normalize("NFKD", s)
+        s = s.encode("ascii", "ignore").decode("ascii")
+        s = re.sub(r"[^\w\s-]", "", s).strip().lower()
+        s = re.sub(r"[-\s]+", "-", s)
+        return s
+
+def make_slug_book_key(title: str, author: str|None=None, year: int|None=None, source: str|None=None, lang: str|None=None):
+    parts = [_norm(title)]
+    if author: parts.append(_norm(author))
+    if year:   parts.append(str(year))
+    if source: parts.append(_norm(source))        # e.g., "gutenberg"
+    if lang:   parts.append(_norm(lang))          # e.g., "en"
+    return "-".join(parts)
+

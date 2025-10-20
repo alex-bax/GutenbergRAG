@@ -15,8 +15,8 @@ def fixed_size_chunks(*, text:str, chunk_size=8000, overlap=100, encoding="cl100
     )
 
     chunks = char_splitter.split_text(text)
-    chunk_lens = [len(c) for c in chunks]
 
+    # chunk_lens = [len(c) for c in chunks]
     # plt.bar(range(len(chunk_lens)), chunk_lens)
     return chunks
 

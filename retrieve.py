@@ -1,5 +1,6 @@
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents import SearchClient
+from azure.search.documents.models import VectorizedQuery, VectorQuery
 from openai import AzureOpenAI
 
 from preprocess_book import create_embeddings
@@ -11,13 +12,15 @@ def _search_chunks(*, query: str,
                   embed_client:AzureOpenAI, 
                   embed_model_deployed:str, k=5) -> list[dict[str, Any]]:
     
-    q_emb_vec = create_embeddings(texts=[query], 
+    query_emb_vec = create_embeddings(texts=[query], 
                               embed_client=embed_client, 
                               model_deployed=embed_model_deployed)[0]
     
+    vec_q = VectorizedQuery(vector=query_emb_vec, k_nearest_neighbors=40, fields="contentVector")
+
     results = search_client.search(
         search_text=query,                         # hybrid: BM25 + vector
-        vectors=[{"value": q_emb_vec, "k": 40, "fields": "contentVector"}],
+        vector_queries=[vec_q],
         top=k,
         query_type="semantic",      # TODO: use this one?
         semantic_configuration_name="default"

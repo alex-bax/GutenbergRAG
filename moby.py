@@ -1,37 +1,26 @@
-import os, re, math, requests, uuid
-from dataclasses import dataclass
-from typing import List, Dict, Any, Iterable
-
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 
 from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
-from azure.search.documents.indexes.models import (
-    SearchIndex, SimpleField, SearchField, SearchFieldDataType,
-    VectorSearch, HnswAlgorithmConfiguration, VectorSearchProfile,
-    SemanticConfiguration, SemanticPrioritizedFields
-)
 
+from preprocess_book import make_slug_book_key
 from search_handler import create_missing_search_index, is_book_in_index, upload_to_index
 from retrieve import answer
 from settings import get_settings
 
-# load_dotenv()
-# TODO: do this more elegantly
 
-
-
-# TODO: add hyper params
+# TODO: add hyper params to settings
 
 def main() -> None:
     sett = get_settings()
     index_client = SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT,
                                     credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
     
-    book_name = "Moby-Dick"
-    INDEX = "moby"
+    book_name = "Moby Dick"
+    book_key = make_slug_book_key(title=book_name, author="Herman Melville", lang="en")
+    INDEX = sett.INDEX_NAME
 
     query = "Who's Ishmael?"
 
@@ -46,10 +35,10 @@ def main() -> None:
                             api_version="2024-12-01-preview",
                             api_key=sett.AZ_OPENAI_EMBED_KEY)
 
-    if not is_book_in_index(search_client=search_client, book_name=book_name):
+    if not is_book_in_index(search_client=search_client, book_key=book_key):
         uuids_added = upload_to_index(search_client=search_client, 
-                                      embed_client=emb_client)
-        print(uuids_added)
+                                      embed_client=emb_client,
+                                    book_key=book_key)
     else:
         print(f"{book_name} already in index {INDEX}")
 

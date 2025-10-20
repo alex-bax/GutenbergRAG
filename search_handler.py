@@ -24,6 +24,7 @@ def _get_index_fields() -> list[SearchField]:
     return [
             SimpleField(name="id", type=SearchFieldDataType.String, key=True),
             SimpleField(name="book", type=SearchFieldDataType.String, filterable=True, facetable=True),
+            SimpleField(name="book_key", type=SearchFieldDataType.String, filterable=True, facetable=True),
             SimpleField(name="chapter", type=SearchFieldDataType.String, filterable=True, facetable=True),
             SimpleField(name="chunk_id", type=SearchFieldDataType.Int32, filterable=True),
             SearchField(name="content", type=SearchFieldDataType.String, searchable=True),
@@ -35,7 +36,6 @@ def _get_index_fields() -> list[SearchField]:
                 vector_search_profile_name="vprofile"
             ),
         ]
-
 
 def _get_vector_search(vector_search_alg_name="hnsw") -> VectorSearch:
     vector_search_alg = HnswAlgorithmConfiguration(name=vector_search_alg_name) if vector_search_alg_name == "hnsw" else ExhaustiveKnnAlgorithmConfiguration(name=vector_search_alg_name)
@@ -78,23 +78,23 @@ def create_missing_search_index(*, book_index_name="moby", search_index_client:S
 
 # TODO: make env var more elegant, instead of passing
 
-def is_book_in_index(*, search_client:SearchClient, book_name:str) -> bool:
+def is_book_in_index(*, search_client:SearchClient, book_key:str) :
+    # Search by facets
     resp = search_client.search(
                 query_type="simple",
                 search_text="*",
-                filter="book eq 'Moby-Dick'",
-                select=["id", "book", "chapter", "chunk_id"],  # limit payload
-                top=0,
-                include_total_count=True
+                filter=f"book_key eq '{book_key}'",
+                facets=["book", "book_key"],
+                top=1,
             )
     
-    book_count = resp.get_count()
-    assert book_count < 1, f"ERR - Too many books added: Found more than 1 book named {book_name}"
-    
-    return book_count == 1
+    # book_count = resp.get_count()
+    # assert book_count < 1, f"ERR - Too many books added: Found more than 1 book named {book_name}"
+    s = any(True for _ in list(resp))   # type:ignore
+    return s
 
 
-def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI) -> list[uuid.UUID]:
+def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, book_key:str) -> list[uuid.UUID]:
     book_p = Path("books", "moby.txt")
     book = download_or_load_from_cache(book_path=book_p)
     chapters = extract_chapters(book_txt=book)
@@ -102,23 +102,20 @@ def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI) -> 
     docs:list[dict] = []
     uuids_added = []
 
-    chapter_embeds:list[list[list[float]]] = []         # list[float] is an embed vec
-    chapter_chunks:list[list[str]] = []
-
     for i, (ch_num_k, ch_content_v) in enumerate(chapters.items(), start=1):
         chunks = fixed_size_chunks(text=ch_content_v['content'])
-        chapter_chunks.append(chunks)
         
-        chapter_embeds.append(create_embeddings(embed_client=embed_client, 
+        embeddings = create_embeddings(embed_client=embed_client, 
                                                 model_deployed="text-embedding-3-small",
-                                                texts=chunks))
+                                                texts=chunks)
         
+        assert len(chunks) == len(embeddings)
 
-    for i, (ch_chunks, embed_vecs) in enumerate(zip(chapter_chunks, chapter_embeds)):
-        for chunk, emb_vec in zip(ch_chunks, embed_vecs):
+        for chunk, emb_vec in zip(chunks, embeddings):
             doc_dict = {
                 "id": str(uuid.uuid4()),
                 "book": "Moby-Dick",
+                "book_key": book_key,
                 "chapter": ch_content_v['chapter_title'],
                 "chunk_id": i,
                 "content": chunk,
@@ -129,9 +126,8 @@ def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI) -> 
             uuids_added.append(doc_dict)
 
         # upload after each chapter, max in batches of ~100 to keep payload small
-        if len(docs) >= 100:
-            search_client.upload_documents(docs)
-            docs.clear()
+        search_client.upload_documents(docs)
+        docs.clear()
 
     return uuids_added
 
@@ -156,21 +152,8 @@ if __name__ == "__main__":      # Don't run when imported via import statement
 
     az_key = AzureKeyCredential(AZURE_SEARCH_KEY)
 
-    index_client = SearchIndexClient(endpoint=AZURE_SEARCH_ENDPOINT, credential=az_key)
-    create_missing_search_index(search_index_client=index_client)
-
-    index = index_client.get_index("moby")
-    # See the field definitions
-    for field in index.fields:
-        print(f"Name: {field.name}")
-        print(f"  Type: {field.type}")
-        print(f"  Searchable: {getattr(field, 'searchable', False)}")
-        print(f"  Filterable: {getattr(field, 'filterable', False)}")
-        print(f"  Sortable: {getattr(field, 'sortable', False)}")
-        print(f"  Facetable: {getattr(field, 'facetable', False)}")
-        print(f"  Retrievable: {getattr(field, 'retrievable', False)}")
-        print()
-
+    # index_client = SearchIndexClient(endpoint=AZURE_SEARCH_ENDPOINT, credential=az_key)
+    # create_missing_search_index(search_index_client=index_client)
     
     search_client = SearchClient(endpoint=AZURE_SEARCH_ENDPOINT, index_name="moby", credential=az_key)
     resp = search_client.search(
@@ -187,6 +170,21 @@ if __name__ == "__main__":      # Don't run when imported via import statement
                             api_key=sett.AZ_OPENAI_EMBED_KEY)
 
     upload_to_index(search_client=search_client, embed_client=emb_client)
+
+    
+
+    resp = search_client.search(
+                query_type="simple",
+                search_text="*",
+                filter="book eq 'Moby-Dick'",
+                select=["id", "book", "chapter", "chunk_id"],  # limit payload
+                top=0,
+                include_total_count=True
+            )
+    
+    book_count = resp.get_count()
+    print(book_count)
+    
     # search_client.upload_documents(documents=[dummy_doc])
 
     # # Query (hybrid + semantic)
