@@ -3,6 +3,8 @@ from azure.search.documents import SearchClient
 from azure.search.documents.models import VectorizedQuery, VectorQuery
 from openai import AzureOpenAI
 
+from azure.core.paging import ItemPaged
+
 from preprocess_book import create_embeddings
 from typing import Any
 
@@ -18,12 +20,12 @@ def _search_chunks(*, query: str,
     
     vec_q = VectorizedQuery(vector=query_emb_vec, k_nearest_neighbors=40, fields="contentVector")
 
-    results = search_client.search(
+    results:ItemPaged = search_client.search(
         search_text=query,                         # hybrid: BM25 + vector
         vector_queries=[vec_q],
         top=k,
-        query_type="semantic",      # TODO: use this one?
-        semantic_configuration_name="default"
+        # query_type="semantic",      # TODO: use this one?
+        # semantic_configuration_name="default"
     )
     
     hits=[]
@@ -56,18 +58,20 @@ def answer(*, query: str,
         context_blocks.append(f"[{h['chapter']} · chunk {h['chunk_id']}] {h['content']}")
         citations.append({"chapter": h["chapter"], "chunk_id": h["chunk_id"]})
 
-    system = "You answer using only the provided context. If unsure, say you don't know. Include a brief 'Sources' list with chapter + chunk ids."
+    system = """You answer using only the provided context. 
+                If unsure, say you don't know. 
+                Include a brief 'Sources' list with chapter + chunk ids.
+                """
     prompt = f"""Question: {query}
                 Context:
                 {chr(10).join(context_blocks)}
                 """
 
-    chat = llm_client.chat.completions.create(
+    chat = llm_client.responses.create(
         model=llm_model_deployed,
-        messages=[
+        input=[
             {"role":"system","content":system},
             {"role":"user","content":prompt}
-        ],
-        temperature=0.2
+        ]
     )
-    return {"answer": chat.choices[0].message.content, "citations": citations}
+    return {"answer": chat.output_text, "citations": citations}

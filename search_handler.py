@@ -14,7 +14,7 @@ from openai import AzureOpenAI
 
 from load_book import download_or_load_from_cache
 from constants import EmbeddingDimension
-from preprocess_book import create_embeddings, extract_chapters#, tiktoken_chunks
+from preprocess_book import create_embeddings, extract_chapters, make_slug_book_key
 from chunking import fixed_size_chunks
 from settings import get_settings
 
@@ -79,8 +79,7 @@ def create_missing_search_index(*, book_index_name="moby", search_index_client:S
 # TODO: make env var more elegant, instead of passing
 
 def is_book_in_index(*, search_client:SearchClient, book_key:str) :
-    # Search by facets
-    resp = search_client.search(
+    resp = search_client.search(                # search using facets
                 query_type="simple",
                 search_text="*",
                 filter=f"book_key eq '{book_key}'",
@@ -88,15 +87,11 @@ def is_book_in_index(*, search_client:SearchClient, book_key:str) :
                 top=1,
             )
     
-    # book_count = resp.get_count()
-    # assert book_count < 1, f"ERR - Too many books added: Found more than 1 book named {book_name}"
-    s = any(True for _ in list(resp))   # type:ignore
-    return s
+    return any(True for _ in list(resp))   # type:ignore
 
 
-def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, book_key:str) -> list[uuid.UUID]:
-    book_p = Path("books", "moby.txt")
-    book = download_or_load_from_cache(book_path=book_p)
+def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, book_key:str, book_url:str) -> list[uuid.UUID]:
+    book = download_or_load_from_cache(book_key=book_key, url=book_url)
     chapters = extract_chapters(book_txt=book)
 
     docs:list[dict] = []
@@ -126,8 +121,9 @@ def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, boo
             uuids_added.append(doc_dict)
 
         # upload after each chapter, max in batches of ~100 to keep payload small
-        search_client.upload_documents(docs)
-        docs.clear()
+        if len(docs) >= 100:
+            search_client.upload_documents(docs)
+            docs.clear()
 
     return uuids_added
 
@@ -169,7 +165,12 @@ if __name__ == "__main__":      # Don't run when imported via import statement
                             api_version="2024-12-01-preview",
                             api_key=sett.AZ_OPENAI_EMBED_KEY)
 
-    upload_to_index(search_client=search_client, embed_client=emb_client)
+    book_key = make_slug_book_key(title="Moby-Dick", gutenberg_id=42, author="Herman Melville", lang="en")
+
+    upload_to_index(search_client=search_client, 
+                    book_url="",
+                    embed_client=emb_client,
+                    book_key=book_key)
 
     
 

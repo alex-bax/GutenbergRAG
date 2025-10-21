@@ -6,6 +6,7 @@ requests
 pydantic
 pydantic-settings 
 python-dotenv
+tqdm
 
 langchain-text-splitters
 langchain-core

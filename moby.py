@@ -9,21 +9,36 @@ from preprocess_book import make_slug_book_key
 from search_handler import create_missing_search_index, is_book_in_index, upload_to_index
 from retrieve import answer
 from settings import get_settings
-
-
+from load_book import gutendex_book_urls
+from tqdm import tqdm
 # TODO: add hyper params to settings
 
+# TODO: split entire app into ingestion / retrieval
+
+
 def main() -> None:
+    ### Ingestion
     sett = get_settings()
-    index_client = SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT,
-                                    credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
     
-    book_name = "Moby Dick"
-    book_key = make_slug_book_key(title=book_name, author="Herman Melville", lang="en")
     INDEX = sett.INDEX_NAME
 
     query = "Who's Ishmael?"
 
+    gutenberg_book_metadata = gutendex_book_urls(n=2, languages=["en"])
+
+    books_to_download:list[dict[str,str|int]] = []
+
+    for b_meta in gutenberg_book_metadata:
+        books_to_download.append({
+            "title": b_meta["title"],
+            "authors": "; ".join([author["name"] for author in b_meta["authors"]]), # type: ignore
+            "gb_id": b_meta["id"],
+            "url": b_meta["download_url"]
+        })
+
+    index_client = SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT,
+                                    credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
+    
     create_missing_search_index(book_index_name="moby", 
                                 search_index_client=index_client)
 
@@ -35,20 +50,31 @@ def main() -> None:
                             api_version="2024-12-01-preview",
                             api_key=sett.AZ_OPENAI_EMBED_KEY)
 
-    if not is_book_in_index(search_client=search_client, book_key=book_key):
-        uuids_added = upload_to_index(search_client=search_client, 
-                                      embed_client=emb_client,
-                                    book_key=book_key)
-    else:
-        print(f"{book_name} already in index {INDEX}")
+    for b in tqdm(books_to_download):
+        b_key = make_slug_book_key(title=b["title"],            # type: ignore
+                                   gutenberg_id=b["gb_id"],     # type: ignore
+                                   author=b["authors"],         # type: ignore
+                                   lang="en")
+        print(f'\n{b_key}')   
 
-    print(f'Answering query: {query}')
+        if not is_book_in_index(search_client=search_client, book_key=b_key):
+            uuids_added = upload_to_index(search_client=search_client, 
+                                        embed_client=emb_client,
+                                        book_key=b_key,
+                                        book_url=b["url"]       # type: ignore
+                                    )
+        else:
+            print(f"{b['title']} already in index {INDEX}")
 
-    llm_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_GPT_ENDPOINT,
-                            api_version="2024-12-01-preview",
-                            api_key=sett.AZ_OPENAI_GPT_KEY)
+    ### Retrieval
+    # print(f'Answering the query: {query}')
 
-    answer(query=query, search_client=search_client, embed_client=emb_client, llm_client=llm_client)
+    # llm_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_GPT_ENDPOINT,
+    #                         api_version="2025-04-01-preview",
+    #                         api_key=sett.AZ_OPENAI_GPT_KEY)
+
+    # ans = answer(query=query, search_client=search_client, embed_client=emb_client, llm_client=llm_client)
+    # print(ans)
 
 
 if __name__ == "__main__":

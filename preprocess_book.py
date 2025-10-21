@@ -56,11 +56,20 @@ def _norm(s: str) -> str:
         s = re.sub(r"[-\s]+", "-", s)
         return s
 
-def make_slug_book_key(title: str, author: str|None=None, year: int|None=None, source: str|None=None, lang: str|None=None):
+def make_slug_book_key(title: str, gutenberg_id:int, author: str|None=None, year: int|None=None, source: str|None=None, lang: str|None=None):
     parts = [_norm(title)]
     if author: parts.append(_norm(author))
+    if gutenberg_id: parts.append(f"{gutenberg_id}")
     if year:   parts.append(str(year))
     if source: parts.append(_norm(source))        # e.g., "gutenberg"
     if lang:   parts.append(_norm(lang))          # e.g., "en"
-    return "-".join(parts)
+    return "_".join(parts)
 
+
+
+if __name__ == "__main__":
+
+    print(make_slug_book_key("Moby Dick", 42, "Herman Melville", 1851, "gutenberg", "en"))
+    print(make_slug_book_key("Pride and Prejudice", 42, "Jane Austen", 1813))
+    print(make_slug_book_key("Don Quixote", gutenberg_id=42, source="project-gutenberg", lang="es"))
+    print(make_slug_book_key("The Odyssey", gutenberg_id=42,))
