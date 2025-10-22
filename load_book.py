@@ -25,7 +25,7 @@ def gutendex_book_urls(n=25, languages:list[str]=["en"], mime="text/plain") -> l
             txt_url = None
             # prefer UTF-8 plain text if available
             for k, url_v in fmts.items():
-                if k.startswith("text/plain"):
+                if k.startswith("text/html"):
                     txt_url = url_v; break
             if txt_url:
                 out.append({"id": b["id"], "title": b["title"], "download_url": txt_url, "authors":b["authors"]})
@@ -35,16 +35,10 @@ def gutendex_book_urls(n=25, languages:list[str]=["en"], mime="text/plain") -> l
     return out
 
 
-def _strip_gutenberg_header_footer(*, book:str) -> str:
-    start = re.search(r"^CHAPTER 1\.", book, re.M)
-    end = re.search(r"End of the Project Gutenberg EBook of", book)
-
-    book = book[start.start(): end.start()] if start and end else book
-    return book.strip()
 
 
 def download_or_load_from_cache(*, book_key:str, url:str) -> str:
-    book_p = Path("books", f'{book_key}.txt')
+    book_p = Path("books", f'{book_key}.html')
 
     if book_p.exists():
         with open(book_p, 'r', encoding="utf-8") as f:

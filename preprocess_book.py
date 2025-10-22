@@ -1,5 +1,10 @@
 import re, unicodedata
 from openai import AzureOpenAI
+from bs4 import BeautifulSoup
+from pathlib import Path
+# TODO:
+# def _extract_contents
+
 
 def extract_chapters(*, book_txt: str) -> dict[int, dict[str, str]]:
     """
@@ -38,6 +43,13 @@ def extract_chapters(*, book_txt: str) -> dict[int, dict[str, str]]:
     return chapters
 
 
+def _strip_gutenberg_header_footer(*, book:str) -> str:
+    start = re.search(r"^CHAPTER 1\.", book, re.M)
+    end = re.search(r"End of the Project Gutenberg EBook of", book)
+
+    book = book[start.start(): end.start()] if start and end else book
+    return book.strip()
+
 
 def create_embeddings(*, embed_client:AzureOpenAI, model_deployed:str, texts:list[str]) -> list[list[float]]:
     resp = embed_client.embeddings.create(
@@ -68,8 +80,9 @@ def make_slug_book_key(title: str, gutenberg_id:int, author: str|None=None, year
 
 
 if __name__ == "__main__":
+    with open(Path("books", ""))
+    b_html = BeautifulSoup()
 
-    print(make_slug_book_key("Moby Dick", 42, "Herman Melville", 1851, "gutenberg", "en"))
-    print(make_slug_book_key("Pride and Prejudice", 42, "Jane Austen", 1813))
-    print(make_slug_book_key("Don Quixote", gutenberg_id=42, source="project-gutenberg", lang="es"))
-    print(make_slug_book_key("The Odyssey", gutenberg_id=42,))
+
+    # print(make_slug_book_key("Moby Dick", 42, "Herman Melville", 1851, "gutenberg", "en"))
+    # print(make_slug_book_key("The Odyssey", gutenberg_id=42,))

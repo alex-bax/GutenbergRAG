@@ -152,25 +152,25 @@ if __name__ == "__main__":      # Don't run when imported via import statement
     # create_missing_search_index(search_index_client=index_client)
     
     search_client = SearchClient(endpoint=AZURE_SEARCH_ENDPOINT, index_name="moby", credential=az_key)
-    resp = search_client.search(
-                search_text="*",
-                filter="book eq 'Moby-Dick'",
-                select=["id", "book", "chapter", "chunk_id"],  # limit payload
-                top=5
-            )
-    for doc in resp:
-        print(doc["id"], doc["chapter"], doc["chunk_id"])
+    # resp = search_client.search(
+    #             search_text="*",
+    #             filter="book eq 'Moby-Dick'",
+    #             select=["id", "book", "chapter", "chunk_id"],  # limit payload
+    #             top=5
+    #         )
+    # for doc in resp:
+    #     print(doc["id"], doc["chapter"], doc["chunk_id"])
     
-    emb_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
-                            api_version="2024-12-01-preview",
-                            api_key=sett.AZ_OPENAI_EMBED_KEY)
+    # emb_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
+    #                         api_version="2024-12-01-preview",
+    #                         api_key=sett.AZ_OPENAI_EMBED_KEY)
 
-    book_key = make_slug_book_key(title="Moby-Dick", gutenberg_id=42, author="Herman Melville", lang="en")
+    # book_key = make_slug_book_key(title="Moby-Dick", gutenberg_id=42, author="Herman Melville", lang="en")
 
-    upload_to_index(search_client=search_client, 
-                    book_url="",
-                    embed_client=emb_client,
-                    book_key=book_key)
+    # upload_to_index(search_client=search_client, 
+    #                 book_url="",
+    #                 embed_client=emb_client,
+    #                 book_key=book_key)
 
     
 

@@ -11,8 +11,8 @@ from retrieve import answer
 from settings import get_settings
 from load_book import gutendex_book_urls
 from tqdm import tqdm
-# TODO: add hyper params to settings
 
+# TODO: add hyper params to settings
 # TODO: split entire app into ingestion / retrieval
 
 
@@ -24,9 +24,11 @@ def main() -> None:
 
     query = "Who's Ishmael?"
 
-    gutenberg_book_metadata = gutendex_book_urls(n=2, languages=["en"])
+    gutenberg_book_metadata = gutendex_book_urls(n=20, languages=["en"])
 
     books_to_download:list[dict[str,str|int]] = []
+
+    #TODO: consider combining the two loops into one
 
     for b_meta in gutenberg_book_metadata:
         books_to_download.append({
