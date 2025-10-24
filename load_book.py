@@ -27,9 +27,15 @@ def gutendex_book_urls(n=25, languages:list[str]=["en"], mime="text/plain") -> l
             for k, url_v in fmts.items():
                 if k.startswith("text/html"):
                     txt_url = url_v; break
+            
             if txt_url:
-                out.append({"id": b["id"], "title": b["title"], "download_url": txt_url, "authors":b["authors"]})
+                out.append({"id": b["id"], 
+                            "title": b["title"], 
+                            "download_url": txt_url, 
+                            "authors":b["authors"]})
+                
                 if len(out) >= n: break
+
         txt_url = data.get("next")
         params = None  # only send params on first page
     return out
@@ -42,12 +48,11 @@ def download_or_load_from_cache(*, book_key:str, url:str) -> str:
 
     if book_p.exists():
         with open(book_p, 'r', encoding="utf-8") as f:
-            print(f"Loaded: {book_p.name}")
+            print(f"\n From file: {book_p.name}")
             book_txt = f.read()
         
     else:
         book_txt = _fetch_book(download_url=url)
-        book_txt = _strip_gutenberg_header_footer(book=book_txt)
 
         with open(book_p, "w", encoding="utf-8") as f:
             f.write(book_txt)

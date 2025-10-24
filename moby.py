@@ -52,21 +52,19 @@ def main() -> None:
                             api_version="2024-12-01-preview",
                             api_key=sett.AZ_OPENAI_EMBED_KEY)
 
-    for b in tqdm(books_to_download):
-        b_key = make_slug_book_key(title=b["title"],            # type: ignore
-                                   gutenberg_id=b["gb_id"],     # type: ignore
-                                   author=b["authors"],         # type: ignore
+    for b in tqdm(books_to_download[:7]):
+        b["book_key"] = make_slug_book_key(title=b["title"],            # type: ignore
+                                   gutenberg_id=b["gb_id"],             # type: ignore
+                                   author=b["authors"],                 # type: ignore
                                    lang="en")
-        print(f'\n{b_key}')   
 
-        if not is_book_in_index(search_client=search_client, book_key=b_key):
-            uuids_added = upload_to_index(search_client=search_client, 
-                                        embed_client=emb_client,
-                                        book_key=b_key,
-                                        book_url=b["url"]       # type: ignore
-                                    )
+        if not is_book_in_index(search_client=search_client, book_key=b["book_key"]):
+            chapters_added = upload_to_index(search_client=search_client, 
+                                            embed_client=emb_client,
+                                            book=b                  # type:ignore
+                                            )
         else:
-            print(f"{b['title']} already in index {INDEX}")
+            print(f"\n Already in index {INDEX} - {b['title']}")
 
     ### Retrieval
     # print(f'Answering the query: {query}')

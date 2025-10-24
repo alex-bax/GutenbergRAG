@@ -14,28 +14,29 @@ from openai import AzureOpenAI
 
 from load_book import download_or_load_from_cache
 from constants import EmbeddingDimension
-from preprocess_book import create_embeddings, extract_chapters, make_slug_book_key
+from preprocess_book import create_embeddings, extract_html, make_slug_book_key
 from chunking import fixed_size_chunks
 from settings import get_settings
+from data_classes.vector_db import EmbeddingVec, ChapterDBItem
 
 # TODO: use Pydantic Settings obj
 
 def _get_index_fields() -> list[SearchField]:
     return [
-            SimpleField(name="id", type=SearchFieldDataType.String, key=True),
-            SimpleField(name="book", type=SearchFieldDataType.String, filterable=True, facetable=True),
+            SimpleField(name="id_str", type=SearchFieldDataType.String, key=True),
+            SimpleField(name="book_name", type=SearchFieldDataType.String, filterable=True, facetable=True),
             SimpleField(name="book_key", type=SearchFieldDataType.String, filterable=True, facetable=True),
-            SimpleField(name="chapter", type=SearchFieldDataType.String, filterable=True, facetable=True),
             SimpleField(name="chunk_id", type=SearchFieldDataType.Int32, filterable=True),
             SearchField(name="content", type=SearchFieldDataType.String, searchable=True),
             SearchField(
-                name="contentVector",
+                name="content_vector",
                 type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
                 searchable=True,                                   
                 vector_search_dimensions=EmbeddingDimension.SMALL,      # NB must match with embedding model dimension
                 vector_search_profile_name="vprofile"
             ),
         ]
+
 
 def _get_vector_search(vector_search_alg_name="hnsw") -> VectorSearch:
     vector_search_alg = HnswAlgorithmConfiguration(name=vector_search_alg_name) if vector_search_alg_name == "hnsw" else ExhaustiveKnnAlgorithmConfiguration(name=vector_search_alg_name)
@@ -76,29 +77,31 @@ def create_missing_search_index(*, book_index_name="moby", search_index_client:S
         print(f"Index '{book_index_name}' already created")
 
 
-# TODO: make env var more elegant, instead of passing
-
 def is_book_in_index(*, search_client:SearchClient, book_key:str) :
     resp = search_client.search(                # search using facets
                 query_type="simple",
                 search_text="*",
                 filter=f"book_key eq '{book_key}'",
-                facets=["book", "book_key"],
+                facets=["book_name", "book_key"],
                 top=1,
             )
     
     return any(True for _ in list(resp))   # type:ignore
 
 
-def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, book_key:str, book_url:str) -> list[uuid.UUID]:
-    book = download_or_load_from_cache(book_key=book_key, url=book_url)
-    chapters = extract_chapters(book_txt=book)
+def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, book:dict[str,str]) -> list[ChapterDBItem]:
+    book_html_str = download_or_load_from_cache(book_key=book["book_key"], url=book["url"])
+    
+    chapters = extract_html(html_book=book_html_str) #extract_chapters(book_txt=book)
+    if len(chapters) == 0:      # Html extraction empty
+        print(f'INFO No html extracted - skip {book["title"]}')
+        return []
 
     docs:list[dict] = []
-    uuids_added = []
+    vector_items_added = []
 
-    for i, (ch_num_k, ch_content_v) in enumerate(chapters.items(), start=1):
-        chunks = fixed_size_chunks(text=ch_content_v['content'])
+    for i, (ch_num_k, html_chapter) in enumerate(chapters.items(), start=1):
+        chunks = fixed_size_chunks(text=html_chapter.content)
         
         embeddings = create_embeddings(embed_client=embed_client, 
                                                 model_deployed="text-embedding-3-small",
@@ -107,94 +110,108 @@ def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, boo
         assert len(chunks) == len(embeddings)
 
         for chunk, emb_vec in zip(chunks, embeddings):
-            doc_dict = {
-                "id": str(uuid.uuid4()),
-                "book": "Moby-Dick",
-                "book_key": book_key,
-                "chapter": ch_content_v['chapter_title'],
-                "chunk_id": i,
-                "content": chunk,
-                "contentVector": emb_vec
-            }
-            docs.append(doc_dict)
-
-            uuids_added.append(doc_dict)
+            chapter_item = ChapterDBItem(
+                id_str= str(uuid.uuid4()),
+                book_name= book["title"],
+                book_key= book["book_key"],
+                chunk_id= i,
+                content= chunk,
+                content_vector= EmbeddingVec(vector=emb_vec, dim=EmbeddingDimension.SMALL)
+            )
+            
+            docs.append(chapter_item.to_dict())
+            vector_items_added.append(chapter_item)
 
         # upload after each chapter, max in batches of ~100 to keep payload small
+        search_client.upload_documents(docs)
         if len(docs) >= 100:
-            search_client.upload_documents(docs)
             docs.clear()
 
-    return uuids_added
+    return vector_items_added
 
 
 if __name__ == "__main__":      # Don't run when imported via import statement
     load_dotenv()
 
-    sett = get_settings()
-    AZURE_SEARCH_ENDPOINT = sett.AZURE_SEARCH_ENDPOINT
-    AZURE_SEARCH_KEY = sett.AZURE_SEARCH_KEY
+    chapter_item = ChapterDBItem(
+        id_str="123e4567-e89b-12d3-a456-426614174000",
+        book_name="The Great Adventure",
+        book_key="the-great-adventure",
+        chunk_id=1,
+        # chapter_title="Chapter 1: The Beginning",
+        content="It was a bright cold day in April, and the clocks were striking thirteen.",
+        content_vector=EmbeddingVec(
+            vector=[0.42]*EmbeddingDimension.SMALL,  # Must match the dim size
+            dim=EmbeddingDimension.SMALL
+        )
+    )
+
+    print(chapter_item)
+
+    # sett = get_settings()
+    # AZURE_SEARCH_ENDPOINT = sett.AZURE_SEARCH_ENDPOINT
+    # AZURE_SEARCH_KEY = sett.AZURE_SEARCH_KEY
     
-    dummy_ch_content = ["Call me Ishmael. Some years ago—never mind how long precisely..."]
+    # dummy_ch_content = ["Call me Ishmael. Some years ago—never mind how long precisely..."]
 
-    dummy_doc = {
-        "id": "test-1",
-        "book": "Moby-Dick",
-        "chapter": "CHAPTER 1. Loomings.",
-        "chunk_id": 0,
-        "content": dummy_ch_content,
-        "contentVector": [0.0]*3072  # placeholder—replace with a real embedding
-    }
+    # dummy_doc = {
+    #     "id": "test-1",
+    #     "book": "Moby-Dick",
+    #     "chapter": "CHAPTER 1. Loomings.",
+    #     "chunk_id": 0,
+    #     "content": dummy_ch_content,
+    #     "contentVector": [0.0]*3072  # placeholder—replace with a real embedding
+    # }
 
-    az_key = AzureKeyCredential(AZURE_SEARCH_KEY)
+    # az_key = AzureKeyCredential(AZURE_SEARCH_KEY)
 
-    # index_client = SearchIndexClient(endpoint=AZURE_SEARCH_ENDPOINT, credential=az_key)
-    # create_missing_search_index(search_index_client=index_client)
+    # # index_client = SearchIndexClient(endpoint=AZURE_SEARCH_ENDPOINT, credential=az_key)
+    # # create_missing_search_index(search_index_client=index_client)
     
-    search_client = SearchClient(endpoint=AZURE_SEARCH_ENDPOINT, index_name="moby", credential=az_key)
+    # search_client = SearchClient(endpoint=AZURE_SEARCH_ENDPOINT, index_name="moby", credential=az_key)
+    # # resp = search_client.search(
+    # #             search_text="*",
+    # #             filter="book eq 'Moby-Dick'",
+    # #             select=["id", "book", "chapter", "chunk_id"],  # limit payload
+    # #             top=5
+    # #         )
+    # # for doc in resp:
+    # #     print(doc["id"], doc["chapter"], doc["chunk_id"])
+    
+    # # emb_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
+    # #                         api_version="2024-12-01-preview",
+    # #                         api_key=sett.AZ_OPENAI_EMBED_KEY)
+
+    # # book_key = make_slug_book_key(title="Moby-Dick", gutenberg_id=42, author="Herman Melville", lang="en")
+
+    # # upload_to_index(search_client=search_client, 
+    # #                 book_url="",
+    # #                 embed_client=emb_client,
+    # #                 book_key=book_key)
+
+    
+
     # resp = search_client.search(
+    #             query_type="simple",
     #             search_text="*",
     #             filter="book eq 'Moby-Dick'",
     #             select=["id", "book", "chapter", "chunk_id"],  # limit payload
-    #             top=5
+    #             top=0,
+    #             include_total_count=True
     #         )
-    # for doc in resp:
-    #     print(doc["id"], doc["chapter"], doc["chunk_id"])
     
-    # emb_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
-    #                         api_version="2024-12-01-preview",
-    #                         api_key=sett.AZ_OPENAI_EMBED_KEY)
-
-    # book_key = make_slug_book_key(title="Moby-Dick", gutenberg_id=42, author="Herman Melville", lang="en")
-
-    # upload_to_index(search_client=search_client, 
-    #                 book_url="",
-    #                 embed_client=emb_client,
-    #                 book_key=book_key)
-
+    # book_count = resp.get_count()
+    # print(book_count)
     
+    # # search_client.upload_documents(documents=[dummy_doc])
 
-    resp = search_client.search(
-                query_type="simple",
-                search_text="*",
-                filter="book eq 'Moby-Dick'",
-                select=["id", "book", "chapter", "chunk_id"],  # limit payload
-                top=0,
-                include_total_count=True
-            )
+    # # # Query (hybrid + semantic)
+    # # results = search_client.search(
+    # #     search_text="Why does Ishmael go to sea?",
+    # #     top=5,
+    # #     # query_type="semantic",
+    # #     # semantic_configuration_name="default"
+    # # )
     
-    book_count = resp.get_count()
-    print(book_count)
-    
-    # search_client.upload_documents(documents=[dummy_doc])
-
-    # # Query (hybrid + semantic)
-    # results = search_client.search(
-    #     search_text="Why does Ishmael go to sea?",
-    #     top=5,
-    #     # query_type="semantic",
-    #     # semantic_configuration_name="default"
-    # )
-    
-    # for r in results:
-    #     print(r["chapter"], r["@search.score"])
+    # # for r in results:
+    # #     print(r["chapter"], r["@search.score"])
