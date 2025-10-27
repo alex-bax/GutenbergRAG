@@ -24,7 +24,7 @@ def main() -> None:
 
     query = "Who's Ishmael?"
 
-    gutenberg_book_metadata_list = gutendex_book_urls(n=1, languages=["en"], text_format="text/plain")
+    gutenberg_book_metadata_list = gutendex_book_urls(n=10, languages=["en"], text_format="text/plain")
 
     books_to_download:list[dict[str,str|int]] = []
 

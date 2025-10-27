@@ -1,5 +1,7 @@
+import backoff
 import re, unicodedata
 from openai import AzureOpenAI
+from openai._exceptions import RateLimitError
 from pathlib import Path
 from data_classes.vector_db import EmbeddingVec
 from constants import EmbeddingDimension
@@ -28,10 +30,12 @@ def extract_txt(*, raw_book: str) -> str:
 #     return extr_html_chs
 
 
+@backoff.on_exception(backoff.expo, RateLimitError, max_time=60, max_tries=6)
 def create_embeddings(*, embed_client:AzureOpenAI, model_deployed:str, texts:list[str]) -> list[EmbeddingVec]:
     resp = embed_client.embeddings.create(
         input=texts,
-        model=model_deployed
+        model=model_deployed,
+        
     )
 
     return [EmbeddingVec(vector=emb_obj.embedding, dim=EmbeddingDimension.SMALL) for emb_obj in resp.data]
