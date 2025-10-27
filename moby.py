@@ -52,7 +52,7 @@ def main() -> None:
                             api_version="2024-12-01-preview",
                             api_key=sett.AZ_OPENAI_EMBED_KEY)
 
-    for b in tqdm(books_to_download[:7]):
+    for b in tqdm(books_to_download[:3]):
         b["book_key"] = make_slug_book_key(title=b["title"],            # type: ignore
                                    gutenberg_id=b["gb_id"],             # type: ignore
                                    author=b["authors"],                 # type: ignore

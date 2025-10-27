@@ -1,7 +1,6 @@
 import os, uuid
 from pathlib import Path
 from dotenv import load_dotenv
-from azure.core.credentials import AzureKeyCredential
 
 from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
@@ -14,7 +13,7 @@ from openai import AzureOpenAI
 
 from load_book import download_or_load_from_cache
 from constants import EmbeddingDimension
-from preprocess_book import create_embeddings, extract_html, make_slug_book_key
+from preprocess_book import create_embeddings, make_slug_book_key, extract_txt
 from chunking import fixed_size_chunks
 from settings import get_settings
 from data_classes.vector_db import EmbeddingVec, ChapterDBItem
@@ -92,7 +91,7 @@ def is_book_in_index(*, search_client:SearchClient, book_key:str) :
 def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, book:dict[str,str]) -> list[ChapterDBItem]:
     book_html_str = download_or_load_from_cache(book_key=book["book_key"], url=book["url"])
     
-    chapters = extract_html(html_book=book_html_str) #extract_chapters(book_txt=book)
+    chapters = (html_book=book_html_str) #extract_chapters(book_txt=book)
     if len(chapters) == 0:      # Html extraction empty
         print(f'INFO No html extracted - skip {book["title"]}')
         return []
