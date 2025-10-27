@@ -1,6 +1,10 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# TODO: merge constants into settings
+# TODO: add input extention type, e.g. whether it's html, txt, etc.
+        # TODO: for each extraction type, use a different pre-processing with Strategy design pattern
+
 class Settings(BaseSettings):
     AZURE_SEARCH_ENDPOINT: str
     AZURE_SEARCH_KEY: str

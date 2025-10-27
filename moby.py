@@ -24,13 +24,13 @@ def main() -> None:
 
     query = "Who's Ishmael?"
 
-    gutenberg_book_metadata = gutendex_book_urls(n=20, languages=["en"])
+    gutenberg_book_metadata_list = gutendex_book_urls(n=1, languages=["en"], text_format="text/plain")
 
     books_to_download:list[dict[str,str|int]] = []
 
     #TODO: consider combining the two loops into one
 
-    for b_meta in gutenberg_book_metadata:
+    for b_meta in gutenberg_book_metadata_list:
         books_to_download.append({
             "title": b_meta["title"],
             "authors": "; ".join([author["name"] for author in b_meta["authors"]]), # type: ignore
@@ -52,7 +52,7 @@ def main() -> None:
                             api_version="2024-12-01-preview",
                             api_key=sett.AZ_OPENAI_EMBED_KEY)
 
-    for b in tqdm(books_to_download[:3]):
+    for b in tqdm(books_to_download):
         b["book_key"] = make_slug_book_key(title=b["title"],            # type: ignore
                                    gutenberg_id=b["gb_id"],             # type: ignore
                                    author=b["authors"],                 # type: ignore

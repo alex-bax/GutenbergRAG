@@ -89,42 +89,40 @@ def is_book_in_index(*, search_client:SearchClient, book_key:str) :
 
 
 def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, book:dict[str,str]) -> list[ChapterDBItem]:
-    book_html_str = download_or_load_from_cache(book_key=book["book_key"], url=book["url"])
+    raw_book_str = download_or_load_from_cache(book_key=book["book_key"], url=book["url"])
     
-    chapters = (html_book=book_html_str) #extract_chapters(book_txt=book)
-    if len(chapters) == 0:      # Html extraction empty
-        print(f'INFO No html extracted - skip {book["title"]}')
+    book_str = extract_txt(raw_book=raw_book_str) #extract_chapters(book_txt=book)
+    if len(book_str) == 0:      
+        print(f'INFO No book string extracted --- skip {book["title"]}')
         return []
 
     docs:list[dict] = []
     vector_items_added = []
 
-    for i, (ch_num_k, html_chapter) in enumerate(chapters.items(), start=1):
-        chunks = fixed_size_chunks(text=html_chapter.content)
-        
-        embeddings = create_embeddings(embed_client=embed_client, 
+    chunks = fixed_size_chunks(text=book_str)
+    embeddings = create_embeddings(embed_client=embed_client, 
                                                 model_deployed="text-embedding-3-small",
                                                 texts=chunks)
         
-        assert len(chunks) == len(embeddings)
+    assert len(chunks) == len(embeddings)
 
-        for chunk, emb_vec in zip(chunks, embeddings):
-            chapter_item = ChapterDBItem(
-                id_str= str(uuid.uuid4()),
-                book_name= book["title"],
-                book_key= book["book_key"],
-                chunk_id= i,
-                content= chunk,
-                content_vector= EmbeddingVec(vector=emb_vec, dim=EmbeddingDimension.SMALL)
-            )
-            
-            docs.append(chapter_item.to_dict())
-            vector_items_added.append(chapter_item)
+    for i, (chunk, emb_vec) in enumerate(zip(chunks, embeddings)):
+        chapter_item = ChapterDBItem(
+            id_str= str(uuid.uuid4()),
+            book_name= book["title"],
+            book_key= book["book_key"],
+            chunk_id= i,
+            content= chunk,
+            content_vector= emb_vec
+        )
+        
+        docs.append(chapter_item.to_dict())
+        vector_items_added.append(chapter_item)
 
-        # upload after each chapter, max in batches of ~100 to keep payload small
-        search_client.upload_documents(docs)
-        if len(docs) >= 100:
-            docs.clear()
+    # upload after each chapter, max in batches of ~100 to keep payload small
+    search_client.upload_documents(docs)
+    if len(docs) >= 100:
+        docs.clear()
 
     return vector_items_added
 

@@ -1,9 +1,8 @@
 import re, unicodedata
 from openai import AzureOpenAI
-from bs4 import BeautifulSoup, ResultSet, Tag
 from pathlib import Path
-from data_classes.html_chapter import HtmlChapter
-
+from data_classes.vector_db import EmbeddingVec
+from constants import EmbeddingDimension
 
 def extract_txt(*, raw_book: str) -> str:
     start_match = re.search(pattern=r'\*\*\*\s?START OF TH(IS|E) PROJECT GUTENBERG EBOOK.', string=raw_book)
@@ -29,14 +28,14 @@ def extract_txt(*, raw_book: str) -> str:
 #     return extr_html_chs
 
 
-def create_embeddings(*, embed_client:AzureOpenAI, model_deployed:str, texts:list[str]) -> list[list[float]]:
+def create_embeddings(*, embed_client:AzureOpenAI, model_deployed:str, texts:list[str]) -> list[EmbeddingVec]:
     resp = embed_client.embeddings.create(
         input=texts,
         model=model_deployed
     )
 
-    embeddings = [emb_obj.embedding for emb_obj in resp.data]
-    return embeddings
+    return [EmbeddingVec(vector=emb_obj.embedding, dim=EmbeddingDimension.SMALL) for emb_obj in resp.data]
+    
 
 
 def _norm(s: str) -> str:
