@@ -14,11 +14,11 @@ def _search_chunks(*, query: str,
                   embed_client:AzureOpenAI, 
                   embed_model_deployed:str, k=5) -> list[dict[str, Any]]:
     
-    query_emb_vec = create_embeddings(texts=[query], 
-                              embed_client=embed_client, 
-                              model_deployed=embed_model_deployed)[0]
+    query_emb_vec = create_embeddings(batches=[query], 
+                                        embed_client=embed_client, 
+                                        model_deployed=embed_model_deployed)[0]
     
-    vec_q = VectorizedQuery(vector=query_emb_vec, k_nearest_neighbors=40, fields="contentVector")
+    vec_q = VectorizedQuery(vector=query_emb_vec.vector, k_nearest_neighbors=40, fields="contentVector")
 
     results:ItemPaged = search_client.search(
         search_text=query,                         # hybrid: BM25 + vector

@@ -1,5 +1,7 @@
 from dotenv import load_dotenv
+from tqdm import tqdm
 from openai import AzureOpenAI
+from pyrate_limiter import Limiter, Rate, Duration
 
 from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
@@ -10,10 +12,19 @@ from search_handler import create_missing_search_index, is_book_in_index, upload
 from retrieve import answer
 from settings import get_settings
 from load_book import gutendex_book_urls
-from tqdm import tqdm
+
+from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN
 
 # TODO: add hyper params to settings
 # TODO: split entire app into ingestion / retrieval
+
+def _make_limiters() -> list[Limiter]:
+    REQ_LIMIT = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
+    TOK_LIMIT = Rate(TOKEN_PR_MIN, Duration.MINUTE)                 # 501,000 tokens per minute
+
+    req_limiter = Limiter(REQ_LIMIT)
+    tok_limiter = Limiter(TOK_LIMIT)
+    return [req_limiter, tok_limiter]
 
 
 def main() -> None:
@@ -52,6 +63,8 @@ def main() -> None:
                             api_version="2024-12-01-preview",
                             api_key=sett.AZ_OPENAI_EMBED_KEY)
 
+    req_limiter, tok_limiter = _make_limiters()
+
     for b in tqdm(books_to_download):
         b["book_key"] = make_slug_book_key(title=b["title"],            # type: ignore
                                         gutenberg_id=b["gb_id"],        # type: ignore
@@ -62,7 +75,9 @@ def main() -> None:
 
             chapters_added = upload_to_index(search_client=search_client, 
                                             embed_client=emb_client,
-                                            book=b                  # type:ignore
+                                            book=b,                  # type:ignore
+                                            token_limiter=tok_limiter,
+                                            request_limiter=req_limiter
                                             )
         else:
             print(f"\n Already in index {INDEX} - {b['title']}")

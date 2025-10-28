@@ -1,4 +1,4 @@
-import backoff
+import backoff, time
 from pathlib import Path
 import re, unicodedata, tiktoken
 from openai import AzureOpenAI
@@ -7,6 +7,10 @@ from tiktoken import Encoding
 
 from data_classes.vector_db import EmbeddingVec
 from constants import EmbeddingDimension, MAX_TOKENS, OVERLAP
+from openai import RateLimitError
+from data_classes.vector_db import EmbeddingVec
+from pyrate_limiter import Duration, Rate, Limiter, BucketFullException
+from constants import REQUESTS_PR_MIN, TOKEN_PR_MIN
 
 def extract_txt(*, raw_book: str) -> str:
     start_match = re.search(pattern=r'\*\*\*\s?START OF TH(IS|E) PROJECT GUTENBERG EBOOK.', string=raw_book)
@@ -15,10 +19,12 @@ def extract_txt(*, raw_book: str) -> str:
     return raw_book[start_match.end():end_match.start()] if start_match and end_match else ""
 
 
-@backoff.on_exception(backoff.expo, RateLimitError, max_time=120, max_tries=6)
-def create_embeddings(*, embed_client:AzureOpenAI, model_deployed:str, texts:list[str]) -> list[EmbeddingVec]:
+@backoff.on_exception(wait_gen=backoff.expo, exception=RateLimitError, max_time=120, max_tries=6)
+def create_embeddings(*, embed_client:AzureOpenAI, 
+                       model_deployed:str, 
+                       batches:list[str]) -> list[EmbeddingVec]:
     resp = embed_client.embeddings.create(
-        input=texts,
+        input=batches,
         model=model_deployed,
     )
     return [EmbeddingVec(vector=emb_obj.embedding, dim=EmbeddingDimension.SMALL) for emb_obj in resp.data]
@@ -27,8 +33,8 @@ def create_embeddings(*, embed_client:AzureOpenAI, model_deployed:str, texts:lis
 def _count_tokens(text: str, enc:Encoding) -> int:
     return len(enc.encode(text))
 
-def _batch_texts_by_tokens(texts: list[str],
-                           max_tokens_per_request: int=MAX_TOKENS) -> list[list[str]]:
+def batch_texts_by_tokens(*, texts: list[str],
+                            max_tokens_per_request: int=MAX_TOKENS) -> list[list[str]]:
     """
     Greedily packs texts into batches so that the sum of tokens per batch
     stays under max_tokens_per_request.
@@ -50,6 +56,42 @@ def _batch_texts_by_tokens(texts: list[str],
     return batches
 
 
+def _acquire_budget(*, tok_limiter:Limiter, req_limiter:Limiter, tokens_needed: int, identity: str = "embeddings"):
+    """Block until both request and token budgets allow the call."""
+    while True:
+        try:
+            tok_limiter.try_acquire(f"{identity}_tpm", weight=tokens_needed)        # weight is amount to minus from 'total' tries amount
+            req_limiter.try_acquire(f"{identity}_rpm", weight=1)
+            return  # budget allowed
+        except BucketFullException as ex:
+            sleep_interval_secs = float(ex.rate.interval) / 1000
+            print(f"** Exceeding budget - sleeping {sleep_interval_secs} secs")
+            time.sleep(sleep_interval_secs)                                              # sleep as long as the limiter suggests
+            
+
+def limiter_create_embeddings(*, embed_client:AzureOpenAI, 
+                              model_deployed: str, 
+                              inp_batches: list[list[str]], 
+                              tok_limiter:Limiter, 
+                              req_limiter:Limiter) -> list[EmbeddingVec]:
+    """Call Azure embeddings with built-in rate limiting and graceful backoff."""
+    all_embeddings = []
+    enc_ = tiktoken.get_encoding("cl100k_base")
+
+    for batch in inp_batches:
+        tokens_needed = sum([_count_tokens(chunk, enc=enc_) for chunk in batch])
+        print(f'tokens needed from limiter: {tokens_needed}')
+        _acquire_budget(tok_limiter=tok_limiter, 
+                        req_limiter=req_limiter, 
+                        tokens_needed=tokens_needed)              # proactive pacing
+        
+        embs = create_embeddings(embed_client=embed_client, 
+                                  model_deployed=model_deployed, 
+                                  batches=batch)
+        
+        all_embeddings.extend(embs)
+        
+    return all_embeddings
 
 
 def _norm(s: str) -> str:

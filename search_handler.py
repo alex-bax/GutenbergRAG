@@ -9,11 +9,12 @@ from azure.search.documents.indexes.models import (
     VectorSearch, HnswAlgorithmConfiguration, VectorSearchProfile, ExhaustiveKnnAlgorithmConfiguration,
     SemanticSearch, SemanticField, SemanticConfiguration, SemanticPrioritizedFields # type: ignore
 )
+from pyrate_limiter import Limiter
 from openai import AzureOpenAI
 
 from load_book import download_or_load_from_cache
 from constants import EmbeddingDimension
-from preprocess_book import create_embeddings, make_slug_book_key, extract_txt
+from preprocess_book import make_slug_book_key, extract_txt, limiter_create_embeddings, batch_texts_by_tokens
 from chunking import fixed_size_chunks
 from settings import get_settings
 from data_classes.vector_db import EmbeddingVec, ChapterDBItem
@@ -88,7 +89,12 @@ def is_book_in_index(*, search_client:SearchClient, book_key:str) :
     return any(True for _ in list(resp))   # type:ignore
 
 
-def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, book:dict[str,str]) -> list[ChapterDBItem]:
+def upload_to_index(*, search_client:SearchClient, 
+                    embed_client:AzureOpenAI, 
+                    book:dict[str,str],
+                    token_limiter:Limiter,
+                    request_limiter:Limiter) -> list[ChapterDBItem]:
+    sett = get_settings()
     raw_book_str = download_or_load_from_cache(book_key=book["book_key"], url=book["url"])
     
     book_str = extract_txt(raw_book=raw_book_str) #extract_chapters(book_txt=book)
@@ -100,11 +106,20 @@ def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, boo
     vector_items_added = []
 
     chunks = fixed_size_chunks(text=book_str)
+    batches = batch_texts_by_tokens(texts=chunks)
 
-    print(f'{len(chunks)} # txts with lens {[len(ch) for ch in chunks]}')
-    embeddings = create_embeddings(embed_client=embed_client, 
-                                                model_deployed="text-embedding-3-small",
-                                                texts=chunks)
+    # print(f'{len(chunks)} # txts with lens {[len(ch) for ch in chunks]}')
+    # embeddings = create_embeddings(embed_client=embed_client, 
+    #                                             model_deployed="text-embedding-3-small",
+    #                                             texts=chunks)
+
+    embeddings = limiter_create_embeddings(embed_client=embed_client, 
+                                            model_deployed=sett.EMBED_MODEL_DEPOYED,
+                                            inp_batches=batches,
+                                            tok_limiter=token_limiter,
+                                            req_limiter=request_limiter
+                                            )
+                    
         
     assert len(chunks) == len(embeddings)
 
