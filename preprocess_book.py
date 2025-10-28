@@ -81,7 +81,7 @@ def _acquire_budget(*, tok_limiter:Limiter, req_limiter:Limiter, tokens_needed: 
             time.sleep(sleep_interval_secs)                                              # sleep as long as the limiter suggests
             
 
-async def limiter_create_embeddings_async(*, embed_client:AzureOpenAI, 
+async def create_embeddings_async(*, embed_client:AzureOpenAI, 
                               model_deployed: str, 
                               inp_batches: list[list[str]], 
                               tok_limiter:Limiter, 
@@ -92,7 +92,7 @@ async def limiter_create_embeddings_async(*, embed_client:AzureOpenAI,
 
     for batch in inp_batches:
         tokens_needed = sum([_count_tokens(chunk, enc=enc_) for chunk in batch])
-        print(f'tokens needed from limiter: {tokens_needed}')
+        print(f'\ntokens needed from limiter: {tokens_needed}')
         # _acquire_budget(tok_limiter=tok_limiter, 
         #                 req_limiter=req_limiter, 
         #                 tokens_needed=tokens_needed)              # proactive pacing

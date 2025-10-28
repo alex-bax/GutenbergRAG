@@ -14,12 +14,11 @@ from openai import AzureOpenAI
 
 from load_book import download_or_load_from_cache
 from constants import EmbeddingDimension
-from preprocess_book import make_slug_book_key, extract_txt, limiter_create_embeddings_async, batch_texts_by_tokens
+from preprocess_book import make_slug_book_key, extract_txt, create_embeddings_async, batch_texts_by_tokens
 from chunking import fixed_size_chunks
 from settings import get_settings
 from data_classes.vector_db import EmbeddingVec, ChapterDBItem
 
-# TODO: use Pydantic Settings obj
 
 def _get_index_fields() -> list[SearchField]:
     return [
@@ -108,18 +107,12 @@ async def upload_to_index_async(*, search_client:SearchClient,
     chunks = fixed_size_chunks(text=book_str)
     batches = batch_texts_by_tokens(texts=chunks)
 
-    # print(f'{len(chunks)} # txts with lens {[len(ch) for ch in chunks]}')
-    # embeddings = create_embeddings(embed_client=embed_client, 
-    #                                             model_deployed="text-embedding-3-small",
-    #                                             texts=chunks)
-
-    embeddings = await limiter_create_embeddings_async(embed_client=embed_client, 
+    embeddings = await create_embeddings_async(embed_client=embed_client, 
                                             model_deployed=sett.EMBED_MODEL_DEPOYED,
                                             inp_batches=batches,
                                             tok_limiter=token_limiter,
                                             req_limiter=request_limiter
                                             )
-                    
         
     assert len(chunks) == len(embeddings)
 
