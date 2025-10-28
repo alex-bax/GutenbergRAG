@@ -1,7 +1,9 @@
 from enum import Enum
 
-MAX_TOKENS = 600
-OVERLAP = 60
+MAX_TOKENS = 8000
+OVERLAP = 100
+TOKEN_PR_MIN = 501_000
+REQUESTS_PR_MIN = 3000
 
 class EmbeddingDimension(int, Enum):
     SMALL = 1536

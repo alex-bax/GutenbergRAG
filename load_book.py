@@ -12,7 +12,7 @@ def _fetch_book(*, download_url="https://www.gutenberg.org/cache/epub/2701/pg270
 
 
 
-def gutendex_book_urls(*, n=25, languages:list[str]=["en"], text_format="text/html") -> list[dict[str, str|int]]:
+def gutendex_book_urls(*, n=25, languages:list[str]=["en"], text_format="text/html") -> list[dict[str, str|int|list[str]]]:
     out = []
     txt_url = "https://gutendex.com/books"
     params = {"languages": ",".join(languages)}

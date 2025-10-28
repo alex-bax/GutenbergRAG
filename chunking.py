@@ -35,15 +35,6 @@ def token_chunking(*, txt:str, chunk_size=600, overlap=60, encoding="cl100k_base
     
     return token_chunks
 
-    # enc = tiktoken.get_encoding(encoding)
-    # token_ids = enc.encode(txt)
-    # step = max_tokens - overlap
-    # decoded_chunks = []
 
-    # for i in range(0, len(token_ids), step):
-    #     token = enc.decode(token_ids[i:i+max_tokens])
-    #     decoded_chunks.append(token)
-    
-    # return decoded_chunks, token_ids
 
 

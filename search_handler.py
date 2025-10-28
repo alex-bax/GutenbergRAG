@@ -100,6 +100,8 @@ def upload_to_index(*, search_client:SearchClient, embed_client:AzureOpenAI, boo
     vector_items_added = []
 
     chunks = fixed_size_chunks(text=book_str)
+
+    print(f'{len(chunks)} # txts with lens {[len(ch) for ch in chunks]}')
     embeddings = create_embeddings(embed_client=embed_client, 
                                                 model_deployed="text-embedding-3-small",
                                                 texts=chunks)

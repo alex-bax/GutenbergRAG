@@ -5,6 +5,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # TODO: add input extention type, e.g. whether it's html, txt, etc.
         # TODO: for each extraction type, use a different pre-processing with Strategy design pattern
 
+# Initializes fields via .env file
+
 class Settings(BaseSettings):
     AZURE_SEARCH_ENDPOINT: str
     AZURE_SEARCH_KEY: str
@@ -19,6 +21,8 @@ class Settings(BaseSettings):
     AZ_OPENAI_GPT_KEY: str
 
     INDEX_NAME: str = "moby"
+
+    EMBED_MODEL_DEPOYED: str
 
     model_config = SettingsConfigDict(
         env_file=".env",  # local dev

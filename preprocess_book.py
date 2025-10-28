@@ -1,10 +1,12 @@
 import backoff
-import re, unicodedata
+from pathlib import Path
+import re, unicodedata, tiktoken
 from openai import AzureOpenAI
 from openai._exceptions import RateLimitError
-from pathlib import Path
+from tiktoken import Encoding
+
 from data_classes.vector_db import EmbeddingVec
-from constants import EmbeddingDimension
+from constants import EmbeddingDimension, MAX_TOKENS, OVERLAP
 
 def extract_txt(*, raw_book: str) -> str:
     start_match = re.search(pattern=r'\*\*\*\s?START OF TH(IS|E) PROJECT GUTENBERG EBOOK.', string=raw_book)
@@ -12,34 +14,42 @@ def extract_txt(*, raw_book: str) -> str:
 
     return raw_book[start_match.end():end_match.start()] if start_match and end_match else ""
 
-# def extract_html(*, html_book:str) -> dict[int, HtmlChapter]:
-#     bs = BeautifulSoup(markup=html_book, features="lxml")
-#     chapters:ResultSet[Tag] = bs.find_all(attrs={"class": "chapter"})
 
-#     if len(chapters) == 0:
-#         # TODO: book doesn't use chapter structure - instead use href-approach
-        
-
-#         return {}
-
-#     extr_html_chs = {}
-#     for i, ch in enumerate(chapters, start=0):
-#         txt = ch.get_text(separator=" ", strip=True)
-#         extr_html_chs[i] = HtmlChapter(content=txt, tag=ch.name, attrs=ch.attrs)        # type:ignore ; 0th chapter is often the contents table or similar
-
-#     return extr_html_chs
-
-
-@backoff.on_exception(backoff.expo, RateLimitError, max_time=60, max_tries=6)
+@backoff.on_exception(backoff.expo, RateLimitError, max_time=120, max_tries=6)
 def create_embeddings(*, embed_client:AzureOpenAI, model_deployed:str, texts:list[str]) -> list[EmbeddingVec]:
     resp = embed_client.embeddings.create(
         input=texts,
         model=model_deployed,
-        
     )
-
     return [EmbeddingVec(vector=emb_obj.embedding, dim=EmbeddingDimension.SMALL) for emb_obj in resp.data]
+
+
+def _count_tokens(text: str, enc:Encoding) -> int:
+    return len(enc.encode(text))
+
+def _batch_texts_by_tokens(texts: list[str],
+                           max_tokens_per_request: int=MAX_TOKENS) -> list[list[str]]:
+    """
+    Greedily packs texts into batches so that the sum of tokens per batch
+    stays under max_tokens_per_request.
+    """
+    enc = tiktoken.get_encoding("cl100k_base")
+    batches, current, sum_current_tokens = [], [], 0
+    for t in texts:
+        token_len = _count_tokens(t, enc)
+        if current and sum_current_tokens + token_len > max_tokens_per_request:
+            batches.append(current)
+            current, sum_current_tokens = [t], token_len
+        else:
+            current.append(t)
+            sum_current_tokens += token_len
     
+    if current:
+        batches.append(current)
+
+    return batches
+
+
 
 
 def _norm(s: str) -> str:
