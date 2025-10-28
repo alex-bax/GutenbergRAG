@@ -8,5 +8,9 @@ pydantic-settings
 python-dotenv
 tqdm
 
+pyrate_limiter
+asyncio
+backoff
+
 langchain-text-splitters
 langchain-core
