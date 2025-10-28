@@ -1,14 +1,15 @@
+import asyncio
 from dotenv import load_dotenv
 from tqdm import tqdm
 from openai import AzureOpenAI
-from pyrate_limiter import Limiter, Rate, Duration
+from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
 
 from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 
 from preprocess_book import make_slug_book_key
-from search_handler import create_missing_search_index, is_book_in_index, upload_to_index
+from search_handler import create_missing_search_index, is_book_in_index, upload_to_index_async
 from retrieve import answer
 from settings import get_settings
 from load_book import gutendex_book_urls
@@ -19,15 +20,22 @@ from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN
 # TODO: split entire app into ingestion / retrieval
 
 def _make_limiters() -> list[Limiter]:
-    REQ_LIMIT = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
-    TOK_LIMIT = Rate(TOKEN_PR_MIN, Duration.MINUTE)                 # 501,000 tokens per minute
+    REQ_RATE = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
+    TOK_RATE = Rate(TOKEN_PR_MIN, Duration.MINUTE)                 # 501,000 tokens per minute
 
-    req_limiter = Limiter(REQ_LIMIT)
-    tok_limiter = Limiter(TOK_LIMIT)
+    req_bucket = BucketAsyncWrapper(InMemoryBucket([REQ_RATE]))
+    tok_bucket = BucketAsyncWrapper(InMemoryBucket([TOK_RATE]))
+    
+    tok_limiter = Limiter(tok_bucket)
+    req_limiter = Limiter(req_bucket)
+
+    # req_limiter = Limiter(REQ_RATE)
+    # tok_limiter = Limiter(TOK_RATE)
+
     return [req_limiter, tok_limiter]
 
 
-def main() -> None:
+async def main() -> None:
     ### Ingestion
     sett = get_settings()
     
@@ -73,7 +81,7 @@ def main() -> None:
 
         if not is_book_in_index(search_client=search_client, book_key=b["book_key"]):
 
-            chapters_added = upload_to_index(search_client=search_client, 
+            chapters_added = await upload_to_index_async(search_client=search_client, 
                                             embed_client=emb_client,
                                             book=b,                  # type:ignore
                                             token_limiter=tok_limiter,
@@ -94,6 +102,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 

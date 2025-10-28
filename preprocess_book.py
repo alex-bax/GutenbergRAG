@@ -1,4 +1,4 @@
-import backoff, time
+import backoff, time, asyncio
 from pathlib import Path
 import re, unicodedata, tiktoken
 from openai import AzureOpenAI
@@ -55,6 +55,18 @@ def batch_texts_by_tokens(*, texts: list[str],
 
     return batches
 
+async def _acquire_budget_async(*, tok_limiter:Limiter, req_limiter:Limiter, tokens_needed: int, identity: str = "embeddings"):
+    """Non-blocking: awaits until both token & request budgets allow the call."""
+    while True:
+        try:
+            await tok_limiter.try_acquire_async(f"{identity}_tpm", weight=tokens_needed)
+            await req_limiter.try_acquire_async(f"{identity}_rpm", weight=1)
+            return  # allowed
+        except BucketFullException as ex:
+            sleep_interval_secs = float(ex.rate.interval) / 1000        # precise wait suggested by the limiter
+            print(f"** Exceeding budget - async sleeping {sleep_interval_secs} secs")
+            await asyncio.sleep(sleep_interval_secs)
+
 
 def _acquire_budget(*, tok_limiter:Limiter, req_limiter:Limiter, tokens_needed: int, identity: str = "embeddings"):
     """Block until both request and token budgets allow the call."""
@@ -69,7 +81,7 @@ def _acquire_budget(*, tok_limiter:Limiter, req_limiter:Limiter, tokens_needed: 
             time.sleep(sleep_interval_secs)                                              # sleep as long as the limiter suggests
             
 
-def limiter_create_embeddings(*, embed_client:AzureOpenAI, 
+async def limiter_create_embeddings_async(*, embed_client:AzureOpenAI, 
                               model_deployed: str, 
                               inp_batches: list[list[str]], 
                               tok_limiter:Limiter, 
@@ -81,10 +93,14 @@ def limiter_create_embeddings(*, embed_client:AzureOpenAI,
     for batch in inp_batches:
         tokens_needed = sum([_count_tokens(chunk, enc=enc_) for chunk in batch])
         print(f'tokens needed from limiter: {tokens_needed}')
-        _acquire_budget(tok_limiter=tok_limiter, 
-                        req_limiter=req_limiter, 
-                        tokens_needed=tokens_needed)              # proactive pacing
+        # _acquire_budget(tok_limiter=tok_limiter, 
+        #                 req_limiter=req_limiter, 
+        #                 tokens_needed=tokens_needed)              # proactive pacing
         
+        await _acquire_budget_async(tok_limiter=tok_limiter, 
+                            req_limiter=req_limiter, 
+                            tokens_needed=tokens_needed) 
+
         embs = create_embeddings(embed_client=embed_client, 
                                   model_deployed=model_deployed, 
                                   batches=batch)

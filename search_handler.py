@@ -14,7 +14,7 @@ from openai import AzureOpenAI
 
 from load_book import download_or_load_from_cache
 from constants import EmbeddingDimension
-from preprocess_book import make_slug_book_key, extract_txt, limiter_create_embeddings, batch_texts_by_tokens
+from preprocess_book import make_slug_book_key, extract_txt, limiter_create_embeddings_async, batch_texts_by_tokens
 from chunking import fixed_size_chunks
 from settings import get_settings
 from data_classes.vector_db import EmbeddingVec, ChapterDBItem
@@ -89,7 +89,7 @@ def is_book_in_index(*, search_client:SearchClient, book_key:str) :
     return any(True for _ in list(resp))   # type:ignore
 
 
-def upload_to_index(*, search_client:SearchClient, 
+async def upload_to_index_async(*, search_client:SearchClient, 
                     embed_client:AzureOpenAI, 
                     book:dict[str,str],
                     token_limiter:Limiter,
@@ -113,7 +113,7 @@ def upload_to_index(*, search_client:SearchClient,
     #                                             model_deployed="text-embedding-3-small",
     #                                             texts=chunks)
 
-    embeddings = limiter_create_embeddings(embed_client=embed_client, 
+    embeddings = await limiter_create_embeddings_async(embed_client=embed_client, 
                                             model_deployed=sett.EMBED_MODEL_DEPOYED,
                                             inp_batches=batches,
                                             tok_limiter=token_limiter,
