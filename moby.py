@@ -35,7 +35,8 @@ def _make_limiters() -> list[Limiter]:
     return [req_limiter, tok_limiter]
 
 
-async def main() -> None:
+
+async def main_moby() -> None:
     ### Ingestion
     sett = get_settings()
     
@@ -102,6 +103,6 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main_moby())
 
 

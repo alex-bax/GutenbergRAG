@@ -31,6 +31,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # Postgres DB
+    DB_NAME:str
+    DB_PW:str
+    DB_PORT:int
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()       # type:ignore

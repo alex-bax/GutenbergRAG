@@ -12,5 +12,11 @@ pyrate_limiter
 asyncio
 backoff
 
+fastapi
+sqlmodel
+sqlalchemy
+psycopg2
+# uvicorn[standard]
+
 langchain-text-splitters
 langchain-core
