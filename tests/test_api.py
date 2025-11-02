@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, Callable, Any
 from fastapi import status, APIRouter
 from fastapi.testclient import TestClient
 from database import Base
@@ -20,6 +20,35 @@ engine = create_engine(TEST_DB_URL,     # the extra params ensure that all sessi
                        poolclass=StaticPool
                     )
 TestingSessionLocal = sessionmaker(autoflush=False, autocommit=False, bind=engine)
+
+@pytest.fixture
+def book_factory(db_session: Session) -> Callable[..., Book]: 
+    """
+    Create and persist Book rows with having defaults.
+    Returns the callable (i.e. function that creates the Book)
+    Usage:
+        book = book_factory(title="Custom")
+    """
+    created: list[Book] = []
+
+    def _create(**overrides: Any) -> Book:
+        defaults: dict[str, Any] = {
+            "title": "Test book",
+            "authors": "Frank Herman",
+            "lang": "en",
+            "slug_key": "x",
+        }
+        merged = defaults | overrides
+        obj = Book(**merged)
+        
+        db_session.add(obj)
+        db_session.commit()   # commit so the app (same engine) can read it
+        db_session.refresh(obj)
+        created.append(obj)
+        return obj
+    
+    return _create
+
 
 @pytest.fixture(scope="session", autouse=True)
 def create_test_schema():
@@ -49,21 +78,20 @@ def client(db_session:Session):
             pass
 
     app.dependency_overrides[get_db] = _override_get_db
-    with TestClient(app) as c:
-        yield c
+    with TestClient(app) as tc:
+        yield tc
     app.dependency_overrides.clear()
 
-def test_get_book(client: TestClient):
-    # Must insert the expected book before retrieving it
-    session: Session = TestingSessionLocal()
-    session.add(Book(id=4, authors="Frank Herman", title="Test book", lang="en", slug_key="x"))
-    session.commit()
-    session.close()
+def test_get_book(client: TestClient, book_factory):
+    # Must insert the expected book before getting it
+    book = book_factory(id=4)
 
-    resp = client.get("/v1/books/4")
+    resp = client.get(f"/v1/books/{book.id}")
     assert resp.status_code == status.HTTP_200_OK, resp.text
     data = resp.json()
     assert data["authors"] == "Frank Herman"
     assert "id" in data
+
+
 
 
