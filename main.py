@@ -16,6 +16,7 @@ prefix_router = APIRouter(prefix="/v1")
 schema.Base.metadata.create_all(bind=engine)        # creates the DB tables
 
 class BookBase(BaseModel):
+    id: int
     title: str
     authors: str #list[str]
     lang:Literal["en", "da", "de"] = Field(..., description="Language the book is written")

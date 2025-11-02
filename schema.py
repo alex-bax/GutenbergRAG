@@ -1,5 +1,6 @@
 from database import Base
 from sqlalchemy import Column, Integer, String, TIMESTAMP, text
+from sqlalchemy.sql import func
 
 # table=True means this class represent DB table
 class Book(Base):
@@ -11,6 +12,6 @@ class Book(Base):
     slug_key = Column(String, nullable=False)
     lang = Column(String, nullable=False)
     # content = Column(String,nullable=False)
-    created_at = Column(TIMESTAMP(timezone=True), server_default=text('now()'))
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 # TODO: add inheritance, refactor class 
