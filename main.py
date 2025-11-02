@@ -12,6 +12,7 @@ import uvicorn
 app = FastAPI(title="MobyRAG")
 prefix_router = APIRouter(prefix="/v1")
 
+
 schema.Base.metadata.create_all(bind=engine)        # creates the DB tables
 
 class BookBase(BaseModel):
@@ -55,7 +56,8 @@ async def get_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
 async def get_books(db:Annotated[Session, Depends(get_db)]):
     stmt = select(schema.Book)
     res = db.execute(stmt)
-    books = res.all()
+    book_rows = res.all()       # -> X [(<schema.Book object at 0x0000019D638986E0>,)]
+    books = [b[0] for b in book_rows]
     return books
 
 @prefix_router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -16,6 +16,8 @@ fastapi
 sqlmodel
 sqlalchemy
 psycopg2
+httpx
+pytest
 # uvicorn[standard]
 
 langchain-text-splitters
