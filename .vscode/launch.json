@@ -11,14 +11,6 @@
             "request": "launch",
             "program": "${workspaceFolder}/moby.py",
             "console": "integratedTerminal"
-        },
-          {
-            "name": "Python Debug - moby.py",
-            "justMyCode": false,
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/moby.py",
-            "console": "integratedTerminal"
         }
     
     ]

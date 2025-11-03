@@ -35,7 +35,7 @@ def select_books_like(title:str|None, authors:str|None, lang:str|None, db_sess:S
         conditions.append(or_(*[DBBook.authors.ilike(f"%{a}%") for a in authors.split(";")]))
  
     if conditions:
-        stmt.where(and_(*conditions))
+        stmt = stmt.where(and_(*conditions))
     
     res = db_sess.execute(stmt)
     
