@@ -86,6 +86,8 @@ async def remove_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
 
 app.include_router(prefix_router)
     
+# TODO: list all docs from a book, and paginate the results
+# @prefix_router.get("")
 
 
 if __name__ == "__main__":
