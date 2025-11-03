@@ -107,45 +107,39 @@ def test_get_book(client: TestClient, book_factory):
     assert "id" in data
 
 
-@pytest.fixture(params=[("Moby Dick", "Herman Melville"),
-                        ("moby", ""),
-                        (None, "melville")
-                        ])
-def book_data(request):
-    title, author = request.param
-    return {"title": title, "authors": author}
-
-def test_search_book(client: TestClient, book_data, book_factory):
+moby = {"title":"Moby Dick", "authors":"Herman Melville"}
+@pytest.mark.parametrize("inp_url, expected", [
+                                                (f"/{VER_PREFIX}/books/search?authors=Herman Melville&title=Moby Dick", [moby]),
+                                                (f"/{VER_PREFIX}/books/search?title=moby", [moby]),
+                                                (f"/{VER_PREFIX}/books/search?authors=melvil", [moby]),
+                                                (f"/{VER_PREFIX}/books/search?title=Unknown book", []),
+                                                (f"/{VER_PREFIX}/books/search?title=Frankenstein&authors=HC Andersen", []),
+                                            ])
+def test_search_book(inp_url, expected, client: TestClient, book_factory):
     title = "Moby Dick"
     book = book_factory(id=3, title=title, authors="Herman Melville")
 
-    url = f"/{VER_PREFIX}/books/search"
-    
-    for param in ["title", "authors"]:
-        if book_data[param]:
-            url = _append_to_url(url, f"{param}={book_data[param]}")
-        
-    print(f'final url: {url}')
-    resp = client.get(url)
+    resp = client.get(inp_url)
 
     assert resp.status_code == status.HTTP_200_OK
     books_found = resp.json()
-    assert len(books_found) == 1, len(books_found)
-    assert books_found[0]["title"] == title, title
+    assert len(books_found) == len(expected), len(expected)
+    if len(expected) > 0:
+        assert books_found[0]["title"] == expected[0]["title"], title
 
 
-
-@pytest.mark.parametrize("test_inp, expected", [(f"/{VER_PREFIX}/books/search?title=Unknown book", []),
+@pytest.mark.parametrize("inp_url, expected", [(f"/{VER_PREFIX}/books/search?title=Unknown book", []),
                                                 (f"/{VER_PREFIX}/books/search?title=Frankenstein&authors=HC Andersen", []),
                                                 (f"/{VER_PREFIX}/books/search?authors=No", status.HTTP_422_UNPROCESSABLE_CONTENT )])
-def test_fail_search_book(test_inp, expected, client:TestClient, book_factory):
+def test_fail_search_book(inp_url, expected, client:TestClient, book_factory):
     title = "Moby Dick"
     book = book_factory(id=3, title=title, authors="Herman Melville")
 
-    resp = client.get(test_inp)
-    books_found = resp.json()
+    resp = client.get(inp_url)
+    books_found:list = resp.json()
 
-    books_found = expected
+    assert len(expected) == len(books_found)
+    
 
 
 
