@@ -1,12 +1,12 @@
 from typing import Iterator, Callable, Any
 from fastapi import status, APIRouter
 from fastapi.testclient import TestClient
-from database import Base
+from db.database import Base
 from main import app, get_db
 from sqlalchemy import create_engine, StaticPool
 from sqlalchemy.orm import sessionmaker, Session
 import pytest
-from schema import Book
+from db.schema import DBBook
 
 # prefix_router = APIRouter(prefix="/v1")
 # app.include_router(prefix_router)
@@ -22,16 +22,16 @@ engine = create_engine(TEST_DB_URL,     # the extra params ensure that all sessi
 TestingSessionLocal = sessionmaker(autoflush=False, autocommit=False, bind=engine)
 
 @pytest.fixture
-def book_factory(db_session: Session) -> Callable[..., Book]: 
+def book_factory(db_session: Session) -> Callable[..., DBBook]: 
     """
     Create and persist Book rows with having defaults.
     Returns the callable (i.e. function that creates the Book)
     Usage:
         book = book_factory(title="Custom")
     """
-    created: list[Book] = []
+    created: list[DBBook] = []
 
-    def _create(**overrides: Any) -> Book:
+    def _create(**overrides: Any) -> DBBook:
         defaults: dict[str, Any] = {
             "title": "Test book",
             "authors": "Frank Herman",
@@ -39,7 +39,7 @@ def book_factory(db_session: Session) -> Callable[..., Book]:
             "slug_key": "x",
         }
         merged = defaults | overrides
-        obj = Book(**merged)
+        obj = DBBook(**merged)
         
         db_session.add(obj)
         db_session.commit()   # commit so the app (same engine) can read it

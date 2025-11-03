@@ -1,9 +1,9 @@
-from database import Base
+from db.database import Base
 from sqlalchemy import Column, Integer, String, TIMESTAMP, text
 from sqlalchemy.sql import func
 
 # table=True means this class represent DB table
-class Book(Base):
+class DBBook(Base):
     __tablename__ = "metaDataBook"
 
     id = Column(Integer,primary_key=True,nullable=False)
