@@ -1,13 +1,13 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Optional
 import psycopg2
 import uvicorn
 
 from sqlalchemy import select, delete
 from sqlalchemy.orm import Session
 from db.database import engine, SessionLocal
-from db.operations import select_all_books, select_book, delete_book, insert_book, BookNotFoundException
+from db.operations import select_all_books, select_book, delete_book, insert_book, select_books_like, BookNotFoundException
 from db.schema import DBBook
 import db.schema as schema
 
@@ -39,9 +39,20 @@ async def create_book(book:BookBase, db:Annotated[Session, Depends(get_db)]):
     inserted_book = insert_book(new_db_book, db)
 
     return inserted_book
-    # db.add(new_db_book)
-    # db.commit()
-    # db.refresh(new_db_book)
+
+
+@prefix_router.get("/books/search", response_model=list[BookBase], status_code=status.HTTP_200_OK)
+async def search_books(db:Annotated[Session, Depends(get_db)], 
+                       title: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
+                       authors: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
+                       lang:Annotated[str|None, Query(min_length=2, max_length=2, examples=["en", "da", "nl"])] = None ):
+    
+    if not any([title, authors, lang]):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Provide at least one filter parameter.")
+    
+    db_books = select_books_like(title=title, authors=authors, lang=lang, db_sess=db)
+
+    return db_books
 
 
 @prefix_router.get("/books/{book_id}", response_model=BookBase, status_code=status.HTTP_200_OK)
@@ -49,7 +60,7 @@ async def get_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
     book = None
     try:
         book = select_book(book_id, db)
-    except BookNotFoundException as book_exc: 
+    except BookNotFoundException: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
 
     if not book:
@@ -60,29 +71,18 @@ async def get_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
 # TODO: could be slow if DB is huge, use pagination instead
 @prefix_router.get("/books/", response_model=list[BookBase])
 async def get_books(db:Annotated[Session, Depends(get_db)]):
-    # stmt = select(schema.DBBook)
-    # res = db.execute(stmt)
-    # book_rows = res.scalars().all()       # -> X [(<schema.Book object at 0x0000019D638986E0>,)]
     books = select_all_books(db)
-
-    # books = [b[0] for b in book_rows]
     return books
+
 
 @prefix_router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
-    # stmt = delete(schema.DBBook).where(schema.DBBook.id == book_id)
-    # res = db.execute(stmt)
-    # db.commit()
     try:
         delete_book(book_id, db)
-    except BookNotFoundException as book_exc:
+    except BookNotFoundException:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'{exc}')
-    # if res.rowcount == 0:       # type:ignore
-    #     raise HTTPException(status.HTTP_404_NOT_FOUND, f"Book with id {book_id} not found")
-
-    
 
 app.include_router(prefix_router)
     
