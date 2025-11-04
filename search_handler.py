@@ -2,6 +2,7 @@ import os, uuid
 from pathlib import Path
 from dotenv import load_dotenv
 
+from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.indexes.models import (
@@ -17,7 +18,23 @@ from constants import EmbeddingDimension
 from preprocess_book import make_slug_book_key, extract_txt, create_embeddings_async, batch_texts_by_tokens
 from chunking import fixed_size_chunks
 from settings import get_settings
-from data_classes.vector_db import EmbeddingVec, ChapterDBItem
+from models.vector_db import EmbeddingVec, ChapterDBItem
+from pydantic import BaseModel, Field
+
+
+class SearchItem(BaseModel):
+    id_str: str|None = Field(default=None)
+    chunk_id: int|None = Field(default=None)
+    book_name: str|None = Field(default=None)
+    book_key: str|None = Field(default=None)
+    content: str|None = Field(default=None)
+
+class SearchPage(BaseModel):
+    items: list[SearchItem]
+    skip_n: int = Field(..., title="Skip N Items", description="Number of items from search result to skip")
+    top: int = Field(..., title="Top", description="Starting from the 'skip', take the next 'top' no. items from the search result")
+    total_count: int | None = Field(None, description="Total count of results found from the query")
+
 
 
 def _get_index_fields() -> list[SearchField]:
@@ -74,6 +91,22 @@ def create_missing_search_index(*, book_index_name="moby", search_index_client:S
         print(f"Created index: {book_index_name}")
     else:
         print(f"Index '{book_index_name}' already created")
+
+
+def paginated_search(*, search_client:SearchClient, q:str="", skip:int, top:int, select_fields:str|None): #-> list[SearchPage]:
+    results = search_client.search(
+        search_text=q,   # "" gets all
+        include_total_count=True,
+        select=select_fields.split(",") if select_fields else None,
+        skip=skip,
+        top=top
+    )
+    total = results.get_count()
+    results_as_dicts:list[dict] = list(results)
+    search_items = [SearchItem(**page) for page in results_as_dicts]
+    page = SearchPage(items=search_items, skip_n=skip, top=top, total_count=total)
+
+    return page    # can safely do this (load into memory) since top and skip are limited via api params
 
 
 def is_book_in_index(*, search_client:SearchClient, book_key:str) :
@@ -140,24 +173,22 @@ async def upload_to_index_async(*, search_client:SearchClient,
 if __name__ == "__main__":      # Don't run when imported via import statement
     load_dotenv()
 
-    chapter_item = ChapterDBItem(
-        id_str="123e4567-e89b-12d3-a456-426614174000",
-        book_name="The Great Adventure",
-        book_key="the-great-adventure",
-        chunk_id=1,
-        # chapter_title="Chapter 1: The Beginning",
-        content="It was a bright cold day in April, and the clocks were striking thirteen.",
-        content_vector=EmbeddingVec(
-            vector=[0.42]*EmbeddingDimension.SMALL,  # Must match the dim size
-            dim=EmbeddingDimension.SMALL
-        )
-    )
+    # chapter_item = ChapterDBItem(
+    #     id_str="123e4567-e89b-12d3-a456-426614174000",
+    #     book_name="The Great Adventure",
+    #     book_key="the-great-adventure",
+    #     chunk_id=1,
+    #     # chapter_title="Chapter 1: The Beginning",
+    #     content="It was a bright cold day in April, and the clocks were striking thirteen.",
+    #     content_vector=EmbeddingVec(
+    #         vector=[0.42]*EmbeddingDimension.SMALL,  # Must match the dim size
+    #         dim=EmbeddingDimension.SMALL
+    #     )
+    # )
 
-    print(chapter_item)
-
-    # sett = get_settings()
-    # AZURE_SEARCH_ENDPOINT = sett.AZURE_SEARCH_ENDPOINT
-    # AZURE_SEARCH_KEY = sett.AZURE_SEARCH_KEY
+    sett = get_settings()
+    AZURE_SEARCH_ENDPOINT = sett.AZURE_SEARCH_ENDPOINT
+    AZURE_SEARCH_KEY = sett.AZURE_SEARCH_KEY
     
     # dummy_ch_content = ["Call me Ishmael. Some years ago—never mind how long precisely..."]
 
@@ -170,12 +201,13 @@ if __name__ == "__main__":      # Don't run when imported via import statement
     #     "contentVector": [0.0]*3072  # placeholder—replace with a real embedding
     # }
 
-    # az_key = AzureKeyCredential(AZURE_SEARCH_KEY)
+    az_key = AzureKeyCredential(AZURE_SEARCH_KEY)
 
     # # index_client = SearchIndexClient(endpoint=AZURE_SEARCH_ENDPOINT, credential=az_key)
     # # create_missing_search_index(search_index_client=index_client)
     
-    # search_client = SearchClient(endpoint=AZURE_SEARCH_ENDPOINT, index_name="moby", credential=az_key)
+    search_client = SearchClient(endpoint=AZURE_SEARCH_ENDPOINT, index_name="moby", credential=az_key)
+    paginated_search(search_client=search_client, top=5, skip=0, select_fields="book_name, id_str, chunk_id")
     # # resp = search_client.search(
     # #             search_text="*",
     # #             filter="book eq 'Moby-Dick'",

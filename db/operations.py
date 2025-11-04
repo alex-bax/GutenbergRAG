@@ -2,6 +2,9 @@ from db.schema import DBBook
 from sqlalchemy import select, delete, and_, or_
 from sqlalchemy.orm import Session
 
+from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination import Page
+
 class BookNotFoundException(Exception):
     pass
 
@@ -55,4 +58,8 @@ def insert_book(book:DBBook, db_sess:Session) -> None:
     db_sess.add(book)
     db_sess.commit()
     db_sess.refresh(book)
+
+
+def select_documents_paginated(db_sess:Session) -> Page[DBBook]:
+    return paginate(db_sess, select(DBBook))
 

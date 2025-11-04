@@ -4,12 +4,21 @@ from typing import Annotated, Literal, Optional
 import psycopg2
 import uvicorn
 
+from azure.core.credentials import AzureKeyCredential
+from azure.search.documents import SearchClient
+
+
 from sqlalchemy import select, delete
 from sqlalchemy.orm import Session
 from db.database import engine, SessionLocal
-from db.operations import select_all_books, select_book, delete_book, insert_book, select_books_like, BookNotFoundException
+from db.operations import select_all_books, select_book, delete_book, insert_book, select_books_like, select_documents_paginated, BookNotFoundException
 from db.schema import DBBook
 import db.schema as schema
+from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination import Page, add_pagination, paginate
+
+from search_handler import paginated_search, SearchPage
+from settings import get_settings
 
 app = FastAPI(title="MobyRAG")
 prefix_router = APIRouter(prefix="/v1")
@@ -24,6 +33,7 @@ class BookBase(BaseModel):
     slug_key: str
     
     model_config = {"from_attributes": True}        # TODO: is this needed?
+
 
 def get_db():
     db = SessionLocal()
@@ -84,10 +94,38 @@ async def remove_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'{exc}')
 
-app.include_router(prefix_router)
+# TODO: test this - how is the result paginated
+@prefix_router.get("/books/paginated")
+async def get_books_paginated(db:Annotated[Session, Depends(get_db)]) -> Page[BookBase]:
+    db_books = select_documents_paginated(db)
+    books = paginate([BookBase(**b.__dict__) for b in db_books.items])
+    return books
+
+
+@prefix_router.get("/books/documents/", response_model=SearchPage, status_code=status.HTTP_200_OK)
+async def get_docs(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100)], 
+                   top:Annotated[int, Query(description="Number of search result documents take after skipping", le=100)],
+                   select:Annotated[list[Literal["book_name", "book_key", "content", "chunk_id", "content_vector", "*"]], Query(description="Fields to select from the vector index")] = ["*"],
+                   query:Annotated[str, Query(description="The search query")] = "", ):
     
+    sett = get_settings()
+    search_client = SearchClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, 
+                                 index_name="moby", 
+                                 credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
+    
+    select_str = ", ".join(select)
+    page = paginated_search(q=query, 
+                            search_client=search_client, 
+                            skip=skip, 
+                            top=top, 
+                            select_fields=select_str)
+
+    return page
+
+app.include_router(prefix_router)
+add_pagination(app)
+
 # TODO: list all docs from a book, and paginate the results
-# @prefix_router.get("")
 
 
 if __name__ == "__main__":
