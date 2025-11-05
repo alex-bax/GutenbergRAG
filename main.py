@@ -48,6 +48,11 @@ def get_search_client() -> SearchClient:
         credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY)
     )
 
+def get_index_client() -> SearchIndexClient:
+    sett = get_settings()
+    return  SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT,
+                            credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
+
 def get_llm_client() -> AzureOpenAI:
     sett = get_settings()
     return AzureOpenAI(
@@ -124,13 +129,10 @@ async def get_books_paginated(db:Annotated[Session, Depends(get_db)]) -> Page[Bo
 @prefix_router.get("/index/documents/", response_model=ApiResponse, status_code=status.HTTP_200_OK)
 async def get_docs(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=1)], 
                    take:Annotated[int, Query(description="Number of search result documents to take after skipping", le=100, ge=1)],
+                   search_client:Annotated[SearchClient, Depends(get_search_client)],
                    select:Annotated[list[Literal["book_name", "book_id", "content", "chunk_id", "content_vector", "*"]], Query(description="Fields to select from the vector index")] = ["*"],
-                   query:Annotated[str, Query(description="The search query")] = "", ):
-    
-    sett = get_settings()
-    search_client = SearchClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, 
-                                 index_name="moby", 
-                                 credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
+                   query:Annotated[str, Query(description="The search query")] = "", 
+                   ):
     
     select_str = ", ".join(select)
     page = paginated_search(q=query, 
@@ -146,31 +148,26 @@ async def get_docs(skip:Annotated[int, Query(description="Number of search resul
 # no body needed, only gutenberg id since we're uploading from Gutenberg 
 @prefix_router.post("/index/{gutenberg_id}", status_code=status.HTTP_201_CREATED, response_model=ApiResponse)
 async def upload_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to upload", gt=0)],
+                      search_client:Annotated[SearchClient, Depends(get_search_client)],
+                      index_client:Annotated[SearchIndexClient, Depends(get_index_client)],
+                      emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
                       db:Annotated[Session, Depends(get_db)]):
     sett = get_settings()
     #TODO: consider how to manage these search instances smartly in a deployed env
     info = ""
 
-    search_index_client = SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, 
+    index_client = SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, 
                                         index_name="moby", 
                                         credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
     
     book_added = None
 
-    create_missing_search_index(search_index_client=search_index_client)
-
-    search_client = SearchClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, 
-                                index_name=sett.INDEX_NAME, 
-                                credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
+    create_missing_search_index(search_index_client=index_client)
 
     book_content, gb_meta = fetch_book_content_from_id(gutenberg_id=gutenberg_id)
     req_limiter, tok_limiter = _make_limiters()
 
     if not is_book_in_index(search_client=search_client, book_id=gb_meta.id):
-        emb_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
-                            api_version="2024-12-01-preview",
-                            api_key=sett.AZ_OPENAI_EMBED_KEY) 
-
         chunks_added = await upload_to_index_async(search_client=search_client, 
                                         embed_client=emb_client,
                                         token_limiter=tok_limiter,
