@@ -5,6 +5,11 @@ from preprocess_book import make_slug_book_key
 # from db.schema import DBBookMetaData
 import db.schema        # TODO: find better way to fix circular import
 
+class QueryResponse(BaseModel):
+    answer:str
+    citation:str #?
+    #canditates:list[]  #TODO: add content chunks?
+
 class BookBase(BaseModel):
     id: int
     gb_id: int = Field(..., title="Gutenberg book ID")

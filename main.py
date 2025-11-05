@@ -25,6 +25,7 @@ from load_book import fetch_book_content_from_id
 from preprocess_book import make_slug_book_key
 from search_handler import is_book_in_index, paginated_search, create_missing_search_index, upload_to_index_async
 from settings import get_settings
+from retrieve import answer
 
 app = FastAPI(title="MobyRAG")
 prefix_router = APIRouter(prefix="/v1")
@@ -38,6 +39,28 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def get_search_client() -> SearchClient:
+    sett = get_settings()
+    return SearchClient(
+        endpoint=sett.AZURE_SEARCH_ENDPOINT,
+        index_name=sett.INDEX_NAME,
+        credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY)
+    )
+
+def get_llm_client() -> AzureOpenAI:
+    sett = get_settings()
+    return AzureOpenAI(
+        azure_endpoint=sett.AZ_OPENAI_GPT_ENDPOINT,
+        api_version="2025-04-01-preview",
+        api_key=sett.AZ_OPENAI_GPT_KEY
+    )
+
+def get_emb_client() -> AzureOpenAI:
+    sett = get_settings()
+    return AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
+                            api_version="2024-12-01-preview",
+                            api_key=sett.AZ_OPENAI_EMBED_KEY)
 
 
 @prefix_router.post("/books/", status_code=status.HTTP_201_CREATED)
@@ -208,14 +231,22 @@ async def show_gutenberg_books_paginated(page_number:Annotated[int, Query(descri
 
 #TODO: add retrieval endpoint
 
-
 # TODO: have default call to initialize db with e.g. 50 books (and use Celery for long time async job)
+        # e.g. populate index
+@prefix_router.get("/query/", status_code=status.HTTP_202_ACCEPTED, response_model=ApiResponse)
+async def answer_query(query:str,
+                      search_client:Annotated[SearchClient, Depends(get_search_client)],
+                      llm_client:Annotated[AzureOpenAI, Depends(get_llm_client)],
+                      emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
+                      only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
+
+    ans = answer(query=query, search_client=search_client, embed_client=emb_client, llm_client=llm_client)
+    # TODO: add the ans to the reponse type
+    return ApiResponse(data=None)
 
 
 app.include_router(prefix_router)
 add_pagination(app)
-
-# TODO: list all docs from a book, and paginate the results
 
 
 if __name__ == "__main__":
