@@ -31,30 +31,15 @@ from search_handler import is_book_in_index, paginated_search, create_missing_se
 from settings import get_settings
 from retrieve import answer
 
-from db.database import sessionmanager
-from contextlib import asynccontextmanager
+app = FastAPI(title="MobyRAG")
+prefix_router = APIRouter(prefix="/v1")
+
+# schema.Base.metadata.create_all(bind=engine)        # creates the DB tables
 
 async def init_models():
     async with engine.begin() as conn:
         await conn.run_sync(schema.Base.metadata.create_all)
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """
-    Function that handles startup and shutdown events.
-    To understand more, read https://fastapi.tiangolo.com/advanced/events/
-    """
-    await init_models()      # create tables
-    yield
-    await engine.dispose()   # tidy up
-
-
-
-app = FastAPI(title="MobyRAG", lifespan=lifespan)
-prefix_router = APIRouter(prefix="/v1")
-
-# schema.Base.metadata.create_all(bind=engine)        # creates the DB tables
 
 async def get_db() -> AsyncIterator[AsyncSession]:
     async with AsyncSessionLocal() as session:
@@ -67,8 +52,6 @@ async def get_db() -> AsyncIterator[AsyncSession]:
 #         yield db
 #     finally:
 #         db.close()
-
-
 
 def get_search_client() -> SearchClient:
     sett = get_settings()
@@ -99,7 +82,7 @@ def get_emb_client() -> AzureOpenAI:
 
 
 @prefix_router.post("/books/", status_code=status.HTTP_201_CREATED)
-async def create_book(book:BookMetaDataResponse, db: Annotated[AsyncSession, Depends(get_db)]):
+async def create_book(book:BookMetaDataResponse, db:Annotated[AsyncSession, Depends(get_db)]):
     new_db_book = DBBookMetaData(**book.model_dump())
     await insert_book(new_db_book, db)
 
