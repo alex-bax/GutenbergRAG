@@ -2,6 +2,7 @@ from models.api_response import BookMetaDataResponse
 from db.database import Base
 from sqlalchemy import Column, Integer, String, TIMESTAMP
 from sqlalchemy.sql import func
+# from sqlalchemy.orm import Mapped, mapped_column
 
 # table=True means this class represent a DB table
 class DBBookMetaData(Base):

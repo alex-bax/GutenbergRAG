@@ -1,7 +1,7 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
 from openai import AzureOpenAI
 from pydantic import BaseModel, Field, field_validator
-from typing import Annotated, Literal
+from typing import Annotated, Literal,AsyncIterator
 import psycopg2
 import uvicorn, requests
 
@@ -11,8 +11,12 @@ from azure.search.documents.indexes import SearchIndexClient
 
 # from sqlalchemy import select, delete
 from sqlalchemy.orm import Session
-from db.database import engine, SessionLocal
-from db.operations import select_all_books, select_book, delete_book, insert_book, select_books_like, select_documents_paginated, BookNotFoundException
+from db.database import engine, AsyncSessionLocal#, SessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession
+# from db.operations import select_all_books, select_book, delete_book, insert_book, select_books_like, select_documents_paginated, BookNotFoundException
+
+from db.operations import insert_book
+
 from db.schema import DBBookMetaData
 import db.schema as schema
 from moby import _make_limiters
@@ -27,18 +31,44 @@ from search_handler import is_book_in_index, paginated_search, create_missing_se
 from settings import get_settings
 from retrieve import answer
 
-app = FastAPI(title="MobyRAG")
+from db.database import sessionmanager
+from contextlib import asynccontextmanager
+
+async def init_models():
+    async with engine.begin() as conn:
+        await conn.run_sync(schema.Base.metadata.create_all)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Function that handles startup and shutdown events.
+    To understand more, read https://fastapi.tiangolo.com/advanced/events/
+    """
+    await init_models()      # create tables
+    yield
+    await engine.dispose()   # tidy up
+
+
+
+app = FastAPI(title="MobyRAG", lifespan=lifespan)
 prefix_router = APIRouter(prefix="/v1")
 
-schema.Base.metadata.create_all(bind=engine)        # creates the DB tables
+# schema.Base.metadata.create_all(bind=engine)        # creates the DB tables
+
+async def get_db() -> AsyncIterator[AsyncSession]:
+    async with AsyncSessionLocal() as session:
+        yield session
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
+
+
 
 def get_search_client() -> SearchClient:
     sett = get_settings()
@@ -69,177 +99,177 @@ def get_emb_client() -> AzureOpenAI:
 
 
 @prefix_router.post("/books/", status_code=status.HTTP_201_CREATED)
-async def create_book(book:BookMetaDataResponse, db:Annotated[Session, Depends(get_db)]):
+async def create_book(book:BookMetaDataResponse, db: Annotated[AsyncSession, Depends(get_db)]):
     new_db_book = DBBookMetaData(**book.model_dump())
-    insert_book(new_db_book, db)
+    await insert_book(new_db_book, db)
 
-@prefix_router.get("/books/search", response_model=ApiResponse, status_code=status.HTTP_200_OK)
-async def search_books(db:Annotated[Session, Depends(get_db)], 
-                       title: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
-                       authors: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
-                       lang:Annotated[str|None, Query(min_length=2, max_length=2, examples=["en", "da", "nl"])] = None ):
+# @prefix_router.get("/books/search", response_model=ApiResponse, status_code=status.HTTP_200_OK)
+# async def search_books(db:Annotated[AsyncSession, Depends(get_db)], 
+#                        title: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
+#                        authors: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
+#                        lang:Annotated[str|None, Query(min_length=2, max_length=2, examples=["en", "da", "nl"])] = None ):
     
-    if not any([title, authors, lang]):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Provide at least one filter parameter.")
+#     if not any([title, authors, lang]):
+#         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Provide at least one filter parameter.")
     
-    db_books = select_books_like(title=title, authors=authors, lang=lang, db_sess=db)
-    book_metas = [b.to_book_meta_response() for b in db_books]
+#     db_books = select_books_like(title=title, authors=authors, lang=lang, db_sess=db)
+#     book_metas = [b.to_book_meta_response() for b in db_books]
 
-    return ApiResponse(data=book_metas)
-
-
-@prefix_router.get("/books/{book_id}", response_model=ApiResponse, status_code=status.HTTP_200_OK)
-async def get_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
-    book = None
-    try:
-        book = select_book(book_id, db)
-    except BookNotFoundException: 
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
-
-    if not book:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Book with id {book_id} empty")
-
-    return ApiResponse(data=book.to_book_meta_response())
-
-# TODO: could be slow if DB is huge, use pagination instead
-@prefix_router.get("/books/", response_model=ApiResponse)
-async def get_books(db:Annotated[Session, Depends(get_db)]):
-    books = select_all_books(db)
-    return ApiResponse(data=[b.to_book_meta_response() for b in books])
+#     return ApiResponse(data=book_metas)
 
 
-@prefix_router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
-    try:
-        delete_book(book_id, db)
-    except BookNotFoundException:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'{exc}')
+# @prefix_router.get("/books/{book_id}", response_model=ApiResponse, status_code=status.HTTP_200_OK)
+# async def get_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
+#     book = None
+#     try:
+#         book = select_book(book_id, db)
+#     except BookNotFoundException: 
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
+
+#     if not book:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Book with id {book_id} empty")
+
+#     return ApiResponse(data=book.to_book_meta_response())
+
+# # TODO: could be slow if DB is huge, use pagination instead
+# @prefix_router.get("/books/", response_model=ApiResponse)
+# async def get_books(db:Annotated[Session, Depends(get_db)]):
+#     books = select_all_books(db)
+#     return ApiResponse(data=[b.to_book_meta_response() for b in books])
 
 
-# TODO: test this - how is the result paginated
-@prefix_router.get("/books/paginated")
-async def get_books_paginated(db:Annotated[Session, Depends(get_db)]) -> Page[BookMetaDataResponse]:
-    db_books = select_documents_paginated(db)
-    books = paginate([BookMetaDataResponse(**b.__dict__) for b in db_books.items])
-    return books
+# @prefix_router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def remove_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
+#     try:
+#         delete_book(book_id, db)
+#     except BookNotFoundException:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
+#     except Exception as exc:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'{exc}')
 
 
-@prefix_router.get("/index/documents/", response_model=ApiResponse, status_code=status.HTTP_200_OK)
-async def get_docs(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=1)], 
-                   take:Annotated[int, Query(description="Number of search result documents to take after skipping", le=100, ge=1)],
-                   search_client:Annotated[SearchClient, Depends(get_search_client)],
-                   select:Annotated[list[Literal["book_name", "book_id", "content", "chunk_id", "content_vector", "*"]], Query(description="Fields to select from the vector index")] = ["*"],
-                   query:Annotated[str, Query(description="The search query")] = "", 
-                   ):
+# # TODO: test this - how is the result paginated
+# @prefix_router.get("/books/paginated")
+# async def get_books_paginated(db:Annotated[Session, Depends(get_db)]) -> Page[BookMetaDataResponse]:
+#     db_books = select_documents_paginated(db)
+#     books = paginate([BookMetaDataResponse(**b.__dict__) for b in db_books.items])
+#     return books
+
+
+# @prefix_router.get("/index/documents/", response_model=ApiResponse, status_code=status.HTTP_200_OK)
+# async def get_docs(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=1)], 
+#                    take:Annotated[int, Query(description="Number of search result documents to take after skipping", le=100, ge=1)],
+#                    search_client:Annotated[SearchClient, Depends(get_search_client)],
+#                    select:Annotated[list[Literal["book_name", "book_id", "content", "chunk_id", "content_vector", "*"]], Query(description="Fields to select from the vector index")] = ["*"],
+#                    query:Annotated[str, Query(description="The search query")] = "", 
+#                    ):
     
-    select_str = ", ".join(select)
-    page = paginated_search(q=query, 
-                            search_client=search_client, 
-                            skip=skip, 
-                            top=take, 
-                            select_fields=select_str)
+#     select_str = ", ".join(select)
+#     page = paginated_search(q=query, 
+#                             search_client=search_client, 
+#                             skip=skip, 
+#                             top=take, 
+#                             select_fields=select_str)
 
-    return ApiResponse(data=page)
+#     return ApiResponse(data=page)
 
-#TODO: post book to vector db by using Gutendex ID
-#TODO: make it work with list of ids?
-# no body needed, only gutenberg id since we're uploading from Gutenberg 
-@prefix_router.post("/index/{gutenberg_id}", status_code=status.HTTP_201_CREATED, response_model=ApiResponse)
-async def upload_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to upload", gt=0)],
-                      search_client:Annotated[SearchClient, Depends(get_search_client)],
-                      index_client:Annotated[SearchIndexClient, Depends(get_index_client)],
-                      emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
-                      db:Annotated[Session, Depends(get_db)]):
-    sett = get_settings()
-    #TODO: consider how to manage these search instances smartly in a deployed env
-    info = ""
+# #TODO: post book to vector db by using Gutendex ID
+# #TODO: make it work with list of ids?
+# # no body needed, only gutenberg id since we're uploading from Gutenberg 
+# @prefix_router.post("/index/{gutenberg_id}", status_code=status.HTTP_201_CREATED, response_model=ApiResponse)
+# async def upload_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to upload", gt=0)],
+#                       search_client:Annotated[SearchClient, Depends(get_search_client)],
+#                       index_client:Annotated[SearchIndexClient, Depends(get_index_client)],
+#                       emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
+#                       db:Annotated[Session, Depends(get_db)]):
+#     sett = get_settings()
+#     #TODO: consider how to manage these search instances smartly in a deployed env
+#     info = ""
 
-    index_client = SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, 
-                                        index_name="moby", 
-                                        credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
+#     index_client = SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, 
+#                                         index_name="moby", 
+#                                         credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
     
-    book_added = None
+#     book_added = None
 
-    create_missing_search_index(search_index_client=index_client)
+#     create_missing_search_index(search_index_client=index_client)
 
-    book_content, gb_meta = fetch_book_content_from_id(gutenberg_id=gutenberg_id)
-    req_limiter, tok_limiter = _make_limiters()
+#     book_content, gb_meta = fetch_book_content_from_id(gutenberg_id=gutenberg_id)
+#     req_limiter, tok_limiter = _make_limiters()
 
-    if not is_book_in_index(search_client=search_client, book_id=gb_meta.id):
-        chunks_added = await upload_to_index_async(search_client=search_client, 
-                                        embed_client=emb_client,
-                                        token_limiter=tok_limiter,
-                                        request_limiter=req_limiter,
-                                        book_meta=gb_meta,
-                                        raw_book_content=book_content
-                                    )
+#     if not is_book_in_index(search_client=search_client, book_id=gb_meta.id):
+#         chunks_added = await upload_to_index_async(search_client=search_client, 
+#                                         embed_client=emb_client,
+#                                         token_limiter=tok_limiter,
+#                                         request_limiter=req_limiter,
+#                                         book_meta=gb_meta,
+#                                         raw_book_content=book_content
+#                                     )
         
-        insert_book(book=gb_meta.to_db_model(), db_sess=db)
-        book_added = gb_meta
-    else:
-        info = f"Book already in index {sett.INDEX_NAME} as '{gb_meta.title}'. Fetched meta data from DB"
+#         insert_book(book=gb_meta.to_db_model(), db_sess=db)
+#         book_added = gb_meta
+#     else:
+#         info = f"Book already in index {sett.INDEX_NAME} as '{gb_meta.title}'. Fetched meta data from DB"
 
-        try:
-            book = select_book(book_id=None, db_sess=db, where_gb_id=gutenberg_id)
-        except BookNotFoundException: 
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {gutenberg_id} not found, but was in index")
+#         try:
+#             book = select_book(book_id=None, db_sess=db, where_gb_id=gutenberg_id)
+#         except BookNotFoundException: 
+#             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {gutenberg_id} not found, but was in index")
 
-        book_added = book.to_book_meta_response()
+#         book_added = book.to_book_meta_response()
 
-    return ApiResponse(data=book_added, message=info) 
+#     return ApiResponse(data=book_added, message=info) 
 
 
-#TODO delete from index 
+# #TODO delete from index 
   
 
-@prefix_router.get("/books/gutenberg/{gutenberg_id}", status_code=status.HTTP_200_OK, response_model=ApiResponse)
-async def show_gutenberg_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID of book", gt=0)]):
-    try:
-        res = requests.get(f"https://gutendex.com/books/{gutenberg_id}")
-    except Exception as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=exc)
+# @prefix_router.get("/books/gutenberg/{gutenberg_id}", status_code=status.HTTP_200_OK, response_model=ApiResponse)
+# async def show_gutenberg_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID of book", gt=0)]):
+#     try:
+#         res = requests.get(f"https://gutendex.com/books/{gutenberg_id}")
+#     except Exception as exc:
+#         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=exc)
     
-    if res.status_code != status.HTTP_200_OK:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=res.json())
-    else:
-        body = res.json()
-        return ApiResponse(data=GBBookMeta(**body))
+#     if res.status_code != status.HTTP_200_OK:
+#         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=res.json())
+#     else:
+#         body = res.json()
+#         return ApiResponse(data=GBBookMeta(**body))
 
 
-@prefix_router.get("/books/gutenberg/paginated/", status_code=status.HTTP_200_OK, response_model=list[GBBookMeta])
-async def show_gutenberg_books_paginated(page_number:Annotated[int, Query(description="Page number to read from", ge=0)],
-                                         number_of_books:Annotated[int, Query(description="Number of books to show", ge=1, le=32)]=32
-                                        ):
-    try:
-        res = requests.get(f"https://gutendex.com/books?page={page_number}")
-    except Exception as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=exc)
+# @prefix_router.get("/books/gutenberg/paginated/", status_code=status.HTTP_200_OK, response_model=list[GBBookMeta])
+# async def show_gutenberg_books_paginated(page_number:Annotated[int, Query(description="Page number to read from", ge=0)],
+#                                          number_of_books:Annotated[int, Query(description="Number of books to show", ge=1, le=32)]=32
+#                                         ):
+#     try:
+#         res = requests.get(f"https://gutendex.com/books?page={page_number}")
+#     except Exception as exc:
+#         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=exc)
 
-    if res.status_code != status.HTTP_200_OK:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=res.json())
-    else:
-        body = res.json()["results"]
-        print(body)
-        gb_books = [GBBookMeta(**book_dict) for book_dict in body]
-        return gb_books[:number_of_books]
+#     if res.status_code != status.HTTP_200_OK:
+#         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=res.json())
+#     else:
+#         body = res.json()["results"]
+#         print(body)
+#         gb_books = [GBBookMeta(**book_dict) for book_dict in body]
+#         return gb_books[:number_of_books]
 
 
-#TODO: add retrieval endpoint
+# #TODO: add retrieval endpoint
 
-# TODO: have default call to initialize db with e.g. 50 books (and use Celery for long time async job)
-        # e.g. populate index
-@prefix_router.get("/query/", status_code=status.HTTP_202_ACCEPTED, response_model=ApiResponse)
-async def answer_query(query:str,
-                      search_client:Annotated[SearchClient, Depends(get_search_client)],
-                      llm_client:Annotated[AzureOpenAI, Depends(get_llm_client)],
-                      emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
-                      only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
+# # TODO: have default call to initialize db with e.g. 50 books (and use Celery for long time async job)
+#         # e.g. populate index
+# @prefix_router.get("/query/", status_code=status.HTTP_202_ACCEPTED, response_model=ApiResponse)
+# async def answer_query(query:str,
+#                       search_client:Annotated[SearchClient, Depends(get_search_client)],
+#                       llm_client:Annotated[AzureOpenAI, Depends(get_llm_client)],
+#                       emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
+#                       only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
 
-    ans = answer(query=query, search_client=search_client, embed_client=emb_client, llm_client=llm_client)
-    # TODO: add the ans to the reponse type
-    return ApiResponse(data=None)
+#     ans = answer(query=query, search_client=search_client, embed_client=emb_client, llm_client=llm_client)
+#     # TODO: add the ans to the reponse type
+#     return ApiResponse(data=None)
 
 
 app.include_router(prefix_router)
