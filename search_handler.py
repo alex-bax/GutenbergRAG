@@ -21,15 +21,15 @@ from settings import get_settings
 from models.vector_db import EmbeddingVec, ContentChunk
 from pydantic import BaseModel, Field
 
-from models.api import GBBookMeta
+from models.api_response import GBBookMeta
 
 # TODO: why optional?
 class SearchItem(BaseModel):
-    uuid_str: str|None = Field(default=None)
-    chunk_id: int|None = Field(default=None)
-    book_name: str|None = Field(default=None)
-    book_id: int|None = Field(default=None)
-    content: str|None = Field(default=None)
+    uuid_str: str
+    chunk_nr: int = Field(..., description="Nth chunk of all chunks")
+    book_name: str
+    book_id: int
+    content: str
 
 class SearchPage(BaseModel):
     items: list[SearchItem]
@@ -40,20 +40,25 @@ class SearchPage(BaseModel):
 
 
 def _get_index_fields() -> list[SearchField]:
-    return [
+    index_fields= [
             SimpleField(name="uuid_str", type=SearchFieldDataType.String, key=True),
+            SimpleField(name="chunk_nr", type=SearchFieldDataType.Int32, filterable=True),      
             SimpleField(name="book_name", type=SearchFieldDataType.String, filterable=True, facetable=True),
             SimpleField(name="book_id", type=SearchFieldDataType.Int32, filterable=True, facetable=True),
-            SimpleField(name="chunk_id", type=SearchFieldDataType.Int32, filterable=True),
             SearchField(name="content", type=SearchFieldDataType.String, searchable=True),
-            SearchField(
+        ]
+    
+    assert all(sf.name == SearchItem.model_fields.keys() for sf in index_fields), f"Vector index fields not matching SearchItem: {SearchItem.model_fields.keys()} != (index_fields) {index_fields} "
+
+    index_fields.append(SearchField(
                 name="content_vector",
                 type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
                 searchable=True,                                   
                 vector_search_dimensions=EmbeddingDimension.SMALL,      # NB must match with embedding model dimension
                 vector_search_profile_name="vprofile"
-            ),
-        ]
+            ))
+    
+    return index_fields
 
 
 def _get_vector_search(vector_search_alg_name="hnsw") -> VectorSearch:
@@ -185,7 +190,7 @@ if __name__ == "__main__":      # Don't run when imported via import statement
     # # create_missing_search_index(search_index_client=index_client)
     
     search_client = SearchClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, index_name="moby", credential=az_key)
-    paginated_search(search_client=search_client, top=5, skip=0, select_fields="book_name, id_str, chunk_id")
+    paginated_search(search_client=search_client, top=5, skip=0, select_fields="book_name, id_str, chunk_nr")
     # # resp = search_client.search(
     # #             search_text="*",
     # #             filter="book eq 'Moby-Dick'",

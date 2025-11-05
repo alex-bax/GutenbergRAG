@@ -4,6 +4,20 @@ from constants import EmbeddingDimension
 
 import numpy as np
 
+class SearchItem(BaseModel):
+    uuid_str: str
+    chunk_nr: int = Field(..., description="Nth chunk of all chunks")
+    book_name: str
+    book_id: int
+    content: str
+
+class SearchPage(BaseModel):
+    items: list[SearchItem]
+    skip_n: int = Field(..., title="Skip N Items", description="Number of items from search result to skip")
+    top: int = Field(..., title="Top", description="Starting from the 'skip', take the next 'top' no. items from the search result")
+    total_count: int | None = Field(None, description="Total count of results found from the query")
+
+
 class EmbeddingVec(BaseModel):
     vector: list[float] = Field(..., description="The embedding vector")
     dim: Literal[EmbeddingDimension.SMALL, EmbeddingDimension.LARGE] = Field(..., description="Dimension of the embedding vector")

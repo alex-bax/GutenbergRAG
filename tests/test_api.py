@@ -131,7 +131,7 @@ def test_search_book(queries, expected, client: TestClient, book_factory):
 @pytest.mark.parametrize("queries, expected", [("title=Unknown book", []),
                                                 ("title=Frankenstein&authors=HC Andersen", []),
                                                 ("authors=No", status.HTTP_422_UNPROCESSABLE_CONTENT )])
-def test_fail_search_book(queries, expected, client:TestClient, book_factory):
+def test_negative_search_book(queries, expected, client:TestClient, book_factory):
     title = "Moby Dick"
     book = book_factory(id=3, title=title, authors="Herman Melville")
 

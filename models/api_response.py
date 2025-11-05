@@ -3,23 +3,28 @@ from models.vector_db import ContentChunk
 from pydantic import BaseModel, Field, field_validator
 
 from preprocess_book import make_slug_book_key
+from search_handler import SearchPage
 
 class BookBase(BaseModel):
     id: int
     title: str
 
-class BookMetaData(BookBase):
-    lang:str = Field(..., description="Language ISO code the book is written in", examples=["en", "nl", "da"])
-    slug_key: str
-    authors: str #list[str]
-    model_config = {"from_attributes": True}        # TODO: is this needed?
-
+class BookMetaDataResponse(BookBase):
+    lang:str = Field(..., description="ISO language code the book is written in", examples=["en", "nl", "da"])
+    book_id: int
+    authors: str 
+    model_config = {"from_attributes": True}        
 
 class Book(BookBase):
     id:int
     book_name:str
     book_key: str
     chunks: list[ContentChunk]       
+
+class ApiResponse(BaseModel):
+    data: BookMetaDataResponse|list[BookMetaDataResponse]|SearchPage|None
+    job_id: int|None = Field(None, description="Id for async long running jobs when uploading many books")   
+    message: str|None    
 
 class GBBookMeta(BaseModel):
     title:str
