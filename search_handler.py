@@ -18,25 +18,9 @@ from constants import EmbeddingDimension
 from preprocess_book import make_slug_book_key, clean_headers, create_embeddings_async, batch_texts_by_tokens
 from chunking import fixed_size_chunks
 from settings import get_settings
-from models.vector_db import EmbeddingVec, ContentChunk
-from pydantic import BaseModel, Field
+from models.vector_db import ContentUploadChunk, SearchChunk, SearchPage
 
 from models.api_response import GBBookMeta
-
-# TODO: why optional?
-class SearchItem(BaseModel):
-    uuid_str: str
-    chunk_nr: int = Field(..., description="Nth chunk of all chunks")
-    book_name: str
-    book_id: int
-    content: str
-
-class SearchPage(BaseModel):
-    items: list[SearchItem]
-    skip_n: int = Field(..., title="Skip N Items", description="Number of items from search result to skip")
-    top: int = Field(..., title="Top", description="Starting from the 'skip', take the next 'top' no. items from the search result")
-    total_count: int | None = Field(None, description="Total count of results found from the query")
-
 
 
 def _get_index_fields() -> list[SearchField]:
@@ -48,7 +32,7 @@ def _get_index_fields() -> list[SearchField]:
             SearchField(name="content", type=SearchFieldDataType.String, searchable=True),
         ]
     
-    assert all(sf.name == SearchItem.model_fields.keys() for sf in index_fields), f"Vector index fields not matching SearchItem: {SearchItem.model_fields.keys()} != (index_fields) {index_fields} "
+    assert all(sf.name in SearchChunk.model_fields.keys() for sf in index_fields), f"Vector index fields not matching SearchItem: {SearchChunk.model_fields.keys()} != (index_fields) {index_fields} "
 
     index_fields.append(SearchField(
                 name="content_vector",
@@ -110,7 +94,7 @@ def paginated_search(*, search_client:SearchClient, q:str="", skip:int, top:int,
     )
     total = results.get_count()
     results_as_dicts:list[dict] = list(results)
-    search_items = [SearchItem(**page) for page in results_as_dicts]
+    search_items = [SearchChunk(**page) for page in results_as_dicts]
     page = SearchPage(items=search_items, skip_n=skip, top=top, total_count=total)
 
     return page    # can safely do this (load into memory) since top and skip are limited via api params
@@ -134,7 +118,7 @@ async def upload_to_index_async(*, search_client:SearchClient,
                     request_limiter:Limiter,
                     raw_book_content: str,
                     book_meta: GBBookMeta,
-                    ) -> list[ContentChunk]:
+                    ) -> list[ContentUploadChunk]:
     sett = get_settings()
 
     book_str = clean_headers(raw_book=raw_book_content) 
@@ -158,11 +142,11 @@ async def upload_to_index_async(*, search_client:SearchClient,
     assert len(chunks) == len(embeddings)
 
     for i, (chunk, emb_vec) in enumerate(zip(chunks, embeddings)):
-        chapter_item = ContentChunk(
+        chapter_item = ContentUploadChunk(
             uuid_str= str(uuid.uuid4()),
             book_name= book_meta.title,
             book_id = book_meta.id,
-            chunk_id= i,
+            chunk_nr= i,
             content= chunk,
             content_vector= emb_vec
         )
@@ -203,15 +187,6 @@ if __name__ == "__main__":      # Don't run when imported via import statement
     # # emb_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
     # #                         api_version="2024-12-01-preview",
     # #                         api_key=sett.AZ_OPENAI_EMBED_KEY)
-
-    # # book_key = make_slug_book_key(title="Moby-Dick", gutenberg_id=42, author="Herman Melville", lang="en")
-
-    # # upload_to_index(search_client=search_client, 
-    # #                 book_url="",
-    # #                 embed_client=emb_client,
-    # #                 book_key=book_key)
-
-    
 
     # resp = search_client.search(
     #             query_type="simple",

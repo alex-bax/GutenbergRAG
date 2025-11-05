@@ -1,7 +1,7 @@
 import requests, re
 from pathlib import Path
 
-from models.api import GBBookMeta
+from models.api_response import GBBookMeta
 
 
 def _fetch_book_content(*, download_url="https://www.gutenberg.org/cache/epub/2701/pg2701.txt") -> str:

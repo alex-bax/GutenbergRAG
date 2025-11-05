@@ -4,18 +4,6 @@ from constants import EmbeddingDimension
 
 import numpy as np
 
-class SearchItem(BaseModel):
-    uuid_str: str
-    chunk_nr: int = Field(..., description="Nth chunk of all chunks")
-    book_name: str
-    book_id: int
-    content: str
-
-class SearchPage(BaseModel):
-    items: list[SearchItem]
-    skip_n: int = Field(..., title="Skip N Items", description="Number of items from search result to skip")
-    top: int = Field(..., title="Top", description="Starting from the 'skip', take the next 'top' no. items from the search result")
-    total_count: int | None = Field(None, description="Total count of results found from the query")
 
 
 class EmbeddingVec(BaseModel):
@@ -31,19 +19,33 @@ class EmbeddingVec(BaseModel):
         
         return self
 
-class ContentChunk(BaseModel):
+class ContentUploadChunk(BaseModel):
     uuid_str:str = Field(...)
     book_name:str = Field(..., description="Name/title of the book")
-    # book_key:str = Field(..., description="Unique, slug-style key that identifies the book", examples=["frankenstein-or-the-modern-prometheus_shelley-mary-wollstonecraft_84_en", 
     book_id:int = Field(...)
-    chunk_id:int = Field(...)
-    # chapter_title:str = Field(..., description="Title of the chapter")
+    chunk_nr:int = Field(..., description="Its index from all chunks, e.g. if 6, then it's the 6th chunk")
     content:str = Field(..., description="Content of the chapter")
     content_vector:EmbeddingVec
 
     def to_dict(self) -> dict[str, int|str|list[float]]:
         embed_vec = self.content_vector.vector
         return self.__dict__ | { "content_vector": embed_vec }
+
+
+# Uses optional since user search request can toggle fields
+class SearchChunk(BaseModel):
+    uuid_str: str|None
+    chunk_nr: int|None = Field(None,  description="Nth chunk of all chunks")
+    book_name: str|None
+    book_id: int|None
+    content: str|None
+
+class SearchPage(BaseModel):
+    items: list[SearchChunk]
+    skip_n: int = Field(..., title="Skip N Items", description="Number of items from search result to skip")
+    top: int = Field(..., title="Top", description="Starting from the 'skip', take the next 'top' no. items from the search result")
+    total_count: int | None = Field(None, description="Total count of results found from the query")
+
 
 
 

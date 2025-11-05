@@ -1,30 +1,23 @@
-from db.schema import DBBook
-from models.vector_db import ContentChunk
+from __future__ import annotations
+from models.vector_db import ContentUploadChunk, SearchPage
 from pydantic import BaseModel, Field, field_validator
-
 from preprocess_book import make_slug_book_key
-from search_handler import SearchPage
+# from db.schema import DBBookMetaData
+import db.schema        # TODO: find better way to fix circular import
 
 class BookBase(BaseModel):
     id: int
+    gb_id: int = Field(..., title="Gutenberg book ID")
     title: str
 
 class BookMetaDataResponse(BookBase):
     lang:str = Field(..., description="ISO language code the book is written in", examples=["en", "nl", "da"])
-    book_id: int
     authors: str 
     model_config = {"from_attributes": True}        
 
 class Book(BookBase):
-    id:int
     book_name:str
-    book_key: str
-    chunks: list[ContentChunk]       
-
-class ApiResponse(BaseModel):
-    data: BookMetaDataResponse|list[BookMetaDataResponse]|SearchPage|None
-    job_id: int|None = Field(None, description="Id for async long running jobs when uploading many books")   
-    message: str|None    
+    chunks: list[ContentUploadChunk]       
 
 class GBBookMeta(BaseModel):
     title:str
@@ -49,14 +42,13 @@ class GBBookMeta(BaseModel):
         author_names = [a.get("name", "Unknown") for a in self.authors]
         return "; ".join(author_names)
 
-    def _convert_to_db_model(self) -> DBBook:
+    def to_db_model(self) -> db.schema.DBBookMetaData:
         authors_str = self.authors_as_str()
         
-        return DBBook(
-            id=self.id,
+        return db.schema.DBBookMetaData(
+            gb_id=self.id,
             title=self.title,
             authors=authors_str,
-            slug_key=make_slug_book_key(title=self.title, gutenberg_id=self.id, author=authors_str),
             lang=self.languages[0],
         )
     
@@ -67,3 +59,11 @@ class GBBookMeta(BaseModel):
                 return url
     
         return found
+    
+
+class ApiResponse(BaseModel):
+    data: BookMetaDataResponse|list[BookMetaDataResponse]|SearchPage|GBBookMeta|None = Field(default=None)
+    job_id: int|None = Field(default=None, description="Id for async long running jobs when uploading many books to index")   
+    message: str|None = None    
+
+

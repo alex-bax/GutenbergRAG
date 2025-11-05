@@ -1,12 +1,12 @@
 from typing import Iterator, Callable, Any
 from fastapi import status, APIRouter
 from fastapi.testclient import TestClient
+from db.schema import DBBookMetaData
 from db.database import Base
 from main import app, get_db
 from sqlalchemy import create_engine, StaticPool
 from sqlalchemy.orm import sessionmaker, Session
 import pytest
-from db.schema import DBBook
 # prefix_router = APIRouter(prefix="/v1")
 # app.include_router(prefix_router)
 # client = TestClient(app)
@@ -21,29 +21,25 @@ engine = create_engine(TEST_DB_URL,     # the extra params ensure that all sessi
                     )
 TestingSessionLocal = sessionmaker(autoflush=False, autocommit=False, bind=engine)
 
-def _append_to_url(url, param) -> str:
-    url += f'?{param}' if 'search?' not in url else f'&{param}'
-    return url
-
 @pytest.fixture
-def book_factory(db_session: Session) -> Iterator[Callable[..., DBBook]]: 
+def book_factory(db_session: Session) -> Iterator[Callable[..., DBBookMetaData]]: 
     """
     Create and persist Book rows with having defaults.
     Returns the callable (i.e. function that creates the Book)
     Usage:
         book = book_factory(title="Custom")
     """
-    created: list[DBBook] = []
+    created: list[DBBookMetaData] = []
 
-    def _create(**overrides: Any) -> DBBook:
+    def _create(**overrides: Any) -> DBBookMetaData:
         defaults: dict[str, Any] = {
             "title": "Test book",
+            "gb_id":42,
             "authors": "Frank Herman",
             "lang": "en",
-            "slug_key": "x",
         }
         merged = defaults | overrides
-        obj = DBBook(**merged)
+        obj = DBBookMetaData(**merged)
         
         db_session.add(obj)
         db_session.commit()   # commit so the app (same engine) can read it
@@ -102,7 +98,7 @@ def test_get_book(client: TestClient, book_factory):
 
     resp = client.get(f"/{VER_PREFIX}/books/{book.id}")
     assert resp.status_code == status.HTTP_200_OK, resp.text
-    data = resp.json()
+    data = resp.json()["data"]
     assert data["authors"] == "Frank Herman"
     assert "id" in data
 
@@ -122,7 +118,7 @@ def test_search_book(queries, expected, client: TestClient, book_factory):
     resp = client.get(url)
 
     assert resp.status_code == status.HTTP_200_OK
-    books_found = resp.json()
+    books_found = resp.json()["data"]
     assert len(books_found) == len(expected), len(expected)
     if len(expected) > 0:
         assert books_found[0]["title"] == expected[0]["title"], title
@@ -138,15 +134,16 @@ def test_negative_search_book(queries, expected, client:TestClient, book_factory
     url = f"/{VER_PREFIX}/books/search?{queries}"
 
     resp = client.get(url)
-    books_found:list = resp.json()
 
     if isinstance(expected, list):
+        books_found:list = resp.json()["data"]
         assert len(books_found) == len(expected)
     elif isinstance(expected, int):
         assert resp.status_code == expected
     
 
-
+# TODO test show show_gutenberg_book
+# TODO test upload_book
 
 
 
