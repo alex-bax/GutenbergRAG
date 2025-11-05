@@ -1,8 +1,10 @@
 import requests, re
 from pathlib import Path
 
+from models.api import GBBookMeta
 
-def _fetch_book(*, download_url="https://www.gutenberg.org/cache/epub/2701/pg2701.txt") -> str:
+
+def _fetch_book_content(*, download_url="https://www.gutenberg.org/cache/epub/2701/pg2701.txt") -> str:
     """
     Fetches book. Default url is gutenberg book url for Moby Dick
     """
@@ -10,8 +12,25 @@ def _fetch_book(*, download_url="https://www.gutenberg.org/cache/epub/2701/pg270
     r.raise_for_status()
     return r.text
 
+def fetch_book_content_from_id(*, gutenberg_id:int) -> tuple[str, GBBookMeta]:
+    gb_meta = _fetch_gutendex_meta_from_id(gb_id=gutenberg_id)
+    url = gb_meta.get_txt_url()
+
+    if not url:
+        raise Exception("Gutenberg book missing txt/plain url")
+
+    return _fetch_book_content(download_url=url), gb_meta    
 
 
+def _fetch_gutendex_meta_from_id(*, gb_id:int) -> GBBookMeta:
+    url = f"https://gutendex.com/books/{gb_id}"
+    resp = requests.get(url)
+    resp.raise_for_status()
+    
+    body = resp.json()#["results"]
+    return GBBookMeta(**body)
+
+    
 def gutendex_book_urls(*, n=25, languages:list[str]=["en"], text_format="text/html") -> list[dict[str, str|int|list[str]]]:
     out = []
     txt_url = "https://gutendex.com/books"
@@ -55,7 +74,7 @@ def download_or_load_from_cache(*, book_key:str, url:str) -> str:
             book_txt = f.read()
         
     else:
-        book_txt = _fetch_book(download_url=url)
+        book_txt = _fetch_book_content(download_url=url)
 
         with open(book_p, "w", encoding="utf-8") as f:
             f.write(book_txt)

@@ -1,22 +1,29 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
+from openai import AzureOpenAI
 from pydantic import BaseModel, Field, field_validator
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 import psycopg2
 import uvicorn, requests
 
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
+from azure.search.documents.indexes import SearchIndexClient
 
-from sqlalchemy import select, delete
+# from sqlalchemy import select, delete
 from sqlalchemy.orm import Session
 from db.database import engine, SessionLocal
 from db.operations import select_all_books, select_book, delete_book, insert_book, select_books_like, select_documents_paginated, BookNotFoundException
 from db.schema import DBBook
 import db.schema as schema
+from moby import _make_limiters
+from models.api import Book, BookBase, BookMetaData, GBBookMeta
+from models.vector_db import ContentChunk
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
 
-from search_handler import paginated_search, SearchPage
+from load_book import fetch_book_content_from_id
+from preprocess_book import make_slug_book_key
+from search_handler import is_book_in_index, paginated_search, create_missing_search_index, SearchPage, upload_to_index_async
 from settings import get_settings
 
 app = FastAPI(title="MobyRAG")
@@ -24,14 +31,6 @@ prefix_router = APIRouter(prefix="/v1")
 
 schema.Base.metadata.create_all(bind=engine)        # creates the DB tables
 
-class Book(BaseModel):
-    id: int
-    title: str
-class BookBase(Book):
-    lang:str = Field(..., description="Language ISO code the book is written in", examples=["en", "nl", "da"])
-    slug_key: str
-    authors: str #list[str]
-    model_config = {"from_attributes": True}        # TODO: is this needed?
 
 
 def get_db():
@@ -42,15 +41,15 @@ def get_db():
         db.close()
 
 
-@prefix_router.post("/books/", response_model=Book, status_code=status.HTTP_201_CREATED)
-async def create_book(book:BookBase, db:Annotated[Session, Depends(get_db)]):
+@prefix_router.post("/books/", response_model=BookBase, status_code=status.HTTP_201_CREATED)
+async def create_book(book:BookMetaData, db:Annotated[Session, Depends(get_db)]):
     new_db_book = DBBook(**book.model_dump())
     inserted_book = insert_book(new_db_book, db)
 
     return inserted_book
 
 
-@prefix_router.get("/books/search", response_model=list[Book], status_code=status.HTTP_200_OK)
+@prefix_router.get("/books/search", response_model=list[BookBase], status_code=status.HTTP_200_OK)
 async def search_books(db:Annotated[Session, Depends(get_db)], 
                        title: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
                        authors: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
@@ -64,7 +63,7 @@ async def search_books(db:Annotated[Session, Depends(get_db)],
     return db_books
 
 
-@prefix_router.get("/books/{book_id}", response_model=Book, status_code=status.HTTP_200_OK)
+@prefix_router.get("/books/{book_id}", response_model=BookBase, status_code=status.HTTP_200_OK)
 async def get_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
     book = None
     try:
@@ -78,7 +77,7 @@ async def get_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
     return book
 
 # TODO: could be slow if DB is huge, use pagination instead
-@prefix_router.get("/books/", response_model=list[Book])
+@prefix_router.get("/books/", response_model=list[BookBase])
 async def get_books(db:Annotated[Session, Depends(get_db)]):
     books = select_all_books(db)
     return books
@@ -95,13 +94,13 @@ async def remove_book(book_id:int, db:Annotated[Session, Depends(get_db)]):
 
 # TODO: test this - how is the result paginated
 @prefix_router.get("/books/paginated")
-async def get_books_paginated(db:Annotated[Session, Depends(get_db)]) -> Page[BookBase]:
+async def get_books_paginated(db:Annotated[Session, Depends(get_db)]) -> Page[BookMetaData]:
     db_books = select_documents_paginated(db)
-    books = paginate([BookBase(**b.__dict__) for b in db_books.items])
+    books = paginate([BookMetaData(**b.__dict__) for b in db_books.items])
     return books
 
 
-@prefix_router.get("/books/documents/", response_model=SearchPage, status_code=status.HTTP_200_OK)
+@prefix_router.get("/index/documents/", response_model=SearchPage, status_code=status.HTTP_200_OK)
 async def get_docs(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=1)], 
                    take:Annotated[int, Query(description="Number of search result documents to take after skipping", le=100, ge=1)],
                    select:Annotated[list[Literal["book_name", "book_key", "content", "chunk_id", "content_vector", "*"]], Query(description="Fields to select from the vector index")] = ["*"],
@@ -121,27 +120,47 @@ async def get_docs(skip:Annotated[int, Query(description="Number of search resul
 
     return page
 
+# TODO: post book to vector db by using Gutendex ID
+#TODO: make it work with list of ids!
+# no body needed, only gutenberg id since we're uploading from Gutenberg 
+@prefix_router.post("/index/{gutenberg_id}", status_code=status.HTTP_201_CREATED)
+async def upload_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to upload", gt=0)]):
+    sett = get_settings()
+    #TODO: consider how to manage these search instances smartly in a deployed env
+    search_index_client = SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, 
+                                        index_name="moby", 
+                                        credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
+    
+    create_missing_search_index(search_index_client=search_index_client)
 
-class GBBookMeta(Book):
-    summaries:list[str]
-    subjects:list[str]
-    languages:list[str]
-    authors:list[dict]
-    editors:list[dict]
-    download_count:int
-    copyright:bool
-   
-    @field_validator("authors", "editors", mode="before")
-    def clear_nulls(cls, v:list[dict]):
-        d = [{k:v if v else None for k,v in author.items() } for author in v ]
-        return d
+    search_client = SearchClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, 
+                                index_name=sett.INDEX_NAME, 
+                                credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
 
+    book_content, gb_meta = fetch_book_content_from_id(gutenberg_id=gutenberg_id)
+    req_limiter, tok_limiter = _make_limiters()
 
-# TODO: search in Gutendex to show books
-@prefix_router.get("/books/gutenberg/{gb_id}", status_code=status.HTTP_200_OK, response_model=GBBookMeta)
-async def show_gutenberg_book(gb_id:Annotated[int, Path(description="Gutenberg ID of book", gt=0)]):
+    if not is_book_in_index(search_client=search_client, book_id=gb_meta.id):
+        emb_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
+                            api_version="2024-12-01-preview",
+                            api_key=sett.AZ_OPENAI_EMBED_KEY) 
+
+        chapters_added = await upload_to_index_async(search_client=search_client, 
+                                        embed_client=emb_client,
+                                        token_limiter=tok_limiter,
+                                        request_limiter=req_limiter,
+                                        book_meta=gb_meta,
+                                        raw_book_content=book_content
+                                    )
+    else:
+        print(f"\n Already in index {sett.INDEX_NAME} - {gb_meta.title}")
+
+  
+
+@prefix_router.get("/books/gutenberg/{gutenberg_id}", status_code=status.HTTP_200_OK, response_model=GBBookMeta)
+async def show_gutenberg_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID of book", gt=0)]):
     try:
-        res = requests.get(f"https://gutendex.com/books/{gb_id}")
+        res = requests.get(f"https://gutendex.com/books/{gutenberg_id}")
     except Exception as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=exc)
     
@@ -170,7 +189,7 @@ async def show_gutenberg_books_paginated(page_number:Annotated[int, Query(descri
         return gb_books[:number_of_books]
 
 
-# TODO: post book to vector db by using Gutendex ID
+
 # TODO: have default call to initialize db with e.g. 50 books (and use Celery for long time async job)
 
 

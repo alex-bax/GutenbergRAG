@@ -17,10 +17,11 @@ class EmbeddingVec(BaseModel):
         
         return self
 
-class ChapterDBItem(BaseModel):
-    id_str:str = Field(...)
-    book_name:str = Field(..., description="Name of the book")
-    book_key:str = Field(..., description="Unique, slug-style key that identifies the book")
+class ContentChunk(BaseModel):
+    uuid_str:str = Field(...)
+    book_name:str = Field(..., description="Name/title of the book")
+    # book_key:str = Field(..., description="Unique, slug-style key that identifies the book", examples=["frankenstein-or-the-modern-prometheus_shelley-mary-wollstonecraft_84_en", 
+    book_id:int = Field(...)
     chunk_id:int = Field(...)
     # chapter_title:str = Field(..., description="Title of the chapter")
     content:str = Field(..., description="Content of the chapter")

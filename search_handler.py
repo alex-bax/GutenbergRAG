@@ -15,18 +15,20 @@ from openai import AzureOpenAI
 
 from load_book import download_or_load_from_cache
 from constants import EmbeddingDimension
-from preprocess_book import make_slug_book_key, extract_txt, create_embeddings_async, batch_texts_by_tokens
+from preprocess_book import make_slug_book_key, clean_headers, create_embeddings_async, batch_texts_by_tokens
 from chunking import fixed_size_chunks
 from settings import get_settings
-from models.vector_db import EmbeddingVec, ChapterDBItem
+from models.vector_db import EmbeddingVec, ContentChunk
 from pydantic import BaseModel, Field
 
+from models.api import GBBookMeta
 
+# TODO: why optional?
 class SearchItem(BaseModel):
-    id_str: str|None = Field(default=None)
+    uuid_str: str|None = Field(default=None)
     chunk_id: int|None = Field(default=None)
     book_name: str|None = Field(default=None)
-    book_key: str|None = Field(default=None)
+    book_id: int|None = Field(default=None)
     content: str|None = Field(default=None)
 
 class SearchPage(BaseModel):
@@ -39,9 +41,9 @@ class SearchPage(BaseModel):
 
 def _get_index_fields() -> list[SearchField]:
     return [
-            SimpleField(name="id_str", type=SearchFieldDataType.String, key=True),
+            SimpleField(name="uuid_str", type=SearchFieldDataType.String, key=True),
             SimpleField(name="book_name", type=SearchFieldDataType.String, filterable=True, facetable=True),
-            SimpleField(name="book_key", type=SearchFieldDataType.String, filterable=True, facetable=True),
+            SimpleField(name="book_id", type=SearchFieldDataType.Int32, filterable=True, facetable=True),
             SimpleField(name="chunk_id", type=SearchFieldDataType.Int32, filterable=True),
             SearchField(name="content", type=SearchFieldDataType.String, searchable=True),
             SearchField(
@@ -109,12 +111,12 @@ def paginated_search(*, search_client:SearchClient, q:str="", skip:int, top:int,
     return page    # can safely do this (load into memory) since top and skip are limited via api params
 
 
-def is_book_in_index(*, search_client:SearchClient, book_key:str) :
+def is_book_in_index(*, search_client:SearchClient, book_id:int) :
     resp = search_client.search(                # search using facets
                 query_type="simple",
                 search_text="*",
-                filter=f"book_key eq '{book_key}'",
-                facets=["book_name", "book_key"],
+                filter=f"book_id eq {book_id}",
+                facets=["book_name", "book_id"],
                 top=1,
             )
     
@@ -123,15 +125,16 @@ def is_book_in_index(*, search_client:SearchClient, book_key:str) :
 
 async def upload_to_index_async(*, search_client:SearchClient, 
                     embed_client:AzureOpenAI, 
-                    book:dict[str,str],
                     token_limiter:Limiter,
-                    request_limiter:Limiter) -> list[ChapterDBItem]:
+                    request_limiter:Limiter,
+                    raw_book_content: str,
+                    book_meta: GBBookMeta,
+                    ) -> list[ContentChunk]:
     sett = get_settings()
-    raw_book_str = download_or_load_from_cache(book_key=book["book_key"], url=book["url"])
-    
-    book_str = extract_txt(raw_book=raw_book_str) #extract_chapters(book_txt=book)
+
+    book_str = clean_headers(raw_book=raw_book_content) 
     if len(book_str) == 0:      
-        print(f'INFO No book string extracted --- skip {book["title"]}')
+        print(f'** INFO No book content str extracted --- skipping {book_meta.title}')
         return []
 
     docs:list[dict] = []
@@ -150,10 +153,10 @@ async def upload_to_index_async(*, search_client:SearchClient,
     assert len(chunks) == len(embeddings)
 
     for i, (chunk, emb_vec) in enumerate(zip(chunks, embeddings)):
-        chapter_item = ChapterDBItem(
-            id_str= str(uuid.uuid4()),
-            book_name= book["title"],
-            book_key= book["book_key"],
+        chapter_item = ContentChunk(
+            uuid_str= str(uuid.uuid4()),
+            book_name= book_meta.title,
+            book_id = book_meta.id,
             chunk_id= i,
             content= chunk,
             content_vector= emb_vec
@@ -173,40 +176,15 @@ async def upload_to_index_async(*, search_client:SearchClient,
 if __name__ == "__main__":      # Don't run when imported via import statement
     load_dotenv()
 
-    # chapter_item = ChapterDBItem(
-    #     id_str="123e4567-e89b-12d3-a456-426614174000",
-    #     book_name="The Great Adventure",
-    #     book_key="the-great-adventure",
-    #     chunk_id=1,
-    #     # chapter_title="Chapter 1: The Beginning",
-    #     content="It was a bright cold day in April, and the clocks were striking thirteen.",
-    #     content_vector=EmbeddingVec(
-    #         vector=[0.42]*EmbeddingDimension.SMALL,  # Must match the dim size
-    #         dim=EmbeddingDimension.SMALL
-    #     )
-    # )
-
     sett = get_settings()
-    AZURE_SEARCH_ENDPOINT = sett.AZURE_SEARCH_ENDPOINT
-    AZURE_SEARCH_KEY = sett.AZURE_SEARCH_KEY
-    
     # dummy_ch_content = ["Call me Ishmael. Some years ago—never mind how long precisely..."]
 
-    # dummy_doc = {
-    #     "id": "test-1",
-    #     "book": "Moby-Dick",
-    #     "chapter": "CHAPTER 1. Loomings.",
-    #     "chunk_id": 0,
-    #     "content": dummy_ch_content,
-    #     "contentVector": [0.0]*3072  # placeholder—replace with a real embedding
-    # }
-
-    az_key = AzureKeyCredential(AZURE_SEARCH_KEY)
+    az_key = AzureKeyCredential(sett.AZURE_SEARCH_KEY)
 
     # # index_client = SearchIndexClient(endpoint=AZURE_SEARCH_ENDPOINT, credential=az_key)
     # # create_missing_search_index(search_index_client=index_client)
     
-    search_client = SearchClient(endpoint=AZURE_SEARCH_ENDPOINT, index_name="moby", credential=az_key)
+    search_client = SearchClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, index_name="moby", credential=az_key)
     paginated_search(search_client=search_client, top=5, skip=0, select_fields="book_name, id_str, chunk_id")
     # # resp = search_client.search(
     # #             search_text="*",
@@ -252,5 +230,3 @@ if __name__ == "__main__":      # Don't run when imported via import statement
     # #     # semantic_configuration_name="default"
     # # )
     
-    # # for r in results:
-    # #     print(r["chapter"], r["@search.score"])

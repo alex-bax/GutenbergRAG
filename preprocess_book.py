@@ -11,7 +11,7 @@ from openai import RateLimitError
 from pyrate_limiter import Duration, Rate, Limiter, BucketFullException
 from constants import REQUESTS_PR_MIN, TOKEN_PR_MIN
 
-def extract_txt(*, raw_book: str) -> str:
+def clean_headers(*, raw_book: str) -> str:
     start_match = re.search(pattern=r'\*\*\*\s?START OF TH(IS|E) PROJECT GUTENBERG EBOOK.', string=raw_book)
     end_match = re.search(pattern=r'\*\*\* end of the project gutenberg ebook', string=raw_book.lower())
 
@@ -116,12 +116,15 @@ def _norm(s: str) -> str:
         s = re.sub(r"[-\s]+", "-", s)
         return s
 
-def make_slug_book_key(title: str, gutenberg_id:int, author: str|None=None, year: int|None=None, source: str|None=None, lang: str|None=None):
+
+# TODO: make this accept a GBBookMeta
+# delete some of its attrs to make it fit: https://stackoverflow.com/questions/1120927/which-is-better-in-python-del-or-delattr
+def make_slug_book_key(title: str, gutenberg_id:int, author: str, 
+                       year: int|None=None, lang: str|None=None):
     parts = [_norm(title)]
     if author: parts.append(_norm(author))
     if gutenberg_id: parts.append(f"{gutenberg_id}")
     if year:   parts.append(str(year))
-    if source: parts.append(_norm(source))        # e.g., "gutenberg"
     if lang:   parts.append(_norm(lang))          # e.g., "en"
     return "_".join(parts)
 
@@ -132,7 +135,7 @@ if __name__ == "__main__":
     with open(Path(book_p), 'r') as f:
         txt = f.read()
 
-    d = extract_txt(raw_book=txt)
+    d = clean_headers(raw_book=txt)
 
     # print(make_slug_book_key("Moby Dick", 42, "Herman Melville", 1851, "gutenberg", "en"))
     # print(make_slug_book_key("The Odyssey", gutenberg_id=42,))

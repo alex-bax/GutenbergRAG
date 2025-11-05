@@ -35,7 +35,7 @@ def _make_limiters() -> list[Limiter]:
     return [req_limiter, tok_limiter]
 
 
-
+# TODO: change to use GBMeta instead of dict based
 async def main_moby() -> None:
     ### Ingestion
     sett = get_settings()
