@@ -17,58 +17,57 @@ async def insert_book(book:DBBookMetaData, db_sess:AsyncSession) -> None:
     await  db_sess.refresh(book)
 
 
-# def select_all_books(db_sess:Session) -> list[DBBookMetaData]:
-#     stmt = select(DBBookMetaData)
-#     res = db_sess.execute(stmt)
-#     book_rows = list(res.scalars().all())       # [(<schema.Book object at 0x0000019D638986E0>,)]
+async def select_all_books(db_sess:AsyncSession) -> list[DBBookMetaData]:
+    stmt = select(DBBookMetaData)
+    res =await db_sess.execute(stmt)
+    book_rows = list(res.scalars().all())       # [(<schema.Book object at 0x0000019D638986E0>,)]
 
-#     return book_rows
+    return book_rows
 
-# def select_book(book_id:int|None, db_sess:Session, where_gb_id:int|None=None) -> DBBookMetaData:
-#     if where_gb_id:
-#         stmt = select(DBBookMetaData).where(DBBookMetaData.gb_id == where_gb_id)
-#     else:
-#         stmt = select(DBBookMetaData).where(DBBookMetaData.id == book_id)
+async def select_book(book_id:int|None, db_sess:AsyncSession, where_gb_id:int|None=None) -> DBBookMetaData:
+    if where_gb_id:
+        stmt = select(DBBookMetaData).where(DBBookMetaData.gb_id == where_gb_id)
+    else:
+        stmt = select(DBBookMetaData).where(DBBookMetaData.id == book_id)
 
-#     res = db_sess.execute(stmt)
-#     book = res.scalars().one_or_none()
+    res =await db_sess.execute(stmt)
+    book = res.scalars().one_or_none()
     
-#     if not book:
-#         raise BookNotFoundException(f"Book with id {book_id} not found")
+    if not book:
+        raise BookNotFoundException(f"Book with id {book_id} not found")
     
-#     return book
+    return book
 
-# def select_books_like(title:str|None, authors:str|None, lang:str|None, db_sess:Session) -> list[DBBookMetaData]:
-#     conditions = []         # bool expressions to be joined together
-#     stmt = select(DBBookMetaData)
+async def select_books_like(title:str|None, authors:str|None, lang:str|None, db_sess:AsyncSession) -> list[DBBookMetaData]:
+    conditions = []         # bool expressions to be joined together
+    stmt = select(DBBookMetaData)
 
-#     if lang:
-#         conditions.append(DBBookMetaData.lang == lang)
-#     if title:
-#         conditions.append(DBBookMetaData.title.ilike(f"%{title}%"))     # case insensitive
-#     # authors can be separated by ;
-#     if authors:
-#         conditions.append(or_(*[DBBookMetaData.authors.ilike(f"%{a}%") for a in authors.split(";")]))
+    if lang:
+        conditions.append(DBBookMetaData.lang == lang)
+    if title:
+        conditions.append(DBBookMetaData.title.ilike(f"%{title}%"))     # case insensitive
+    # authors can be separated by ;
+    if authors:
+        conditions.append(or_(*[DBBookMetaData.authors.ilike(f"%{a}%") for a in authors.split(";")]))
  
-#     if conditions:
-#         stmt = stmt.where(and_(*conditions))
+    if conditions:
+        stmt = stmt.where(and_(*conditions))
     
-#     res = db_sess.execute(stmt)
+    res = await db_sess.execute(stmt)
     
-#     return list(res.scalars().all())
+    return list(res.scalars().all())
 
 
-# def delete_book(book_id:int, db_sess:Session) -> None:
-#     stmt = delete(DBBookMetaData).where(DBBookMetaData.id == book_id)
-#     res = db_sess.execute(stmt)
-#     db_sess.commit()
+async def delete_book(book_id:int, db_sess:AsyncSession) -> None:
+    stmt = delete(DBBookMetaData).where(DBBookMetaData.id == book_id)
+    res =await db_sess.execute(stmt)
+    await db_sess.commit()
     
-#     if res.rowcount == 0:       # type:ignore
-#         raise BookNotFoundException(f"Book with id {book_id} not found")
+    if res.rowcount == 0:       # type:ignore
+        raise BookNotFoundException(f"Book with id {book_id} not found")
 
 
 
-
-# def select_documents_paginated(db_sess:Session) -> Page[DBBookMetaData]:
-#     return paginate(db_sess, select(DBBookMetaData))
+async def select_documents_paginated(db_sess:AsyncSession) -> Page[DBBookMetaData]:
+    return await paginate(db_sess, select(DBBookMetaData))
 
