@@ -106,7 +106,7 @@ async def client(
     # endpoints to get SQLAlchemy's AsyncSession. In my case, it is
     # get_async_session
     app.dependency_overrides[get_async_db_sess] = override_get_async_session
-    yield AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+    yield AsyncClient(transport=ASGITransport(app=app), base_url="http://")
     del app.dependency_overrides[get_async_db_sess]
 
     await transaction.rollback()
@@ -117,8 +117,15 @@ async def test_api_create_profile(client: AsyncClient):
     test_name = "test"
     async with client as ac:
         response = await ac.post(
-            "/api/profiles",
-            json={"name": test_name},
+            # "/api/profiles",
+            "/v1/books/",
+            json={
+                "id": 0,
+                "gb_id": 0,
+                "title": "string",
+                "lang": "en",
+                "authors": "string"
+                },
         )
         created_profile_id = response.json()["id"]
 

@@ -19,6 +19,7 @@ psycopg2
 httpx
 pytest
 httpx
+aiosqlite
 # uvicorn[standard]
 
 langchain-text-splitters
