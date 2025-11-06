@@ -4,6 +4,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from settings import get_settings
 import asyncio
+from typing import AsyncIterator
 
 sett = get_settings()
 
@@ -19,3 +20,6 @@ AsyncSessionLocal = async_sessionmaker(
 
 Base = declarative_base() 
 
+async def get_async_db_sess() -> AsyncIterator[AsyncSession]:
+    async with AsyncSessionLocal() as session:
+        yield session

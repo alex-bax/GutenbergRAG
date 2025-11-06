@@ -11,7 +11,7 @@ from azure.search.documents.indexes import SearchIndexClient
 
 # from sqlalchemy import select, delete
 # from sqlalchemy.orm import Session
-from db.database import engine, AsyncSessionLocal#, SessionLocal
+from db.database import engine, get_async_db_sess#, SessionLocal
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.operations import select_all_books, select_book, delete_book, insert_book, select_books_like, select_documents_paginated, BookNotFoundException
 
@@ -19,7 +19,7 @@ from db.schema import DBBookMetaData
 import db.schema as schema
 from moby import _make_limiters
 from models.api_response import ApiResponse, BookMetaDataResponse, GBBookMeta
-from models.vector_db import SearchPage
+# from models.vector_db import SearchPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
 
@@ -39,9 +39,9 @@ async def init_models():
         await conn.run_sync(schema.Base.metadata.create_all)
 
 
-async def get_db() -> AsyncIterator[AsyncSession]:
-    async with AsyncSessionLocal() as session:
-        yield session
+# async def get_db() -> AsyncIterator[AsyncSession]:
+#     async with AsyncSessionLocal() as session:
+#         yield session
 
 
 # def get_db():
@@ -80,12 +80,12 @@ def get_emb_client() -> AzureOpenAI:
 
 
 @prefix_router.post("/books/", status_code=status.HTTP_201_CREATED)
-async def create_book(book:BookMetaDataResponse, db:Annotated[AsyncSession, Depends(get_db)]):
+async def create_book(book:BookMetaDataResponse, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     new_db_book = DBBookMetaData(**book.model_dump())
     await insert_book(new_db_book, db)
 
 @prefix_router.get("/books/search", response_model=ApiResponse, status_code=status.HTTP_200_OK)
-async def search_books(db:Annotated[AsyncSession, Depends(get_db)], 
+async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)], 
                        title: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
                        authors: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
                        lang:Annotated[str|None, Query(min_length=2, max_length=2, examples=["en", "da", "nl"])] = None ):
@@ -100,7 +100,7 @@ async def search_books(db:Annotated[AsyncSession, Depends(get_db)],
 
 
 @prefix_router.get("/books/{book_id}", response_model=ApiResponse, status_code=status.HTTP_200_OK)
-async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_db)]):
+async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     book = None
     try:
         book = await select_book(book_id, db)
@@ -114,13 +114,13 @@ async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_db)]):
 
 # TODO: could be slow if DB is huge, use pagination instead
 @prefix_router.get("/books/", response_model=ApiResponse)
-async def get_books(db:Annotated[AsyncSession, Depends(get_db)]):
+async def get_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     books = await select_all_books(db)
     return ApiResponse(data=[b.to_book_meta_response() for b in books])
 
 
 @prefix_router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_book(book_id:int, db:Annotated[AsyncSession, Depends(get_db)]):
+async def remove_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     try:
         await delete_book(book_id, db)
     except BookNotFoundException:
@@ -131,7 +131,7 @@ async def remove_book(book_id:int, db:Annotated[AsyncSession, Depends(get_db)]):
 
 # TODO: test this - how is the result paginated
 @prefix_router.get("/books/paginated")
-async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_db)]) -> Page[BookMetaDataResponse]:
+async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_sess)]) -> Page[BookMetaDataResponse]:
     db_books = await select_documents_paginated(db)
     books = paginate([BookMetaDataResponse(**b.__dict__) for b in db_books.items])
     return books
@@ -162,7 +162,7 @@ async def upload_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID
                       search_client:Annotated[SearchClient, Depends(get_search_client)],
                       index_client:Annotated[SearchIndexClient, Depends(get_index_client)],
                       emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
-                      db:Annotated[AsyncSession, Depends(get_db)]):
+                      db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     sett = get_settings()
     #TODO: consider how to manage these search instances smartly in a deployed env
     info = ""

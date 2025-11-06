@@ -3,7 +3,7 @@ from fastapi import status, APIRouter
 from fastapi.testclient import TestClient
 from db.schema import DBBookMetaData
 from db.database import Base
-from main import app, get_db
+from main import app, get_async_db_sess
 from sqlalchemy import create_engine, StaticPool
 from sqlalchemy.orm import sessionmaker, Session
 import pytest
@@ -86,7 +86,7 @@ def client(db_session:Session):
         finally:
             pass
 
-    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_async_db_sess] = _override_get_db
     with TestClient(app) as tc:
         yield tc
     app.dependency_overrides.clear()

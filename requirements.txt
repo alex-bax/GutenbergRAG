@@ -18,6 +18,7 @@ sqlalchemy
 psycopg2
 httpx
 pytest
+httpx
 # uvicorn[standard]
 
 langchain-text-splitters
