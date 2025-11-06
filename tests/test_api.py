@@ -102,7 +102,7 @@ def test_get_book(client: TestClient, book_factory):
     assert data["authors"] == "Frank Herman"
     assert "id" in data
 
-
+ 
 moby = {"title":"Moby Dick", "authors":"Herman Melville"}
 @pytest.mark.parametrize("queries, expected", [(f"authors=Herman Melville&title=Moby Dick", [moby]),
                                                 (f"title=moby", [moby]),
@@ -123,7 +123,7 @@ def test_search_book(queries, expected, client: TestClient, book_factory):
     if len(expected) > 0:
         assert books_found[0]["title"] == expected[0]["title"], title
 
-
+ 
 @pytest.mark.parametrize("queries, expected", [("title=Unknown book", []),
                                                 ("title=Frankenstein&authors=HC Andersen", []),
                                                 ("authors=No", status.HTTP_422_UNPROCESSABLE_CONTENT )])
