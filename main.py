@@ -158,7 +158,7 @@ async def get_docs(skip:Annotated[int, Query(description="Number of search resul
 #TODO: make it work with list of ids?
 # no body needed, only gutenberg id since we're uploading from Gutenberg 
 @prefix_router.post("/index/{gutenberg_id}", status_code=status.HTTP_201_CREATED, response_model=ApiResponse)
-async def upload_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to upload", gt=0)],
+async def upload_book_to_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to upload", gt=0)],
                       search_client:Annotated[SearchClient, Depends(get_search_client)],
                       index_client:Annotated[SearchIndexClient, Depends(get_index_client)],
                       emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
@@ -193,7 +193,7 @@ async def upload_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID
         info = f"Book already in index {sett.INDEX_NAME} as '{gb_meta.title}'. Fetched meta data from DB"
 
         try:
-            book = await select_book(book_id=None, db_sess=db, where_gb_id=gutenberg_id)
+            book = await select_book(book_id=None, db_sess=db, gb_id=gutenberg_id)
         except BookNotFoundException: 
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {gutenberg_id} not found, but was in index")
 
@@ -201,8 +201,31 @@ async def upload_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID
 
     return ApiResponse(data=book_added, message=info) 
 
-
+#TODO: look up specific chunk by uuid?
 #TODO delete from index 
+
+
+@prefix_router.delete("/index/{gutenberg_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
+                                search_client:Annotated[SearchClient, Depends(get_search_client)],
+                                db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
+    # Ensure that book exists before deleting it from index
+    try:
+        await delete_book(book_id=None, gb_id=gutenberg_id, db_sess=db)
+    except BookNotFoundException: 
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {gutenberg_id} not found in DB")
+    
+    # get all documents with matching book_key
+    result = search_client.search(search_text="*",  # match all docs
+                                filter=f"book_id eq {gutenberg_id}",
+                                select=["uuid_str"],  # only fetch the ID "PK" field 
+                                )
+    
+    if not result:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"No index docs found with book_id {gutenberg_id}")
+    else:
+        search_client.delete_documents(list(result))
+
   
 
 @prefix_router.get("/books/gutenberg/{gutenberg_id}", status_code=status.HTTP_200_OK, response_model=ApiResponse)

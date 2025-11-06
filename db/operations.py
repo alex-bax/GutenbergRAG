@@ -24,9 +24,9 @@ async def select_all_books(db_sess:AsyncSession) -> list[DBBookMetaData]:
 
     return book_rows
 
-async def select_book(book_id:int|None, db_sess:AsyncSession, where_gb_id:int|None=None) -> DBBookMetaData:
-    if where_gb_id:
-        stmt = select(DBBookMetaData).where(DBBookMetaData.gb_id == where_gb_id)
+async def select_book(book_id:int|None, db_sess:AsyncSession, gb_id:int|None=None) -> DBBookMetaData:
+    if gb_id:
+        stmt = select(DBBookMetaData).where(DBBookMetaData.gb_id == gb_id)
     else:
         stmt = select(DBBookMetaData).where(DBBookMetaData.id == book_id)
 
@@ -58,9 +58,14 @@ async def select_books_like(title:str|None, authors:str|None, lang:str|None, db_
     return list(res.scalars().all())
 
 
-async def delete_book(book_id:int, db_sess:AsyncSession) -> None:
-    stmt = delete(DBBookMetaData).where(DBBookMetaData.id == book_id)
-    res =await db_sess.execute(stmt)
+async def delete_book(book_id:int|None, db_sess:AsyncSession, gb_id:int|None=None) -> None:
+    
+    if gb_id:
+        stmt = delete(DBBookMetaData).where(DBBookMetaData.gb_id == gb_id)
+    else:
+        stmt = delete(DBBookMetaData).where(DBBookMetaData.id == book_id)
+    
+    res = await db_sess.execute(stmt)
     await db_sess.commit()
     
     if res.rowcount == 0:       # type:ignore

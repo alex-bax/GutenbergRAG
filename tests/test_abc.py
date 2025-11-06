@@ -10,14 +10,12 @@ from db.database import Base
 
 # Importing fastapi.Depends that is used to retrieve SQLAlchemy's session
 from db.database import get_async_db_sess
-# from app.api.deps import get_async_session
 # Importing main FastAPI instance
 from main import app
 
 # To run async tests
 pytestmark = pytest.mark.anyio
 
-# Supply connection string
 engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 
 
@@ -120,6 +118,8 @@ async def client(
     del app.dependency_overrides[get_async_db_sess]
 
     await transaction.rollback()
+
+
 
 
 # Tests showing rollbacks between functions when using API client
