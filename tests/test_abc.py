@@ -6,6 +6,7 @@ from httpx import AsyncClient, ASGITransport
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from db.database import Base
 
 # Importing fastapi.Depends that is used to retrieve SQLAlchemy's session
 from db.database import get_async_db_sess
@@ -29,6 +30,15 @@ class Profile(DeclarativeBase):
     )
     name: Mapped[str]
 
+@pytest.fixture(scope="session", autouse=True)
+async def create_test_schema():
+    # Create the schema (tables)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # Drop the schema (tables) after the tests
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
 # Required per https://anyio.readthedocs.io/en/stable/testing.html#using-async-fixtures-with-higher-scopes
 @pytest.fixture(scope="session")
