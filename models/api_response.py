@@ -7,7 +7,7 @@ import db.schema        # TODO: find better way to fix circular import
 
 class QueryResponse(BaseModel):
     answer:str
-    citation:str #?
+    citations:list[str] #?
     #canditates:list[]  #TODO: add content chunks?
 
 class BookBase(BaseModel):
@@ -67,7 +67,7 @@ class GBBookMeta(BaseModel):
     
 
 class ApiResponse(BaseModel):
-    data: BookMetaDataResponse|list[BookMetaDataResponse]|SearchPage|GBBookMeta|None = Field(default=None)
+    data: BookMetaDataResponse|list[BookMetaDataResponse]|SearchPage|GBBookMeta|QueryResponse|None = Field(default=None)
     job_id: int|None = Field(default=None, description="Id for async long running jobs when uploading many books to index")   
     message: str|None = None    
 

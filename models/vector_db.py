@@ -32,7 +32,7 @@ class ContentUploadChunk(BaseModel):
         return self.__dict__ | { "content_vector": embed_vec }
 
 
-# Uses optional since user search request can toggle fields
+# Uses optional since user search request can toggle fields on/off
 class SearchChunk(BaseModel):
     uuid_str: str|None
     chunk_nr: int|None = Field(None,  description="Nth chunk of all chunks")

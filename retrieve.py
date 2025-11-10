@@ -5,6 +5,7 @@ from openai import AzureOpenAI
 
 from azure.core.paging import ItemPaged
 
+from models.api_response import QueryResponse
 from preprocess_book import create_embeddings
 from typing import Any
 
@@ -18,7 +19,7 @@ def _search_chunks(*, query: str,
                                         embed_client=embed_client, 
                                         model_deployed=embed_model_deployed)[0]
     
-    vec_q = VectorizedQuery(vector=query_emb_vec.vector, k_nearest_neighbors=40, fields="contentVector")
+    vec_q = VectorizedQuery(vector=query_emb_vec.vector, k_nearest_neighbors=40, fields="content_vector")
 
     results:ItemPaged = search_client.search(
         search_text=query,                         # hybrid: BM25 + vector
@@ -32,29 +33,31 @@ def _search_chunks(*, query: str,
     for r in results:
         hits.append({
             "score": r["@search.score"],
-            "book": r["book"], "chapter": r["chapter"], "chunk_id": r["chunk_id"],
+            "book": r["book_name"], "chunk_nr": r["chunk_nr"], "book_id": r["book_id"],
             "content": r["content"]
         })
     
     return hits
 
-
 def answer(*, query: str, 
            search_client:SearchClient, 
            embed_client:AzureOpenAI, 
            llm_client:AzureOpenAI,
+           top_n_matches:int,
            embed_model_deployed="text-embedding-3-small",
-           llm_model_deployed="gpt-5-mini") -> dict[str, Any]:
+           llm_model_deployed="gpt-5-mini",) -> QueryResponse:
     
     hits = _search_chunks(query=query, 
                          search_client=search_client, 
                          embed_client=embed_client, 
                          embed_model_deployed=embed_model_deployed, 
-                         k=6)
+                         k=top_n_matches)
     context_blocks = []
     citations = []
+    llm_answer = "No matches found with query. Ensure that index is populated."
 
     for h in hits:
+        #TODO: make/use class the represent the fields used in index! No manual udpates here!
         context_blocks.append(f"[{h['chapter']} · chunk {h['chunk_id']}] {h['content']}")
         citations.append({"chapter": h["chapter"], "chunk_id": h["chunk_id"]})
 
@@ -62,16 +65,21 @@ def answer(*, query: str,
                 If unsure, say you don't know. 
                 Include a brief 'Sources' list with chapter + chunk ids.
                 """
+    #TODO: fix this
     prompt = f"""Question: {query}
                 Context:
-                {chr(10).join(context_blocks)}
+                {chr(10).join(context_blocks)}      
                 """
 
-    chat = llm_client.responses.create(
-        model=llm_model_deployed,
-        input=[
-            {"role":"system","content":system},
-            {"role":"user","content":prompt}
-        ]
-    )
-    return {"answer": chat.output_text, "citations": citations}
+    if len(hits) > 0:
+        chat = llm_client.responses.create(
+            model=llm_model_deployed,
+            input=[
+                {"role":"system","content":system},
+                {"role":"user","content":prompt}
+            ]
+        )
+        llm_answer = chat.output_text
+    
+    
+    return QueryResponse(answer=llm_answer, citations= citations)

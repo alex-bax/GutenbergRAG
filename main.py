@@ -18,7 +18,7 @@ from db.operations import select_all_books, select_book, delete_book, insert_boo
 from db.schema import DBBookMetaData
 import db.schema as schema
 from moby import _make_limiters
-from models.api_response import ApiResponse, BookMetaDataResponse, GBBookMeta
+from models.api_response import ApiResponse, BookMetaDataResponse, GBBookMeta, QueryResponse
 # from models.vector_db import SearchPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
@@ -202,9 +202,6 @@ async def upload_book_to_index(gutenberg_id:Annotated[int, Path(description="Gut
     return ApiResponse(data=book_added, message=info) 
 
 #TODO: look up specific chunk by uuid?
-#TODO delete from index 
-
-
 @prefix_router.delete("/index/{gutenberg_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
                                 search_client:Annotated[SearchClient, Depends(get_search_client)],
@@ -259,21 +256,24 @@ async def show_gutenberg_books_paginated(page_number:Annotated[int, Query(descri
         gb_books = [GBBookMeta(**book_dict) for book_dict in body]
         return gb_books[:number_of_books]
 
-
-#TODO: add retrieval endpoint
-
 # TODO: have default call to initialize db with e.g. 50 books (and use Celery for long time async job)
         # e.g. populate index
+
 @prefix_router.get("/query/", status_code=status.HTTP_202_ACCEPTED, response_model=ApiResponse)
-async def answer_query(query:str,
+async def answer_query(query:Annotated[str, Query()],
                       search_client:Annotated[SearchClient, Depends(get_search_client)],
                       llm_client:Annotated[AzureOpenAI, Depends(get_llm_client)],
                       emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
+                      top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=50)]=7,
                       only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
 
-    ans = answer(query=query, search_client=search_client, embed_client=emb_client, llm_client=llm_client)
+    llm_resp = answer(query=query, 
+                      search_client=search_client, 
+                      embed_client=emb_client, 
+                      llm_client=llm_client,
+                      top_n_matches=top_n_matches)
     # TODO: add the ans to the reponse type
-    return ApiResponse(data=None)
+    return ApiResponse(data=llm_resp)
 
 
 app.include_router(prefix_router)
