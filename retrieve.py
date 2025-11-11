@@ -4,16 +4,17 @@ from azure.search.documents.models import VectorizedQuery, VectorQuery
 from openai import AzureOpenAI
 
 from azure.core.paging import ItemPaged
+from constants import MIN_SEARCH_SCORE
 
 from models.api_response import QueryResponse
 from preprocess_book import create_embeddings
 from typing import Any
+from models.vector_db import SearchChunk, ContentUploadChunk
 
-
-def _search_chunks(*, query: str, 
+def search_chunks(*, query: str, 
                   search_client:SearchClient, 
                   embed_client:AzureOpenAI, 
-                  embed_model_deployed:str, k=5) -> list[dict[str, Any]]:
+                  embed_model_deployed:str, k=5) -> list[SearchChunk]: #list[dict[str, Any]]:
     
     query_emb_vec = create_embeddings(batches=[query], 
                                         embed_client=embed_client, 
@@ -31,47 +32,49 @@ def _search_chunks(*, query: str,
     
     hits=[]
     for r in results:
-        hits.append({
-            "score": r["@search.score"],
-            "book": r["book_name"], "chunk_nr": r["chunk_nr"], "book_id": r["book_id"],
-            "content": r["content"]
-        })
+        chunk = SearchChunk(search_score=r["@search.score"], 
+                            uuid_str=r["uuid_str"],
+                            chunk_nr=r["chunk_nr"],
+                            book_id=r["book_id"],
+                            content=r["content"],
+                            book_name=r["book_name"],
+                        )
+        hits.append(chunk)
     
     return hits
 
-def answer(*, query: str, 
-           search_client:SearchClient, 
-           embed_client:AzureOpenAI, 
-           llm_client:AzureOpenAI,
-           top_n_matches:int,
-           embed_model_deployed="text-embedding-3-small",
-           llm_model_deployed="gpt-5-mini",) -> QueryResponse:
-    
-    hits = _search_chunks(query=query, 
-                         search_client=search_client, 
-                         embed_client=embed_client, 
-                         embed_model_deployed=embed_model_deployed, 
-                         k=top_n_matches)
-    context_blocks = []
-    citations = []
-    llm_answer = "No matches found with query. Ensure that index is populated."
+def answer_with_context(*, query:str, 
+                        llm_client:AzureOpenAI, 
+                        llm_model_deployed:str, 
+                        chunk_hits:list[SearchChunk]) -> tuple[str, list[SearchChunk]]:
+   
+    relevant_context = []
 
-    for h in hits:
-        #TODO: make/use class the represent the fields used in index! No manual udpates here!
-        context_blocks.append(f"[{h['chapter']} · chunk {h['chunk_id']}] {h['content']}")
-        citations.append({"chapter": h["chapter"], "chunk_id": h["chunk_id"]})
+    relev_chunk_hits = [c for c in chunk_hits if c.search_score >= MIN_SEARCH_SCORE]
+    assert all(c is not None for c in relev_chunk_hits)
 
-    system = """You answer using only the provided context. 
+    for chunk_h in relev_chunk_hits:
+        chunk_format_str = f"[{chunk_h.book_name} chunk_id {chunk_h.uuid_str} -- # chunk {chunk_h.chunk_nr}, search score:{chunk_h.search_score}] | {chunk_h.content} |"
+        relevant_context.append(chunk_format_str)
+
+    system = """You answer using only the provided list of content chunks. 
+                Each chunk has a header denoted by '[' and ']'. The content of the chunk is denoted by: '|'
+                
                 If unsure, say you don't know. 
-                Include a brief 'Sources' list with chapter + chunk ids.
+                Include a brief 'Sources' list with chunk uuids and their book_name.
                 """
-    #TODO: fix this
+    
     prompt = f"""Question: {query}
                 Context:
-                {chr(10).join(context_blocks)}      
+                {"\n".join([chunk.content for chunk in relev_chunk_hits if chunk.content])}      
                 """
 
-    if len(hits) > 0:
+    llm_answer = "No matches found with query. Ensure that book index is populated."
+    if len(relev_chunk_hits) == 0 and len(chunk_hits) > 0:
+        llm_answer = "Matches found, but none were relevant."
+        relev_chunk_hits = chunk_hits   
+
+    elif len(relev_chunk_hits) > 0:
         chat = llm_client.responses.create(
             model=llm_model_deployed,
             input=[
@@ -80,6 +83,29 @@ def answer(*, query: str,
             ]
         )
         llm_answer = chat.output_text
+
+    return llm_answer, relev_chunk_hits
+
+
+
+def answer_api(*, query: str, 
+           search_client:SearchClient, 
+           embed_client:AzureOpenAI, 
+           llm_client:AzureOpenAI,
+           top_n_matches:int,
+           embed_model_deployed:str,
+           llm_model_deployed:str) -> QueryResponse:
     
+    chunk_hits = search_chunks(query=query, 
+                         search_client=search_client, 
+                         embed_client=embed_client, 
+                         embed_model_deployed=embed_model_deployed, 
+                         k=top_n_matches)
+   
+
+    llm_answer, relevant_chunks = answer_with_context(query=query, 
+                                                      llm_client=llm_client, 
+                                                      llm_model_deployed=llm_model_deployed, 
+                                                      chunk_hits=chunk_hits)    
     
-    return QueryResponse(answer=llm_answer, citations= citations)
+    return QueryResponse(answer=llm_answer, citations= relevant_chunks)

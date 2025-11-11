@@ -27,7 +27,7 @@ from load_book import fetch_book_content_from_id
 from preprocess_book import make_slug_book_key
 from search_handler import is_book_in_index, paginated_search, create_missing_search_index, upload_to_index_async
 from settings import get_settings
-from retrieve import answer
+from retrieve import answer_api
 
 app = FastAPI(title="MobyRAG")
 prefix_router = APIRouter(prefix="/v1")
@@ -52,31 +52,16 @@ async def init_models():
 #         db.close()
 
 def get_search_client() -> SearchClient:
-    sett = get_settings()
-    return SearchClient(
-        endpoint=sett.AZURE_SEARCH_ENDPOINT,
-        index_name=sett.INDEX_NAME,
-        credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY)
-    )
+    return get_settings().get_search_client()
 
 def get_index_client() -> SearchIndexClient:
-    sett = get_settings()
-    return  SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT,
-                            credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
+    return get_settings().get_index_client()
 
 def get_llm_client() -> AzureOpenAI:
-    sett = get_settings()
-    return AzureOpenAI(
-        azure_endpoint=sett.AZ_OPENAI_GPT_ENDPOINT,
-        api_version="2025-04-01-preview",
-        api_key=sett.AZ_OPENAI_GPT_KEY
-    )
+    return get_settings().get_llm_client()
 
 def get_emb_client() -> AzureOpenAI:
-    sett = get_settings()
-    return AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
-                            api_version="2024-12-01-preview",
-                            api_key=sett.AZ_OPENAI_EMBED_KEY)
+    return get_settings().get_emb_client()
 
 
 @prefix_router.post("/books/", status_code=status.HTTP_201_CREATED)
@@ -167,10 +152,6 @@ async def upload_book_to_index(gutenberg_id:Annotated[int, Path(description="Gut
     #TODO: consider how to manage these search instances smartly in a deployed env
     info = ""
 
-    index_client = SearchIndexClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, 
-                                        index_name="moby", 
-                                        credential=AzureKeyCredential(sett.AZURE_SEARCH_KEY))
-    
     book_added = None
 
     create_missing_search_index(search_index_client=index_client)
@@ -267,11 +248,15 @@ async def answer_query(query:Annotated[str, Query()],
                       top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=50)]=7,
                       only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
 
-    llm_resp = answer(query=query, 
+    sett = get_settings()
+
+    llm_resp = answer_api(query=query, 
                       search_client=search_client, 
                       embed_client=emb_client, 
                       llm_client=llm_client,
-                      top_n_matches=top_n_matches)
+                      top_n_matches=top_n_matches,
+                      embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
+                      llm_model_deployed=sett.LLM_MODEL_DEPLOYMENT)
     # TODO: add the ans to the reponse type
     return ApiResponse(data=llm_resp)
 

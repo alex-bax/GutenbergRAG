@@ -133,7 +133,7 @@ async def upload_to_index_async(*, search_client:SearchClient,
     batches = batch_texts_by_tokens(texts=chunks)
 
     embeddings = await create_embeddings_async(embed_client=embed_client, 
-                                            model_deployed=sett.EMBED_MODEL_DEPOYED,
+                                            model_deployed=sett.EMBED_MODEL_DEPLOYMENT,
                                             inp_batches=batches,
                                             tok_limiter=token_limiter,
                                             req_limiter=request_limiter

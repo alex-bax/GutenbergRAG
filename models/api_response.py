@@ -1,5 +1,5 @@
 from __future__ import annotations
-from models.vector_db import ContentUploadChunk, SearchPage
+from models.vector_db import ContentUploadChunk, SearchPage, SearchChunk
 from pydantic import BaseModel, Field, field_validator
 from preprocess_book import make_slug_book_key
 # from db.schema import DBBookMetaData
@@ -7,7 +7,7 @@ import db.schema        # TODO: find better way to fix circular import
 
 class QueryResponse(BaseModel):
     answer:str
-    citations:list[str] #?
+    citations:list[SearchChunk] #?
     #canditates:list[]  #TODO: add content chunks?
 
 class BookBase(BaseModel):

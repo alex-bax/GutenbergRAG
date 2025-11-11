@@ -10,7 +10,7 @@ from azure.search.documents import SearchClient
 
 from preprocess_book import make_slug_book_key
 from search_handler import create_missing_search_index, is_book_in_index, upload_to_index_async
-from retrieve import answer
+from retrieve import answer_api
 from settings import get_settings
 from load_book import gutendex_book_urls
 

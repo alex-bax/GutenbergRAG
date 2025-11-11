@@ -23,7 +23,7 @@ class ContentUploadChunk(BaseModel):
     uuid_str:str = Field(...)
     book_name:str = Field(..., description="Name/title of the book")
     book_id:int = Field(...)
-    chunk_nr:int = Field(..., description="Its index from all chunks, e.g. if 6, then it's the 6th chunk")
+    chunk_nr:int = Field(..., description="Nth chunk of all chunks, e.g. if 6, then it's the 6th chunk")
     content:str = Field(..., description="Content of the chapter")
     content_vector:EmbeddingVec
 
@@ -39,6 +39,7 @@ class SearchChunk(BaseModel):
     book_name: str|None
     book_id: int|None
     content: str|None
+    search_score: float
 
 class SearchPage(BaseModel):
     items: list[SearchChunk]

@@ -12,7 +12,7 @@ from pyrate_limiter import Duration, Rate, Limiter, BucketFullException
 from constants import REQUESTS_PR_MIN, TOKEN_PR_MIN
 
 def clean_headers(*, raw_book: str) -> str:
-    start_match = re.search(pattern=r'\*\*\*\s?START OF TH(IS|E) PROJECT GUTENBERG EBOOK.', string=raw_book)
+    start_match = re.search(pattern=r'\*\*\*\s?START OF TH(IS|E) PROJECT GUTENBERG EBOOK', string=raw_book)
     end_match = re.search(pattern=r'\*\*\* end of the project gutenberg ebook', string=raw_book.lower())
 
     return raw_book[start_match.end():end_match.start()] if start_match and end_match else ""
@@ -100,6 +100,7 @@ async def create_embeddings_async(*, embed_client:AzureOpenAI,
                             req_limiter=req_limiter, 
                             tokens_needed=tokens_needed) 
 
+        # TODO - change to use async
         embs = create_embeddings(embed_client=embed_client, 
                                   model_deployed=model_deployed, 
                                   batches=batch)
