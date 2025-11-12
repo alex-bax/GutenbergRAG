@@ -1,7 +1,7 @@
 from typing import Iterator, Callable, Any
 from fastapi import status, APIRouter
 from fastapi.testclient import TestClient
-from db.schema import DBBookMetaData
+from models.schema import DBBookMetaData
 from db.database import Base
 from main import app, get_async_db_sess
 from sqlalchemy import create_engine, StaticPool

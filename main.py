@@ -15,14 +15,15 @@ from db.database import engine, get_async_db_sess#, SessionLocal
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.operations import select_all_books, select_book, delete_book, insert_book, select_books_like, select_documents_paginated, BookNotFoundException
 
-from db.schema import DBBookMetaData
-import db.schema as schema
+from models.schema import DBBookMetaData
+import models.schema as schema
 from moby import _make_limiters
 from models.api_response import ApiResponse, BookMetaDataResponse, GBBookMeta, QueryResponse
 # from models.vector_db import SearchPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
 
+from converters import gbbookmeta_to_db
 from load_book import fetch_book_content_from_id
 from preprocess_book import make_slug_book_key
 from search_handler import is_book_in_index, paginated_search, create_missing_search_index, upload_to_index_async
@@ -168,7 +169,7 @@ async def upload_book_to_index(gutenberg_id:Annotated[int, Path(description="Gut
                                         raw_book_content=book_content
                                     )
         
-        await insert_book(book=gb_meta.to_db_model(), db_sess=db)
+        await insert_book(book=gbbookmeta_to_db(gb_meta), db_sess=db)
         book_added = gb_meta
     else:
         info = f"Book already in index {sett.INDEX_NAME} as '{gb_meta.title}'. Fetched meta data from DB"

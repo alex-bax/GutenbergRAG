@@ -2,10 +2,6 @@ from pydantic import BaseModel, Field, model_validator
 from typing import Literal
 from constants import EmbeddingDimension
 
-import numpy as np
-
-
-
 class EmbeddingVec(BaseModel):
     vector: list[float] = Field(..., description="The embedding vector")
     dim: Literal[EmbeddingDimension.SMALL, EmbeddingDimension.LARGE] = Field(..., description="Dimension of the embedding vector")

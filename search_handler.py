@@ -1,4 +1,4 @@
-import os, uuid
+import uuid
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -18,9 +18,9 @@ from constants import EmbeddingDimension
 from preprocess_book import make_slug_book_key, clean_headers, create_embeddings_async, batch_texts_by_tokens
 from chunking import fixed_size_chunks
 from settings import get_settings
-from models.vector_db import ContentUploadChunk, SearchChunk, SearchPage
 
 from models.api_response import GBBookMeta
+from models.vector_db import ContentUploadChunk, SearchChunk, SearchPage
 
 
 def _get_index_fields() -> list[SearchField]:
@@ -100,7 +100,20 @@ def paginated_search(*, search_client:SearchClient, q:str="", skip:int, top:int,
     return page    # can safely do this (load into memory) since top and skip are limited via api params
 
 
-def is_book_in_index(*, search_client:SearchClient, book_id:int) :
+def are_books_in_index(*, search_client:SearchClient, book_ids:list[int]) -> list[int]:
+    filter_expr = " or ".join([f"book_id eq {b_id}" for b_id in book_ids])
+    resp = search_client.search(                # search using facets
+                query_type="simple",
+                search_text="*",
+                filter=filter_expr,
+                facets=["book_name", "book_id"],
+                top=1,
+            )
+    print(resp)
+    return []
+
+
+def is_book_in_index(*, search_client:SearchClient, book_id:int) -> bool:
     resp = search_client.search(                # search using facets
                 query_type="simple",
                 search_text="*",
@@ -166,15 +179,9 @@ if __name__ == "__main__":      # Don't run when imported via import statement
     load_dotenv()
 
     sett = get_settings()
-    # dummy_ch_content = ["Call me Ishmael. Some years ago—never mind how long precisely..."]
+    are_books_in_index(search_client=sett.get_search_client(), book_ids=[42, 32])
 
-    az_key = AzureKeyCredential(sett.AZURE_SEARCH_KEY)
-
-    # # index_client = SearchIndexClient(endpoint=AZURE_SEARCH_ENDPOINT, credential=az_key)
-    # # create_missing_search_index(search_index_client=index_client)
-    
-    search_client = SearchClient(endpoint=sett.AZURE_SEARCH_ENDPOINT, index_name="moby", credential=az_key)
-    paginated_search(search_client=search_client, top=5, skip=0, select_fields="book_name, id_str, chunk_nr")
+    # paginated_search(search_client=search_client, top=5, skip=0, select_fields="book_name, id_str, chunk_nr")
     # # resp = search_client.search(
     # #             search_text="*",
     # #             filter="book eq 'Moby-Dick'",

@@ -2,8 +2,8 @@ from __future__ import annotations
 from models.vector_db import ContentUploadChunk, SearchPage, SearchChunk
 from pydantic import BaseModel, Field, field_validator
 from preprocess_book import make_slug_book_key
-# from db.schema import DBBookMetaData
-import db.schema        # TODO: find better way to fix circular import
+
+import models.schema        # TODO: find better way to fix circular import
 
 class QueryResponse(BaseModel):
     answer:str
@@ -36,6 +36,8 @@ class GBBookMeta(BaseModel):
     formats:dict[str, str]
     copyright:bool
 
+    # from models.schema import DBBookMetaData
+
     # Some dicts have null value
     @field_validator("authors", "editors", mode="before")
     def clear_nulls(cls, v:list[dict]):
@@ -47,15 +49,15 @@ class GBBookMeta(BaseModel):
         author_names = [a.get("name", "Unknown") for a in self.authors]
         return "; ".join(author_names)
 
-    def to_db_model(self) -> db.schema.DBBookMetaData:
-        authors_str = self.authors_as_str()
+    # def to_db_model(self) -> models.schema.DBBookMetaData:
+    #     authors_str = self.authors_as_str()
         
-        return db.schema.DBBookMetaData(
-            gb_id=self.id,
-            title=self.title,
-            authors=authors_str,
-            lang=self.languages[0],
-        )
+    #     return models.schema.DBBookMetaData(
+    #         gb_id=self.id,
+    #         title=self.title,
+    #         authors=authors_str,
+    #         lang=self.languages[0],
+    #     )
     
     def get_txt_url(self) -> str|None:
         found = None

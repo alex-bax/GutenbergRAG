@@ -8,6 +8,10 @@ from settings import get_settings
 
 # TODO: calculate cost pr run in tokens
 # TODO: take all books and check if in index, if not then upload them
+
+def are_test_books_in_index(books:list[str]) -> :
+    is_book_in_index(search_client=search_client, book_id=gb_meta.id)
+
 if __name__ == "__main__":
     eval_dataset_p = Path("eval_data", "gutenberg_gold.csv")
     df = pd.read_csv(eval_dataset_p)

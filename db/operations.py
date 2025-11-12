@@ -1,4 +1,4 @@
-from db.schema import DBBookMetaData
+from models.schema import DBBookMetaData
 from sqlalchemy import select, delete, and_, or_
 # from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
