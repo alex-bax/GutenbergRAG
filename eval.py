@@ -3,14 +3,22 @@ from ragas.metrics import faithfulness, answer_relevancy, context_precision, con
 from ragas import evaluate
 import pandas as pd
 from pathlib import Path
+from azure.search.documents import SearchClient
+
 from retrieve import search_chunks, answer_with_context
 from settings import get_settings
+from search_handler import check_missing_books_in_index
 
 # TODO: calculate cost pr run in tokens
 # TODO: take all books and check if in index, if not then upload them
 
-def are_test_books_in_index(books:list[str]) -> :
-    is_book_in_index(search_client=search_client, book_id=gb_meta.id)
+def download_missing_test_books(df_eval:pd.DataFrame, search_client:SearchClient):
+    eval_book_ids = list(df_eval["gb_id"].unique())
+    missing_book_ids = check_missing_books_in_index(search_client=search_client, book_ids=eval_book_ids)
+
+    for b_id in missing_book_ids:
+        
+
 
 if __name__ == "__main__":
     eval_dataset_p = Path("eval_data", "gutenberg_gold.csv")

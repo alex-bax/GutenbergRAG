@@ -26,7 +26,7 @@ from fastapi_pagination import Page, add_pagination, paginate
 from converters import gbbookmeta_to_db
 from load_book import fetch_book_content_from_id
 from preprocess_book import make_slug_book_key
-from search_handler import is_book_in_index, paginated_search, create_missing_search_index, upload_to_index_async
+from search_handler import check_missing_books_in_index, paginated_search, create_missing_search_index, upload_to_index_async
 from settings import get_settings
 from retrieve import answer_api
 
@@ -160,7 +160,7 @@ async def upload_book_to_index(gutenberg_id:Annotated[int, Path(description="Gut
     book_content, gb_meta = fetch_book_content_from_id(gutenberg_id=gutenberg_id)
     req_limiter, tok_limiter = _make_limiters()
 
-    if not is_book_in_index(search_client=search_client, book_id=gb_meta.id):
+    if  len(check_missing_books_in_index(search_client=search_client, book_ids=[gb_meta.id])) > 0:
         chunks_added = await upload_to_index_async(search_client=search_client, 
                                         embed_client=emb_client,
                                         token_limiter=tok_limiter,

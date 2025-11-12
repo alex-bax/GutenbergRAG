@@ -100,7 +100,10 @@ def paginated_search(*, search_client:SearchClient, q:str="", skip:int, top:int,
     return page    # can safely do this (load into memory) since top and skip are limited via api params
 
 
-def are_books_in_index(*, search_client:SearchClient, book_ids:list[int]) -> list[int]:
+def check_missing_books_in_index(*, search_client:SearchClient, book_ids:list[int]) -> list[int]:
+    """
+    Given a list of Gutenberg IDs return a list of those missing from the index
+    """
     filter_expr = " or ".join([f"book_id eq {b_id}" for b_id in book_ids])
     resp = search_client.search(                # search using facets
                 query_type="simple",
@@ -109,20 +112,22 @@ def are_books_in_index(*, search_client:SearchClient, book_ids:list[int]) -> lis
                 facets=["book_name", "book_id"],
                 top=1,
             )
-    print(resp)
-    return []
+    found_books = list(resp)
+    missing_books = list(set(book_ids) - set(found_books))      # type:ignore       # TODO:check this line
+    print()
+    return missing_books   # type:ignore
 
 
-def is_book_in_index(*, search_client:SearchClient, book_id:int) -> bool:
-    resp = search_client.search(                # search using facets
-                query_type="simple",
-                search_text="*",
-                filter=f"book_id eq {book_id}",
-                facets=["book_name", "book_id"],
-                top=1,
-            )
+# def is_book_in_index(*, search_client:SearchClient, book_id:int) -> bool:
+#     resp = search_client.search(                # search using facets
+#                 query_type="simple",
+#                 search_text="*",
+#                 filter=f"book_id eq {book_id}",
+#                 facets=["book_name", "book_id"],
+#                 top=1,
+#             )
     
-    return any(True for _ in list(resp))   # type:ignore
+#     return any(True for _ in list(resp))   # type:ignore
 
 
 async def upload_to_index_async(*, search_client:SearchClient, 
@@ -176,44 +181,4 @@ async def upload_to_index_async(*, search_client:SearchClient,
 
 
 if __name__ == "__main__":      # Don't run when imported via import statement
-    load_dotenv()
-
-    sett = get_settings()
-    are_books_in_index(search_client=sett.get_search_client(), book_ids=[42, 32])
-
-    # paginated_search(search_client=search_client, top=5, skip=0, select_fields="book_name, id_str, chunk_nr")
-    # # resp = search_client.search(
-    # #             search_text="*",
-    # #             filter="book eq 'Moby-Dick'",
-    # #             select=["id", "book", "chapter", "chunk_id"],  # limit payload
-    # #             top=5
-    # #         )
-    # # for doc in resp:
-    # #     print(doc["id"], doc["chapter"], doc["chunk_id"])
-    
-    # # emb_client = AzureOpenAI(azure_endpoint=sett.AZ_OPENAI_EMBED_ENDPOINT,
-    # #                         api_version="2024-12-01-preview",
-    # #                         api_key=sett.AZ_OPENAI_EMBED_KEY)
-
-    # resp = search_client.search(
-    #             query_type="simple",
-    #             search_text="*",
-    #             filter="book eq 'Moby-Dick'",
-    #             select=["id", "book", "chapter", "chunk_id"],  # limit payload
-    #             top=0,
-    #             include_total_count=True
-    #         )
-    
-    # book_count = resp.get_count()
-    # print(book_count)
-    
-    # # search_client.upload_documents(documents=[dummy_doc])
-
-    # # # Query (hybrid + semantic)
-    # # results = search_client.search(
-    # #     search_text="Why does Ishmael go to sea?",
-    # #     top=5,
-    # #     # query_type="semantic",
-    # #     # semantic_configuration_name="default"
-    # # )
-    
+    pass

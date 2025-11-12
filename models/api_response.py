@@ -70,7 +70,7 @@ class GBBookMeta(BaseModel):
 
 class ApiResponse(BaseModel):
     data: BookMetaDataResponse|list[BookMetaDataResponse]|SearchPage|GBBookMeta|QueryResponse|None = Field(default=None)
-    job_id: int|None = Field(default=None, description="Id for async long running jobs when uploading many books to index")   
+    job_id: int|None = Field(default=None, description="Id for long running async jobs when uploading many books to index at once")   
     message: str|None = None    
 
 

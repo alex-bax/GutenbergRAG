@@ -9,7 +9,7 @@ from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 
 from preprocess_book import make_slug_book_key
-from search_handler import create_missing_search_index, is_book_in_index, upload_to_index_async
+from search_handler import create_missing_search_index, upload_to_index_async
 from retrieve import answer_api
 from settings import get_settings
 from load_book import gutendex_book_urls
@@ -74,22 +74,22 @@ async def main_moby() -> None:
 
     req_limiter, tok_limiter = _make_limiters()
 
-    for b in tqdm(books_to_download):
-        b["book_key"] = make_slug_book_key(title=b["title"],            # type: ignore
-                                        gutenberg_id=b["gb_id"],        # type: ignore
-                                        author=b["authors"],            # type: ignore
-                                        lang="en")
+    # for b in tqdm(books_to_download):
+    #     b["book_key"] = make_slug_book_key(title=b["title"],            # type: ignore
+    #                                     gutenberg_id=b["gb_id"],        # type: ignore
+    #                                     author=b["authors"],            # type: ignore
+    #                                     lang="en")
 
-        if not is_book_in_index(search_client=search_client, book_key=b["book_key"]):
+    #     if not is_book_in_index(search_client=search_client, book_key=b["book_key"]):
 
-            chapters_added = await upload_to_index_async(search_client=search_client, 
-                                            embed_client=emb_client,
-                                            book=b,                  # type:ignore
-                                            token_limiter=tok_limiter,
-                                            request_limiter=req_limiter
-                                            )
-        else:
-            print(f"\n Already in index {INDEX} - {b['title']}")
+    #         chapters_added = await upload_to_index_async(search_client=search_client, 
+    #                                         embed_client=emb_client,
+    #                                         book=b,                  # type:ignore
+    #                                         token_limiter=tok_limiter,
+    #                                         request_limiter=req_limiter
+    #                                         )
+    #     else:
+    #         print(f"\n Already in index {INDEX} - {b['title']}")
 
     ### Retrieval
     # print(f'Answering the query: {query}')
