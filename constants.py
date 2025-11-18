@@ -1,11 +1,12 @@
 from enum import Enum
 
 MAX_TOKENS = 8000
+CHUNK_SIZE = 400
 OVERLAP = 100
 TOKEN_PR_MIN = 501_000
 REQUESTS_PR_MIN = 3000
 
-MIN_SEARCH_SCORE = 0.5
+MIN_SEARCH_SCORE = 0.01
 
 class EmbeddingDimension(int, Enum):
     SMALL = 1536

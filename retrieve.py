@@ -54,19 +54,21 @@ def answer_with_context(*, query:str,
     assert all(c is not None for c in relev_chunk_hits)
 
     for chunk_h in relev_chunk_hits:
-        chunk_format_str = f"[{chunk_h.book_name} chunk_id {chunk_h.uuid_str} -- # chunk {chunk_h.chunk_nr}, search score:{chunk_h.search_score}] | {chunk_h.content} |"
+        chunk_format_str = f"[ book {chunk_h.book_name} ; chunk_id {chunk_h.uuid_str} ; search score {chunk_h.search_score}] || {chunk_h.content} ||"
         relevant_context.append(chunk_format_str)
 
+    ## TODO! work on this. the delims for contetn
     system = """You answer using only the provided list of content chunks. 
                 Each chunk has a header denoted by '[' and ']'. The content of the chunk is denoted by: '|'
                 
                 If unsure, say you don't know. 
                 Include a brief 'Sources' list with chunk uuids and their book_name.
-                """
-    
+            """
+    joined_context = ">>".join(relevant_context)
+    joined_context[:joined_context.rfind(">> ")]
     prompt = f"""Question: {query}
                 Context:
-                {"\n".join([chunk.content for chunk in relev_chunk_hits if chunk.content])}      
+                {joined_context}      
                 """
 
     llm_answer = "No matches found with query. Ensure that book index is populated."

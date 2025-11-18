@@ -1,13 +1,16 @@
 import requests, re
+import pandas as pd
 from pathlib import Path
 
 from models.api_response import GBBookMeta
+from models.local_gb_book_model import GBBookMetaLocal
+from search_handler import get_missing_books_in_index, upload_to_index_async
+from retrieve import search_chunks, answer_with_context
+from settings import get_settings, Settings
+from preprocess_book import make_slug_book_key
 
-
-def _fetch_book_content(*, download_url="https://www.gutenberg.org/cache/epub/2701/pg2701.txt") -> str:
-    """
-    Fetches book. Default url is gutenberg book url for Moby Dick
-    """
+# TODO: make async
+def _fetch_book_content(*, download_url) -> str:
     r = requests.get(download_url, timeout=60)
     r.raise_for_status()
     return r.text
@@ -17,9 +20,63 @@ def fetch_book_content_from_id(*, gutenberg_id:int) -> tuple[str, GBBookMeta]:
     url = gb_meta.get_txt_url()
 
     if not url:
-        raise Exception("Gutenberg book missing txt/plain url")
+        raise Exception("Gutenberg book missing its txt/plain url")
 
     return _fetch_book_content(download_url=url), gb_meta    
+
+def _load_gb_meta_local(*, path: Path) -> GBBookMetaLocal:
+    json_text = Path(path).read_text(encoding="utf-8")
+    return GBBookMetaLocal.model_validate_json(json_text)
+
+
+def get_path_by_book_id_from_cache(*, book_id:int, folder_p:Path = Path("eval_data", "gb_meta_objs_by_id")) -> list[Path]:
+    if not folder_p.is_dir():
+        raise FileNotFoundError(f"Folder not found: {str(folder_p)}")
+
+    lst = [file for file in folder_p.iterdir() if file.is_file() and str(book_id) in file.name]
+    assert len(lst) < 2
+    return lst
+
+async def index_upload_missing_book_ids(*, book_ids:list[int], sett:Settings) -> list[GBBookMeta]:
+    missing_book_ids = get_missing_books_in_index(search_client=sett.get_search_client(), 
+                                                  book_ids=book_ids)
+    gb_books = []
+    req_lim, token_lim = sett.make_limiters()
+    print(f'--- Missing book ids: {missing_book_ids}')
+
+    for b_id in missing_book_ids:
+        eval_book_paths = get_path_by_book_id_from_cache(book_id=b_id)
+        
+        if len(eval_book_paths) == 0:
+            book_content, gb_meta = fetch_book_content_from_id(gutenberg_id=b_id)
+            local_gb_p = Path("eval_data", "gb_meta_objs_by_id", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
+            loc_gb_meta = GBBookMetaLocal(**gb_meta.model_dump(), path_to_content=local_gb_p)
+
+            with open(local_gb_p.with_suffix(".json"), "w") as f:
+                f.write(loc_gb_meta.model_dump_json(indent=4))
+            
+            local_book_content_p = Path("eval_data","books") / local_gb_p.name
+            with open(local_book_content_p, "w", encoding="utf-8") as f:
+                f.write(book_content)
+
+            print(f"GB meta obj not found in cache - fetching from Gutendex. Wrote content + gb obj to: {local_gb_p.name}")
+        else:
+            gb_meta = _load_gb_meta_local(path=eval_book_paths[0])
+            with open(Path("eval_data", "books", eval_book_paths[0].with_suffix(".txt").name), "r", encoding="utf-8") as f:
+                book_content = f.read()
+            print(f"Loaded content from cache for book id {b_id}")
+
+        print(f"Uploading Book id {b_id} to index")
+        await upload_to_index_async(search_client=sett.get_search_client(), 
+                                    embed_client=sett.get_emb_client(),
+                                    token_limiter=token_lim,
+                                    request_limiter=req_lim,
+                                    raw_book_content=book_content,
+                                    book_meta=gb_meta
+                                )
+        gb_books.append(gb_meta)
+
+    return gb_books
 
 
 def _fetch_gutendex_meta_from_id(*, gb_id:int) -> GBBookMeta:

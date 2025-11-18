@@ -5,6 +5,9 @@ from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
 from openai import AzureOpenAI
+from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
+from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN
+
 
 # TODO: merge constants into settings
 # TODO: add input extention type, e.g. whether it's html, txt, etc.
@@ -64,6 +67,18 @@ class Settings(BaseSettings):
         return AzureOpenAI(azure_endpoint=self.AZ_OPENAI_EMBED_ENDPOINT,
                                 api_version="2024-12-01-preview",
                                 api_key=self.AZ_OPENAI_EMBED_KEY)
+    
+    def make_limiters(self) -> list[Limiter]:
+        REQ_RATE = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
+        TOK_RATE = Rate(TOKEN_PR_MIN, Duration.MINUTE)                 # 501,000 tokens per minute
+
+        req_bucket = BucketAsyncWrapper(InMemoryBucket([REQ_RATE]))
+        tok_bucket = BucketAsyncWrapper(InMemoryBucket([TOK_RATE]))
+        
+        req_limiter = Limiter(req_bucket)
+        tok_limiter = Limiter(tok_bucket)
+
+        return [req_limiter, tok_limiter]
 
 
 @lru_cache

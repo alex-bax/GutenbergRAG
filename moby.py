@@ -19,20 +19,20 @@ from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN
 # TODO: add hyper params to settings
 # TODO: split entire app into ingestion / retrieval
 
-def _make_limiters() -> list[Limiter]:
-    REQ_RATE = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
-    TOK_RATE = Rate(TOKEN_PR_MIN, Duration.MINUTE)                 # 501,000 tokens per minute
+# def _make_limiters() -> list[Limiter]:
+#     REQ_RATE = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
+#     TOK_RATE = Rate(TOKEN_PR_MIN, Duration.MINUTE)                 # 501,000 tokens per minute
 
-    req_bucket = BucketAsyncWrapper(InMemoryBucket([REQ_RATE]))
-    tok_bucket = BucketAsyncWrapper(InMemoryBucket([TOK_RATE]))
+#     req_bucket = BucketAsyncWrapper(InMemoryBucket([REQ_RATE]))
+#     tok_bucket = BucketAsyncWrapper(InMemoryBucket([TOK_RATE]))
     
-    tok_limiter = Limiter(tok_bucket)
-    req_limiter = Limiter(req_bucket)
+#     tok_limiter = Limiter(tok_bucket)
+#     req_limiter = Limiter(req_bucket)
 
-    # req_limiter = Limiter(REQ_RATE)
-    # tok_limiter = Limiter(TOK_RATE)
+#     # req_limiter = Limiter(REQ_RATE)
+#     # tok_limiter = Limiter(TOK_RATE)
 
-    return [req_limiter, tok_limiter]
+#     return [req_limiter, tok_limiter]
 
 
 # TODO: change to use GBMeta instead of dict based

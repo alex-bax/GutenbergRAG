@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 # TODO: Add overlap and chunk_size to Settings. Since these are hyperparams
 
-def fixed_size_chunks(*, text:str, chunk_size=8000, overlap=100, encoding="cl100k_base") -> list[str]:
+def fixed_size_chunks(*, text:str, chunk_size, overlap=100, encoding="cl100k_base") -> list[str]:
     char_splitter = CharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=overlap,

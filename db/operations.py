@@ -11,7 +11,7 @@ class BookNotFoundException(Exception):
     pass
 
 # def insert_book(book:DBBookMetaData, db_sess:Session) -> None:
-async def insert_book(book:DBBookMetaData, db_sess:AsyncSession) -> None:
+async def insert_book_db(book:DBBookMetaData, db_sess:AsyncSession) -> None:
     db_sess.add(book)
     await db_sess.commit()
     await  db_sess.refresh(book)
@@ -24,21 +24,21 @@ async def select_all_books(db_sess:AsyncSession) -> list[DBBookMetaData]:
 
     return book_rows
 
-async def select_book(book_id:int|None, db_sess:AsyncSession, gb_id:int|None=None) -> DBBookMetaData:
-    if gb_id:
-        stmt = select(DBBookMetaData).where(DBBookMetaData.gb_id == gb_id)
+async def select_books_db(book_ids:list[int]|None, db_sess:AsyncSession, gb_ids:list[int]|None=None) -> list[DBBookMetaData]:
+    if gb_ids:
+        stmt = select(DBBookMetaData).filter(DBBookMetaData.gb_id.in_(gb_ids))#.where(DBBookMetaData.gb_id == gb_id)
     else:
-        stmt = select(DBBookMetaData).where(DBBookMetaData.id == book_id)
+        stmt = select(DBBookMetaData).where(DBBookMetaData.id == book_ids)
 
-    res =await db_sess.execute(stmt)
-    book = res.scalars().one_or_none()
+    res = await db_sess.execute(stmt)
+    books = res.scalars().all()
     
-    if not book:
-        raise BookNotFoundException(f"Book with id {book_id} not found")
+    if not books:
+        raise BookNotFoundException(f"Book with id {book_ids} not found")
     
-    return book
+    return list(books)
 
-async def select_books_like(title:str|None, authors:str|None, lang:str|None, db_sess:AsyncSession) -> list[DBBookMetaData]:
+async def select_books_like_db(title:str|None, authors:str|None, lang:str|None, db_sess:AsyncSession) -> list[DBBookMetaData]:
     conditions = []         # bool expressions to be joined together
     stmt = select(DBBookMetaData)
 
@@ -58,7 +58,7 @@ async def select_books_like(title:str|None, authors:str|None, lang:str|None, db_
     return list(res.scalars().all())
 
 
-async def delete_book(book_id:int|None, db_sess:AsyncSession, gb_id:int|None=None) -> None:
+async def delete_book_db(book_id:int|None, db_sess:AsyncSession, gb_id:int|None=None) -> None:
     
     if gb_id:
         stmt = delete(DBBookMetaData).where(DBBookMetaData.gb_id == gb_id)
@@ -73,6 +73,6 @@ async def delete_book(book_id:int|None, db_sess:AsyncSession, gb_id:int|None=Non
 
 
 
-async def select_documents_paginated(db_sess:AsyncSession) -> Page[DBBookMetaData]:
+async def select_documents_paginated_db(db_sess:AsyncSession) -> Page[DBBookMetaData]:
     return await paginate(db_sess, select(DBBookMetaData))
 

@@ -1,6 +1,7 @@
 import uuid
 from pathlib import Path
 from dotenv import load_dotenv
+import asyncio
 
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
@@ -12,8 +13,8 @@ from azure.search.documents.indexes.models import (
 )
 from pyrate_limiter import Limiter
 from openai import AzureOpenAI
+from constants import CHUNK_SIZE
 
-from load_book import download_or_load_from_cache
 from constants import EmbeddingDimension
 from preprocess_book import make_slug_book_key, clean_headers, create_embeddings_async, batch_texts_by_tokens
 from chunking import fixed_size_chunks
@@ -26,7 +27,7 @@ from models.vector_db import ContentUploadChunk, SearchChunk, SearchPage
 def _get_index_fields() -> list[SearchField]:
     index_fields= [
             SimpleField(name="uuid_str", type=SearchFieldDataType.String, key=True),
-            SimpleField(name="chunk_nr", type=SearchFieldDataType.Int32, filterable=True),      
+            SimpleField(name="chunk_nr", type=SearchFieldDataType.Int32, filterable=True, facetable=True),      
             SimpleField(name="book_name", type=SearchFieldDataType.String, filterable=True, facetable=True),
             SimpleField(name="book_id", type=SearchFieldDataType.Int32, filterable=True, facetable=True),
             SearchField(name="content", type=SearchFieldDataType.String, searchable=True),
@@ -67,6 +68,8 @@ def _get_vector_search(vector_search_alg_name="hnsw") -> VectorSearch:
 #             ])
 
 
+
+
 def create_missing_search_index(*, book_index_name="moby", search_index_client:SearchIndexClient) -> None:
     all_indexes = [idx.name for idx in search_index_client.list_indexes()]
 
@@ -99,35 +102,29 @@ def paginated_search(*, search_client:SearchClient, q:str="", skip:int, top:int,
 
     return page    # can safely do this (load into memory) since top and skip are limited via api params
 
-
-def check_missing_books_in_index(*, search_client:SearchClient, book_ids:list[int]) -> list[int]:
+#TODO: write test for this
+# TODO: make async?
+def get_missing_books_in_index(*, search_client:SearchClient, book_ids:list[int]) -> list[int]:
     """
     Given a list of Gutenberg IDs return a list of those missing from the index
     """
     filter_expr = " or ".join([f"book_id eq {b_id}" for b_id in book_ids])
-    resp = search_client.search(                # search using facets
+    resp = search_client.search(                
                 query_type="simple",
                 search_text="*",
                 filter=filter_expr,
-                facets=["book_name", "book_id"],
-                top=1,
+                facets=["book_name", "book_id"],        # search using facets
+                top=len(book_ids),
             )
-    found_books = list(resp)
-    missing_books = list(set(book_ids) - set(found_books))      # type:ignore       # TODO:check this line
-    print()
-    return missing_books   # type:ignore
-
-
-# def is_book_in_index(*, search_client:SearchClient, book_id:int) -> bool:
-#     resp = search_client.search(                # search using facets
-#                 query_type="simple",
-#                 search_text="*",
-#                 filter=f"book_id eq {book_id}",
-#                 facets=["book_name", "book_id"],
-#                 top=1,
-#             )
     
-#     return any(True for _ in list(resp))   # type:ignore
+    found_book_ids = [f["value"] for f in resp.get_facets()["book_id"]] # type:ignore
+    missing_books = list(set(book_ids) - set(found_book_ids))      
+    
+    return missing_books   
+
+
+def _split_by_size(data: list, chunk_size: int) -> list[list]:
+    return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
 
 
 async def upload_to_index_async(*, search_client:SearchClient, 
@@ -147,7 +144,7 @@ async def upload_to_index_async(*, search_client:SearchClient,
     docs:list[dict] = []
     vector_items_added = []
 
-    chunks = fixed_size_chunks(text=book_str)
+    chunks = fixed_size_chunks(text=book_str, chunk_size=CHUNK_SIZE)
     batches = batch_texts_by_tokens(texts=chunks)
 
     embeddings = await create_embeddings_async(embed_client=embed_client, 
@@ -172,13 +169,29 @@ async def upload_to_index_async(*, search_client:SearchClient,
         docs.append(chapter_item.to_dict())
         vector_items_added.append(chapter_item)
 
-    # upload after each chapter, max in batches of ~100 to keep payload small
-    search_client.upload_documents(docs)
-    if len(docs) >= 100:
-        docs.clear()
+    # upload after each chapter, max in batches of ~50 to keep payload small
+    docs_splitted = _split_by_size(data=docs, chunk_size=CHUNK_SIZE)
+    for docs in docs_splitted:
+        search_client.upload_documents(docs)
 
     return vector_items_added
 
 
+async def _local_try():
+    sett = get_settings()
+    req_lim, token_lim = sett.make_limiters()
+
+    embeddings = await create_embeddings_async(embed_client=sett.get_emb_client(), 
+                                            model_deployed=sett.EMBED_MODEL_DEPLOYMENT,
+                                            inp_batches=[["hej", "med", "dig"]],
+                                            tok_limiter=token_lim,
+                                            req_limiter=req_lim
+                                            )
+
+
 if __name__ == "__main__":      # Don't run when imported via import statement
-    pass
+    "moby-dick-or-the-whale_melville-herman_2701_en"
+
+    asyncio.run(_local_try())
+
+    

@@ -9,7 +9,9 @@ from models.vector_db import EmbeddingVec
 from constants import EmbeddingDimension, MAX_TOKENS, OVERLAP
 from openai import RateLimitError
 from pyrate_limiter import Duration, Rate, Limiter, BucketFullException
-from constants import REQUESTS_PR_MIN, TOKEN_PR_MIN
+import pandas as pd
+from tqdm import tqdm
+
 
 def clean_headers(*, raw_book: str) -> str:
     start_match = re.search(pattern=r'\*\*\*\s?START OF TH(IS|E) PROJECT GUTENBERG EBOOK', string=raw_book)
@@ -27,6 +29,7 @@ def create_embeddings(*, embed_client:AzureOpenAI,
         model=model_deployed,
     )
     return [EmbeddingVec(vector=emb_obj.embedding, dim=EmbeddingDimension.SMALL) for emb_obj in resp.data]
+
 
 
 def _count_tokens(text: str, enc:Encoding) -> int:
@@ -67,19 +70,6 @@ async def _acquire_budget_async(*, tok_limiter:Limiter, req_limiter:Limiter, tok
             await asyncio.sleep(sleep_interval_secs)
 
 
-def _acquire_budget(*, tok_limiter:Limiter, req_limiter:Limiter, tokens_needed: int, identity: str = "embeddings"):
-    """Block until both request and token budgets allow the call."""
-    while True:
-        try:
-            tok_limiter.try_acquire(f"{identity}_tpm", weight=tokens_needed)        # weight is amount to minus from 'total' tries amount
-            req_limiter.try_acquire(f"{identity}_rpm", weight=1)
-            return  # budget allowed
-        except BucketFullException as ex:
-            sleep_interval_secs = float(ex.rate.interval) / 1000
-            print(f"** Exceeding budget - sleeping {sleep_interval_secs} secs")
-            time.sleep(sleep_interval_secs)                                              # sleep as long as the limiter suggests
-            
-
 async def create_embeddings_async(*, embed_client:AzureOpenAI, 
                               model_deployed: str, 
                               inp_batches: list[list[str]], 
@@ -92,9 +82,6 @@ async def create_embeddings_async(*, embed_client:AzureOpenAI,
     for batch in inp_batches:
         tokens_needed = sum([_count_tokens(chunk, enc=enc_) for chunk in batch])
         print(f'\ntokens needed from limiter: {tokens_needed}')
-        # _acquire_budget(tok_limiter=tok_limiter, 
-        #                 req_limiter=req_limiter, 
-        #                 tokens_needed=tokens_needed)              # proactive pacing
         
         await _acquire_budget_async(tok_limiter=tok_limiter, 
                             req_limiter=req_limiter, 

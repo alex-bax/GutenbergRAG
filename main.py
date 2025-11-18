@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
+from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
 from openai import AzureOpenAI
 from pydantic import BaseModel, Field, field_validator
 from typing import Annotated, Literal,AsyncIterator
@@ -13,45 +13,30 @@ from azure.search.documents.indexes import SearchIndexClient
 # from sqlalchemy.orm import Session
 from db.database import engine, get_async_db_sess#, SessionLocal
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.operations import select_all_books, select_book, delete_book, insert_book, select_books_like, select_documents_paginated, BookNotFoundException
+from db.operations import select_all_books, select_books_db, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
 from models.schema import DBBookMetaData
 import models.schema as schema
-from moby import _make_limiters
 from models.api_response import ApiResponse, BookMetaDataResponse, GBBookMeta, QueryResponse
 # from models.vector_db import SearchPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
 
-from converters import gbbookmeta_to_db
-from load_book import fetch_book_content_from_id
-from preprocess_book import make_slug_book_key
-from search_handler import check_missing_books_in_index, paginated_search, create_missing_search_index, upload_to_index_async
-from settings import get_settings
+from converters import gbbookmeta_to_db_obj, db_obj_to_response
+from load_book import fetch_book_content_from_id, index_upload_missing_book_ids
+from search_handler import  paginated_search, create_missing_search_index
+from settings import get_settings, Settings
 from retrieve import answer_api
 
 app = FastAPI(title="MobyRAG")
 prefix_router = APIRouter(prefix="/v1")
 
-# schema.Base.metadata.create_all(bind=engine)        # creates the DB tables
-
 async def init_models():
     async with engine.begin() as conn:
-        await conn.run_sync(schema.Base.metadata.create_all)
+        await conn.run_sync(schema.Base.metadata.create_all)        # creates the DB tables
 
-
-# async def get_db() -> AsyncIterator[AsyncSession]:
-#     async with AsyncSessionLocal() as session:
-#         yield session
-
-
-# def get_db():
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
-
+# TODO make config obj
+# TODO: refactor all routes to just use settings via get_settings()
 def get_search_client() -> SearchClient:
     return get_settings().get_search_client()
 
@@ -68,7 +53,7 @@ def get_emb_client() -> AzureOpenAI:
 @prefix_router.post("/books/", status_code=status.HTTP_201_CREATED)
 async def create_book(book:BookMetaDataResponse, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     new_db_book = DBBookMetaData(**book.model_dump())
-    await insert_book(new_db_book, db)
+    await insert_book_db(new_db_book, db)
 
 @prefix_router.get("/books/search", response_model=ApiResponse, status_code=status.HTTP_200_OK)
 async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)], 
@@ -79,7 +64,7 @@ async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)],
     if not any([title, authors, lang]):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Provide at least one filter parameter.")
     
-    db_books = await select_books_like(title=title, authors=authors, lang=lang, db_sess=db)
+    db_books = await select_books_like_db(title=title, authors=authors, lang=lang, db_sess=db)
     book_metas = [b.to_book_meta_response() for b in db_books]
 
     return ApiResponse(data=book_metas)
@@ -87,16 +72,17 @@ async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)],
 
 @prefix_router.get("/books/{book_id}", response_model=ApiResponse, status_code=status.HTTP_200_OK)
 async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
-    book = None
+    db_books = None
     try:
-        book = await select_book(book_id, db)
+        db_books = await select_books_db([book_id], db)
     except BookNotFoundException: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
 
-    if not book:
+    if not db_books:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Book with id {book_id} empty")
 
-    return ApiResponse(data=book.to_book_meta_response())
+    book_meta_objs = [db_obj_to_response(b) for b in db_books]
+    return ApiResponse(data=book_meta_objs)
 
 # TODO: could be slow if DB is huge, use pagination instead
 @prefix_router.get("/books/", response_model=ApiResponse)
@@ -108,7 +94,7 @@ async def get_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
 @prefix_router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     try:
-        await delete_book(book_id, db)
+        await delete_book_db(book_id, db)
     except BookNotFoundException:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
     except Exception as exc:
@@ -118,7 +104,7 @@ async def remove_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_
 # TODO: test this - how is the result paginated
 @prefix_router.get("/books/paginated")
 async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_sess)]) -> Page[BookMetaDataResponse]:
-    db_books = await select_documents_paginated(db)
+    db_books = await select_documents_paginated_db(db)
     books = paginate([BookMetaDataResponse(**b.__dict__) for b in db_books.items])
     return books
 
@@ -141,47 +127,36 @@ async def get_docs(skip:Annotated[int, Query(description="Number of search resul
     return ApiResponse(data=page)
 
 #TODO: post book to vector db by using Gutendex ID
-#TODO: make it work with list of ids?
+#TODO: ensure list items are unique, no dups
 # no body needed, only gutenberg id since we're uploading from Gutenberg 
-@prefix_router.post("/index/{gutenberg_id}", status_code=status.HTTP_201_CREATED, response_model=ApiResponse)
-async def upload_book_to_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to upload", gt=0)],
-                      search_client:Annotated[SearchClient, Depends(get_search_client)],
-                      index_client:Annotated[SearchIndexClient, Depends(get_index_client)],
-                      emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
-                      db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
-    sett = get_settings()
-    #TODO: consider how to manage these search instances smartly in a deployed env
+@prefix_router.post("/index", status_code=status.HTTP_201_CREATED, response_model=ApiResponse)
+async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(description="Gutenberg IDs to upload", min_length=1, max_length=50)],
+                      db:Annotated[AsyncSession, Depends(get_async_db_sess)],
+                      settings:Annotated[Settings, Depends(get_settings)]
+                    ):
     info = ""
-
     book_added = None
+    create_missing_search_index(search_index_client=settings.get_index_client())
+    
+    books_uploaded = await index_upload_missing_book_ids(book_ids=gutenberg_ids, sett=settings)
+    resp_book_uploaded = None
 
-    create_missing_search_index(search_index_client=index_client)
-
-    book_content, gb_meta = fetch_book_content_from_id(gutenberg_id=gutenberg_id)
-    req_limiter, tok_limiter = _make_limiters()
-
-    if  len(check_missing_books_in_index(search_client=search_client, book_ids=[gb_meta.id])) > 0:
-        chunks_added = await upload_to_index_async(search_client=search_client, 
-                                        embed_client=emb_client,
-                                        token_limiter=tok_limiter,
-                                        request_limiter=req_limiter,
-                                        book_meta=gb_meta,
-                                        raw_book_content=book_content
-                                    )
-        
-        await insert_book(book=gbbookmeta_to_db(gb_meta), db_sess=db)
-        book_added = gb_meta
+    if len(books_uploaded) > 0:
+        for b in books_uploaded:
+            await insert_book_db(book=gbbookmeta_to_db_obj(b), db_sess=db)
+        resp_book_uploaded = books_uploaded
     else:
-        info = f"Book already in index {sett.INDEX_NAME} as '{gb_meta.title}'. Fetched meta data from DB"
+        info = f"Book ids:{gutenberg_ids} already in index {settings.INDEX_NAME}"
 
         try:
-            book = await select_book(book_id=None, db_sess=db, gb_id=gutenberg_id)
+            books_from_db = await select_books_db(book_ids=None, db_sess=db, gb_ids=gutenberg_ids)
+            resp_book_uploaded = books_from_db
         except BookNotFoundException: 
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {gutenberg_id} not found, but was in index")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with ids {gutenberg_ids} not found in DB, but was in index")
 
-        book_added = book.to_book_meta_response()
+    book_meta_objs = [db_obj_to_response(b) for b in resp_book_uploaded]
+    return ApiResponse(data=book_meta_objs, message=info) 
 
-    return ApiResponse(data=book_added, message=info) 
 
 #TODO: look up specific chunk by uuid?
 @prefix_router.delete("/index/{gutenberg_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -190,7 +165,7 @@ async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="G
                                 db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     # Ensure that book exists before deleting it from index
     try:
-        await delete_book(book_id=None, gb_id=gutenberg_id, db_sess=db)
+        await delete_book_db(book_id=None, gb_id=gutenberg_id, db_sess=db)
     except BookNotFoundException: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {gutenberg_id} not found in DB")
     
@@ -258,7 +233,7 @@ async def answer_query(query:Annotated[str, Query()],
                       top_n_matches=top_n_matches,
                       embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
                       llm_model_deployed=sett.LLM_MODEL_DEPLOYMENT)
-    # TODO: add the ans to the reponse type
+
     return ApiResponse(data=llm_resp)
 
 
