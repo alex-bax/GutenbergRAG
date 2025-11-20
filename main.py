@@ -17,7 +17,7 @@ from db.operations import select_all_books, select_books_db, delete_book_db, ins
 
 from models.schema import DBBookMetaData
 import models.schema as schema
-from models.api_response import ApiResponse, BookMetaDataResponse, GBBookMeta, QueryResponse
+from models.api_response_model import ApiResponse, BookMetaDataResponse, GBBookMeta, QueryResponse
 # from models.vector_db import SearchPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate

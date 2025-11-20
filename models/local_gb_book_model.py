@@ -1,4 +1,4 @@
-from models.api_response import GBBookMeta
+from models.api_response_model import GBBookMeta
 from pydantic import Field
 from pathlib import Path
 

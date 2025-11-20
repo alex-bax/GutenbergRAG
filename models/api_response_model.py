@@ -1,5 +1,5 @@
 from __future__ import annotations
-from models.vector_db import ContentUploadChunk, SearchPage, SearchChunk
+from models.vector_db_model import ContentUploadChunk, SearchPage, SearchChunk
 from pydantic import BaseModel, Field, field_validator
 from preprocess_book import make_slug_book_key
 

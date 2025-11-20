@@ -5,7 +5,7 @@ from openai import AzureOpenAI
 from openai._exceptions import RateLimitError
 from tiktoken import Encoding
 
-from models.vector_db import EmbeddingVec
+from models.vector_db_model import EmbeddingVec
 from constants import EmbeddingDimension, MAX_TOKENS, OVERLAP
 from openai import RateLimitError
 from pyrate_limiter import Duration, Rate, Limiter, BucketFullException

@@ -20,8 +20,8 @@ from preprocess_book import make_slug_book_key, clean_headers, create_embeddings
 from chunking import fixed_size_chunks
 from settings import get_settings
 
-from models.api_response import GBBookMeta
-from models.vector_db import ContentUploadChunk, SearchChunk, SearchPage
+from models.api_response_model import GBBookMeta
+from models.vector_db_model import ContentUploadChunk, SearchChunk, SearchPage
 
 
 def _get_index_fields() -> list[SearchField]:

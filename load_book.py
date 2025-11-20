@@ -2,7 +2,7 @@ import requests, re
 import pandas as pd
 from pathlib import Path
 
-from models.api_response import GBBookMeta
+from models.api_response_model import GBBookMeta
 from models.local_gb_book_model import GBBookMetaLocal
 from search_handler import get_missing_books_in_index, upload_to_index_async
 from retrieve import search_chunks, answer_with_context

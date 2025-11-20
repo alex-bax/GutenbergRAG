@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from azure.search.documents import SearchClient
+from db.vector_store_abstract import VectorStore
+# from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
 from openai import AzureOpenAI
@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     AZ_OPENAI_GPT_ENDPOINT: str
     AZ_OPENAI_GPT_KEY: str
 
+    QDRANT_SEARCH_ENDPOINT: str
+    QDRANT_SEARCH_KEY: str
+
     INDEX_NAME: str = "moby"
     EMBED_MODEL_DEPLOYMENT:str
     LLM_MODEL_DEPLOYMENT:str
@@ -45,8 +48,8 @@ class Settings(BaseSettings):
     DB_PORT:int
 
 
-    def get_search_client(self) -> SearchClient:
-        return SearchClient(
+    def get_search_client(self) -> VectorStore:
+        return VectorStore(
             endpoint=self.AZURE_SEARCH_ENDPOINT,
             index_name=self.INDEX_NAME,
             credential=AzureKeyCredential(self.AZURE_SEARCH_KEY)

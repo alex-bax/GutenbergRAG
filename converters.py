@@ -1,4 +1,4 @@
-from models.api_response import GBBookMeta, BookMetaDataResponse
+from models.api_response_model import GBBookMeta, BookMetaDataResponse
 from models.schema import DBBookMetaData
 
 def gbbookmeta_to_db_obj(gbm: GBBookMeta) -> DBBookMetaData:
