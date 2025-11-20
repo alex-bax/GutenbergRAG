@@ -1,5 +1,5 @@
 from typing import Any, Sequence
-from vector_store_abstract import ContentChunk, VectorStore
+from vector_store_abstract import ContentChunk, AsyncVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     PointStruct,
@@ -9,7 +9,7 @@ from qdrant_client.models import (
     Document
 )
 
-class QdrantVectorStore(VectorStore):
+class QdrantVectorStore(AsyncVectorStore):
     def __init__(
         self,
         url: str,

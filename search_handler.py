@@ -128,11 +128,11 @@ def _split_by_size(data: list, chunk_size: int) -> list[list]:
 
 
 async def upload_to_index_async(*, search_client:SearchClient, 
-                    embed_client:AzureOpenAI, 
-                    token_limiter:Limiter,
-                    request_limiter:Limiter,
-                    raw_book_content: str,
-                    book_meta: GBBookMeta,
+                                embed_client:AzureOpenAI, 
+                                token_limiter:Limiter,
+                                request_limiter:Limiter,
+                                raw_book_content: str,
+                                book_meta: GBBookMeta,
                     ) -> list[ContentUploadChunk]:
     sett = get_settings()
 

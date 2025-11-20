@@ -20,10 +20,10 @@ def search_chunks(*, query: str,
                                         embed_client=embed_client, 
                                         model_deployed=embed_model_deployed)[0]
     
-    vec_q = VectorizedQuery(vector=query_emb_vec.vector, k_nearest_neighbors=40, fields="content_vector")
+    vec_q = VectorizedQuery(vector=query_emb_vec.vector, k_nearest_neighbors=40, fields="book_name, content_vector")
 
     results:ItemPaged = search_client.search(
-        search_text=query,                         # hybrid: BM25 + vector
+        # search_text=query,                         # hybrid: BM25 + vector
         vector_queries=[vec_q],
         top=k,
         # query_type="semantic",      # TODO: use this one?
