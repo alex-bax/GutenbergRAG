@@ -1,17 +1,18 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from db.vector_store_abstract import VectorStore
-# from azure.search.documents import SearchClient
+
+from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
 from openai import AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
-from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN
+from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, EmbeddingDimension
 
 
 # TODO: merge constants into settings
 # TODO: add input extention type, e.g. whether it's html, txt, etc.
         # TODO: for each extraction type, use a different pre-processing with Strategy design pattern
+# TODO: separate this into multiple Settings, e.g. for DB, vector store, etc.
 
 # Initializes fields via .env file
 
@@ -35,6 +36,13 @@ class Settings(BaseSettings):
     EMBED_MODEL_DEPLOYMENT:str
     LLM_MODEL_DEPLOYMENT:str
 
+    # Postgres DB
+    DB_NAME:str
+    DB_PW:str
+    DB_PORT:int
+
+    EMBEDDING_DIM:EmbeddingDimension = EmbeddingDimension.SMALL
+
     model_config = SettingsConfigDict(
         env_file=".env",  # local dev
         env_file_encoding="utf-8",
@@ -42,21 +50,18 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Postgres DB
-    DB_NAME:str
-    DB_PW:str
-    DB_PORT:int
+    
 
 
-    def get_search_client(self) -> VectorStore:
-        return VectorStore(
+    def get_search_client(self) -> SearchClient:
+        return SearchClient(
             endpoint=self.AZURE_SEARCH_ENDPOINT,
             index_name=self.INDEX_NAME,
             credential=AzureKeyCredential(self.AZURE_SEARCH_KEY)
         )
 
     def get_index_client(self) -> SearchIndexClient:
-        return  SearchIndexClient(endpoint=self.AZURE_SEARCH_ENDPOINT,
+        return SearchIndexClient(endpoint=self.AZURE_SEARCH_ENDPOINT,
                                 credential=AzureKeyCredential(self.AZURE_SEARCH_KEY))
 
     def get_llm_client(self) -> AzureOpenAI:

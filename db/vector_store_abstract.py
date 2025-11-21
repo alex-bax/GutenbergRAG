@@ -1,28 +1,28 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from pydantic import BaseModel 
-from typing import Any
-from models.vector_db_model import ContentUploadChunk, SearchChunk, EmbeddingVec
+from typing import Sequence
+from models.vector_db_model import UploadChunk, SearchChunk, EmbeddingVec
 
 # TODO: add paginated_search
 
-class AsyncVectorStore(ABC, BaseModel):
+class AsyncVectorStore(BaseModel, ABC):
     """Backend-agnostic vector db interface."""
 
     @abstractmethod
-    async def upsert(*, self, chunks: list[ContentUploadChunk]) -> None:
+    async def upsert(*, self, chunks: list[UploadChunk]) -> None:
         ...
 
     @abstractmethod
-    async def get_missing_ids(self, book_ids:list[int]) -> list[int]:
+    async def get_missing_ids(*, self, book_ids:list[int]) -> list[int]:
         ...
 
     @abstractmethod
-    async def search_chunks(
+    async def search_by_embedding(
+        *,
         self,
         embed_query_vector:EmbeddingVec,
         k: int = 10,
-        filters: dict[str, Any] | None = None,
     ) -> list[SearchChunk]:
         """
         Returns a list of hits (each hit is a dict with at least: id, score, payload).
@@ -30,9 +30,9 @@ class AsyncVectorStore(ABC, BaseModel):
         ...
 
     @abstractmethod
-    async def delete(*, self, ids: list[str]) -> None:
+    async def delete_books(*, self, book_ids:Sequence[int]) -> None:
         ...
 
     @abstractmethod
-    async def create_index(*, self, ids: list[str]) -> None:
+    async def create_missing_collection(*, self, collection_name:str) -> None:
         ...

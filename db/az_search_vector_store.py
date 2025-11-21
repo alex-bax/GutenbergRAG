@@ -1,9 +1,15 @@
 
 from vector_store_abstract import AsyncVectorStore
 from settings import Settings
-from models.vector_db_model import ContentUploadChunk, SearchChunk
+from models.vector_db_model import SearchChunk
 from azure.search.documents.aio import SearchClient, AsyncSearchItemPaged
-from azure.search.documents.indexes import SearchIndexClient
+from azure.search.documents.indexes.aio import SearchIndexClient
+from azure.search.documents.indexes.models import SearchIndex
+from azure.search.documents.indexes.models import (
+    SearchIndex, SimpleField, SearchField, SearchFieldDataType,
+    VectorSearch, HnswAlgorithmConfiguration, VectorSearchProfile, ExhaustiveKnnAlgorithmConfiguration,
+)
+from typing import Sequence
 from azure.core.paging import ItemPaged
 from azure.core.credentials import AzureKeyCredential
 from pydantic import PrivateAttr
@@ -12,8 +18,8 @@ from models.vector_db_model import EmbeddingVec
 
 class AzSearchVectorStore(AsyncVectorStore):
     settings:Settings
-    chunk_size:int
     _search_client:SearchClient = PrivateAttr()     # not used for validation
+    _index_client:SearchIndexClient = PrivateAttr()
 
     async def model_post_init(self, __context):
         # Run after Pydantic validates input and creates the object
@@ -22,11 +28,11 @@ class AzSearchVectorStore(AsyncVectorStore):
                                         credential=AzureKeyCredential(self.settings.AZURE_SEARCH_KEY)
                                     )
 
-        self.index_client = SearchIndexClient(endpoint=self.settings.AZURE_SEARCH_ENDPOINT,
+        self._index_client = SearchIndexClient(endpoint=self.settings.AZURE_SEARCH_ENDPOINT,
                                             credential=AzureKeyCredential(self.settings.AZURE_SEARCH_KEY))
         
 
-    async def upsert(self, chunks: list[ContentUploadChunk]) -> None:
+    async def upsert(self, chunks: list[VectorChunk]) -> None:
         docs = [chunk.to_dict() for chunk in chunks]
         
         for docs in docs:
@@ -49,12 +55,13 @@ class AzSearchVectorStore(AsyncVectorStore):
         return missing_book_ids  
 
         
-    async def search_chunks(
-            self, embed_query_vector:EmbeddingVec,
+    async def search_by_embedding(
+            self, 
+            embed_query_vector:EmbeddingVec,
             k: int = 10,
         ) -> list[SearchChunk]:
         """
-        Returns a list of hits (each hit is a dict with at least: id, score, payload).
+        Returns a list of hits (each hit is a dict with at least: id, score).
         """
         vec_q = VectorizedQuery(vector=embed_query_vector.vector, k_nearest_neighbors=40, fields="book_name, book_id, content_vector")
 
@@ -76,13 +83,59 @@ class AzSearchVectorStore(AsyncVectorStore):
         
         return hits
 
+    def _get_index_fields(self) -> list[SearchField]:
+        index_fields= [
+                SimpleField(name="uuid_str", type=SearchFieldDataType.String, key=True),
+                SimpleField(name="chunk_nr", type=SearchFieldDataType.Int32, filterable=True, facetable=True),      
+                SimpleField(name="book_name", type=SearchFieldDataType.String, filterable=True, facetable=True),
+                SimpleField(name="book_id", type=SearchFieldDataType.Int32, filterable=True, facetable=True),
+                SearchField(name="content", type=SearchFieldDataType.String, searchable=True),
+            ]
+        
+        assert all(sf.name in SearchChunk.model_fields.keys() for sf in index_fields), f"Vector index fields not matching SearchItem: {SearchChunk.model_fields.keys()} != (index_fields) {index_fields} "
+
+        index_fields.append(SearchField(
+                    name="content_vector",
+                    type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+                    searchable=True,                                   
+                    vector_search_dimensions=self.settings.EMBEDDING_DIM,      # NB must match with embedding model dimension
+                    vector_search_profile_name="vprofile"
+                ))
+        
+        return index_fields
 
 
-    async def delete(*, self, ids: list[str]) -> None:
-        ...
+    def _get_vector_fields(self, vector_search_alg_name="hnsw") -> VectorSearch:
+        vector_search_alg = HnswAlgorithmConfiguration(name=vector_search_alg_name) if vector_search_alg_name == "hnsw" else ExhaustiveKnnAlgorithmConfiguration(name=vector_search_alg_name)
+        
+        return VectorSearch(
+            algorithms=[vector_search_alg],
+            profiles=[VectorSearchProfile(name="vprofile",
+                                        algorithm_configuration_name=vector_search_alg_name)]
+        )
 
-    async def create_index(*, self, ids: list[str]) -> None:
-        ...
+
+    async def delete_books(self, book_ids: Sequence[int]) -> None:
+        doc_dicts = [{"book_id": b_id} for b_id in book_ids]
+        await self._search_client.delete_documents(doc_dicts)
+
+
+    async def create_missing_collection(self, collection_name:str) -> None:
+        """Collection in Azure lingo for Search Index"""
+        all_indexes = [idx.name async for idx in self._index_client.list_indexes()]
+
+        if collection_name not in all_indexes:
+            new_index = SearchIndex(
+                name=collection_name,
+                fields=self._get_index_fields(),
+                vector_search=self._get_vector_fields(),
+                # semantic_search=_get_semantinc_search_settings()
+            )
+
+            self._index_client.create_index(index=new_index)
+            print(f"Created index: {collection_name}")
+        else:
+            print(f"Index '{collection_name}' already created")
 
 
     

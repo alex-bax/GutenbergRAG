@@ -21,7 +21,7 @@ from chunking import fixed_size_chunks
 from settings import get_settings
 
 from models.api_response_model import GBBookMeta
-from models.vector_db_model import ContentUploadChunk, SearchChunk, SearchPage
+from models.vector_db_model import VectorChunk, SearchChunk, SearchPage
 
 
 def _get_index_fields() -> list[SearchField]:
@@ -70,21 +70,21 @@ def _get_vector_search(vector_search_alg_name="hnsw") -> VectorSearch:
 
 
 
-def create_missing_search_index(*, book_index_name="moby", search_index_client:SearchIndexClient) -> None:
-    all_indexes = [idx.name for idx in search_index_client.list_indexes()]
+# def create_missing_search_index(*, book_index_name="moby", search_index_client:SearchIndexClient) -> None:
+#     all_indexes = [idx.name for idx in search_index_client.list_indexes()]
 
-    if book_index_name not in all_indexes:
-        new_index = SearchIndex(
-            name=book_index_name,
-            fields=_get_index_fields(),
-            vector_search=_get_vector_search(),
-            # semantic_search=_get_semantinc_search_settings()
-        )
+#     if book_index_name not in all_indexes:
+#         new_index = SearchIndex(
+#             name=book_index_name,
+#             fields=_get_index_fields(),
+#             vector_search=_get_vector_search(),
+#             # semantic_search=_get_semantinc_search_settings()
+#         )
 
-        search_index_client.create_index(index=new_index)
-        print(f"Created index: {book_index_name}")
-    else:
-        print(f"Index '{book_index_name}' already created")
+#         search_index_client.create_index(index=new_index)
+#         print(f"Created index: {book_index_name}")
+#     else:
+#         print(f"Index '{book_index_name}' already created")
 
 
 def paginated_search(*, search_client:SearchClient, q:str="", skip:int, top:int, select_fields:str|None): #-> list[SearchPage]:
@@ -133,7 +133,7 @@ async def upload_to_index_async(*, search_client:SearchClient,
                                 request_limiter:Limiter,
                                 raw_book_content: str,
                                 book_meta: GBBookMeta,
-                    ) -> list[ContentUploadChunk]:
+                    ) -> list[VectorChunk]:
     sett = get_settings()
 
     book_str = clean_headers(raw_book=raw_book_content) 
@@ -157,7 +157,7 @@ async def upload_to_index_async(*, search_client:SearchClient,
     assert len(chunks) == len(embeddings)
 
     for i, (chunk, emb_vec) in enumerate(zip(chunks, embeddings)):
-        chapter_item = ContentUploadChunk(
+        chapter_item = VectorChunk(
             uuid_str= str(uuid.uuid4()),
             book_name= book_meta.title,
             book_id = book_meta.id,

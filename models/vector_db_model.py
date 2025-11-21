@@ -15,7 +15,7 @@ class EmbeddingVec(BaseModel):
         
         return self
 
-class ContentUploadChunk(BaseModel):
+class UploadChunk(BaseModel):
     uuid_str:str = Field(...)
     book_name:str = Field(..., description="Name/title of the book")
     book_id:int = Field(...)
@@ -30,11 +30,11 @@ class ContentUploadChunk(BaseModel):
 
 # Uses optional since user search request can toggle fields on/off
 class SearchChunk(BaseModel):
-    uuid_str: str|None
-    chunk_nr: int|None = Field(None,  description="Nth chunk of all chunks")
-    book_name: str|None
-    book_id: int|None
-    content: str|None
+    uuid_str: str|None = None
+    chunk_nr: int|None = Field(default=None,  description="Nth chunk of all chunks")
+    book_name: str|None = None
+    book_id: int|None = None
+    content: str|None = None
     search_score: float
 
 class SearchPage(BaseModel):

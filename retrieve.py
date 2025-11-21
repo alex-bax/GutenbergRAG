@@ -9,7 +9,7 @@ from constants import MIN_SEARCH_SCORE
 from models.api_response_model import QueryResponse
 from preprocess_book import create_embeddings
 from typing import Any
-from models.vector_db_model import SearchChunk, ContentUploadChunk
+from models.vector_db_model import SearchChunk, VectorChunk
 
 def search_chunks(*, query: str, 
                   search_client:SearchClient, 

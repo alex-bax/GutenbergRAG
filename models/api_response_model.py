@@ -1,5 +1,5 @@
 from __future__ import annotations
-from models.vector_db_model import ContentUploadChunk, SearchPage, SearchChunk
+from models.vector_db_model import VectorChunk, SearchPage, SearchChunk
 from pydantic import BaseModel, Field, field_validator
 from preprocess_book import make_slug_book_key
 
@@ -21,7 +21,7 @@ class BookMetaDataResponse(BookBase):
 
 class Book(BookBase):
     book_name:str
-    chunks: list[ContentUploadChunk]       
+    chunks: list[VectorChunk]       
 
 class GBBookMeta(BaseModel):
     title:str
