@@ -1,7 +1,6 @@
 from __future__ import annotations
-from models.vector_db_model import VectorChunk, SearchPage, SearchChunk
+from models.vector_db_model import SearchPage, SearchChunk
 from pydantic import BaseModel, Field, field_validator
-from preprocess_book import make_slug_book_key
 
 
 class QueryResponse(BaseModel):
@@ -19,9 +18,9 @@ class BookMetaDataResponse(BookBase):
     authors: str 
     model_config = {"from_attributes": True}        
 
-class Book(BookBase):
-    book_name:str
-    chunks: list[VectorChunk]       
+# class Book(BookBase):
+#     book_name:str
+#     chunks: list[VectorChunk]       
 
 class GBBookMeta(BaseModel):
     title:str

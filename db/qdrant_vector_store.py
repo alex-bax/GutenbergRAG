@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any, Sequence
 from pydantic import PrivateAttr
-from settings import Settings, get_settings
+from settings import Settings 
 from constants import EmbeddingDimension
 from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk
 # from vector_store_abstract import AsyncVectorStore
@@ -100,7 +100,7 @@ class QdrantVectorStore(AsyncVectorStore):
             points=points,
         )
 
-    async def search_by_embedding(self, query_embed_vec: EmbeddingVec, filter:dict[str,Any], k: int = 10) -> list[SearchChunk]:
+    async def search_by_embedding(self, query_embed_vec: EmbeddingVec, filter:dict[str,Any], k: int=10) -> list[SearchChunk]:
         qdrant_filter = self._build_filter(filter)
 
         results = await self._client.query_points(
@@ -132,12 +132,45 @@ class QdrantVectorStore(AsyncVectorStore):
         
         
 
-    async def get_missing_ids(self) -> None:
-        pass
+    async def get_missing_ids(self, book_ids:set[int]) -> set[int]:
+        if not book_ids:
+            return set()
+
+        q_filter = Filter(      # filter: return only points where book_id is in our provided list
+            must=[
+                FieldCondition(
+                    key="book_id",
+                    match=MatchAny(any=list(book_ids)),
+                )
+            ]
+        )
+
+        existing_ids: set[int] = set()
+        offset = None
+
+        # Scroll `book_id` to reduce payload load
+        while True:
+            points, offset = await self._client.scroll(
+                                                    collection_name=self.collection_name,
+                                                    scroll_filter=q_filter,
+                                                    limit=500,
+                                                    offset=offset,
+                                                    with_payload=True,
+                                                    with_vectors=False,
+                                                )
+            for p in points:
+                if p.payload: 
+                    existing_ids.add(p.payload["book_id"])      
+
+            if offset is None:
+                break
+
+        return book_ids - existing_ids
 
 
 
 async def try_local() :
+    from settings import get_settings
     client = QdrantVectorStore(settings=get_settings(), 
                                collection_name="gutenberg")
     await client.initialize()

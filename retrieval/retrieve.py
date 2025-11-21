@@ -7,7 +7,7 @@ from constants import MIN_SEARCH_SCORE
 
 from db.vector_store_abstract import AsyncVectorStore
 from models.api_response_model import QueryResponse
-from preprocess_book import create_embeddings
+from ingestion.preprocess_book import create_embeddings
 from models.vector_db_model import SearchChunk
 
 async def search_chunks(*, query: str, 

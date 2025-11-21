@@ -1,9 +1,7 @@
 from functools import lru_cache
-from pydantic_settings import BaseSettings, SettingsConfigDict,
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal
 from db.vector_store_abstract import AsyncVectorStore
-from db.qdrant_vector_store import QdrantVectorStore
-from db.az_search_vector_store import AzSearchVectorStore
 
 from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
@@ -56,12 +54,16 @@ class Settings(BaseSettings):
 
 
     async def get_search_client(self) -> AsyncVectorStore:
+        from db.az_search_vector_store import AzSearchVectorStore
+        from db.qdrant_vector_store import QdrantVectorStore
+        
         if self.VECTOR_STORE_TO_USE == "Qdrant":
             qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.INDEX_NAME)
             await qdrant_v_store.initialize()
             return qdrant_v_store
 
         elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":
+
             return AzSearchVectorStore(settings=self)
         else:
             raise ValueError("No valid Vector store specified - Check settings!")

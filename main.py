@@ -227,12 +227,12 @@ async def answer_query(query:Annotated[str, Query()],
     sett = get_settings()
 
     llm_resp = await answer_api(query=query, 
-                      search_client=search_client, 
-                      embed_client=emb_client, 
-                      llm_client=llm_client,
-                      top_n_matches=top_n_matches,
-                      embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
-                      llm_model_deployed=sett.LLM_MODEL_DEPLOYMENT)
+                                search_client=search_client, 
+                                embed_client=emb_client, 
+                                llm_client=llm_client,
+                                top_n_matches=top_n_matches,
+                                embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
+                                llm_model_deployed=sett.LLM_MODEL_DEPLOYMENT)
 
     return ApiResponse(data=llm_resp)
 

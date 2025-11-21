@@ -39,7 +39,7 @@ class AzSearchVectorStore(AsyncVectorStore):
             await self._search_client.upload_documents(docs)        #type:ignore
 
 
-    async def get_missing_ids(self, book_ids: list[int]) -> list[int]:
+    async def get_missing_ids(self, book_ids: set[int]) -> set[int]:
         filter_expr = " or ".join([f"book_id eq {b_id}" for b_id in book_ids])
         resp = self._search_client.search(                
                     query_type="simple",
@@ -50,7 +50,7 @@ class AzSearchVectorStore(AsyncVectorStore):
                 )
         
         found_book_ids = [f["value"] for f in resp.get_facets()["book_id"]] # type:ignore
-        missing_book_ids = list(set(book_ids) - set(found_book_ids))      
+        missing_book_ids = set(book_ids) - set(found_book_ids)
         
         return missing_book_ids  
 
@@ -113,6 +113,7 @@ class AzSearchVectorStore(AsyncVectorStore):
             profiles=[VectorSearchProfile(name="vprofile",
                                         algorithm_configuration_name=vector_search_alg_name)]
         )
+
 
 
     async def delete_books(self, book_ids: Sequence[int]) -> None:

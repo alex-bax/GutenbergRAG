@@ -4,10 +4,10 @@ from pathlib import Path
 
 from models.api_response_model import GBBookMeta
 from models.local_gb_book_model import GBBookMetaLocal
-from search_handler import get_missing_books_in_index, upload_to_index_async
-from retrieve import search_chunks, answer_with_context
+from vector_store_controller import get_missing_books_in_index, upload_to_index_async
+from retrieval.retrieve import search_chunks, answer_with_context
 from settings import get_settings, Settings
-from preprocess_book import make_slug_book_key
+from ingestion.preprocess_book import make_slug_book_key
 
 # TODO: make async
 def _fetch_book_content(*, download_url) -> str:
@@ -67,7 +67,7 @@ async def index_upload_missing_book_ids(*, book_ids:list[int], sett:Settings) ->
             print(f"Loaded content from cache for book id {b_id}")
 
         print(f"Uploading Book id {b_id} to index")
-        await upload_to_index_async(search_client=sett.get_search_client(), 
+        await upload_to_index_async(vec_store=await sett.get_search_client(), 
                                     embed_client=sett.get_emb_client(),
                                     token_limiter=token_lim,
                                     request_limiter=req_lim,

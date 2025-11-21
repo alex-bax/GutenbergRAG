@@ -10,11 +10,12 @@ class AsyncVectorStore(BaseModel, ABC):
     """Backend-agnostic vector db interface."""
 
     @abstractmethod
-    async def upsert(self, *, chunks: list[UploadChunk]) -> None:
+    async def upsert(self, *, chunks: Sequence[UploadChunk]) -> None:
         ...
 
     @abstractmethod
-    async def get_missing_ids(self, *, book_ids:list[int]) -> list[int]:
+    async def get_missing_ids(self, *, book_ids:set[int]) -> set[int]:
+        """Return a list of book_ids from NOT present from given list"""
         ...
 
     @abstractmethod
@@ -26,6 +27,7 @@ class AsyncVectorStore(BaseModel, ABC):
         Returns a list of hits (each hit is a dict with at least: id, score, payload).
         """
         ...
+
 
     @abstractmethod
     async def delete_books(self, *, book_ids:Sequence[int]) -> None:
