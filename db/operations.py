@@ -24,7 +24,7 @@ async def select_all_books(db_sess:AsyncSession) -> list[DBBookMetaData]:
 
     return book_rows
 
-async def select_books_db(book_ids:list[int]|None, db_sess:AsyncSession, gb_ids:list[int]|None=None) -> list[DBBookMetaData]:
+async def select_books_db(book_ids:set[int]|None, db_sess:AsyncSession, gb_ids:set[int]|None=None) -> list[DBBookMetaData]:
     if gb_ids:
         stmt = select(DBBookMetaData).filter(DBBookMetaData.gb_id.in_(gb_ids))#.where(DBBookMetaData.gb_id == gb_id)
     else:

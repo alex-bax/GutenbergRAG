@@ -1,28 +1,29 @@
-import requests, re
+import re, requests_async
+import asyncio
 import pandas as pd
 from pathlib import Path
 
 from models.api_response_model import GBBookMeta
 from models.local_gb_book_model import GBBookMetaLocal
-from vector_store_controller import get_missing_books_in_index, upload_to_index_async
+from vector_store_utils import upload_to_index_async
 from retrieval.retrieve import search_chunks, answer_with_context
 from settings import get_settings, Settings
 from ingestion.preprocess_book import make_slug_book_key
 
 # TODO: make async
-def _fetch_book_content(*, download_url) -> str:
-    r = requests.get(download_url, timeout=60)
-    r.raise_for_status()
-    return r.text
+async def _fetch_book_content(*, download_url) -> str:
+    resp = await requests_async.get(download_url, timeout=60)
+    resp.raise_for_status
+    return resp.text
 
-def fetch_book_content_from_id(*, gutenberg_id:int) -> tuple[str, GBBookMeta]:
+async def fetch_book_content_from_id(*, gutenberg_id:int) -> tuple[str, GBBookMeta]:
     gb_meta = _fetch_gutendex_meta_from_id(gb_id=gutenberg_id)
     url = gb_meta.get_txt_url()
 
     if not url:
         raise Exception("Gutenberg book missing its txt/plain url")
 
-    return _fetch_book_content(download_url=url), gb_meta    
+    return await _fetch_book_content(download_url=url), gb_meta    
 
 def _load_gb_meta_local(*, path: Path) -> GBBookMetaLocal:
     json_text = Path(path).read_text(encoding="utf-8")
@@ -37,9 +38,24 @@ def get_path_by_book_id_from_cache(*, book_id:int, folder_p:Path = Path("eval_da
     assert len(lst) < 2
     return lst
 
-async def index_upload_missing_book_ids(*, book_ids:list[int], sett:Settings) -> list[GBBookMeta]:
-    missing_book_ids = get_missing_books_in_index(search_client=sett.get_search_client(), 
-                                                  book_ids=book_ids)
+def _write_to_memory(book_content:str, gb_meta:GBBookMeta) -> Path:
+    local_gb_p = Path("eval_data", "gb_meta_objs_by_id", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
+    loc_gb_meta = GBBookMetaLocal(**gb_meta.model_dump(), path_to_content=local_gb_p)
+
+    with open(local_gb_p.with_suffix(".json"), "w") as f:
+        f.write(loc_gb_meta.model_dump_json(indent=4))
+    
+    local_book_content_p = Path("eval_data","books") / local_gb_p.name
+    with open(local_book_content_p, "w", encoding="utf-8") as f:
+        f.write(book_content)
+
+    return local_gb_p
+
+async def index_upload_missing_book_ids(*, book_ids:set[int], sett:Settings) -> list[GBBookMeta]:
+    """Upload and book ids to vector index and insert into book meta DB if missing"""
+    vector_store = await sett.get_vector_store()
+    missing_book_ids = await vector_store.get_missing_ids( book_ids=book_ids)
+
     gb_books = []
     req_lim, token_lim = sett.make_limiters()
     print(f'--- Missing book ids: {missing_book_ids}')
@@ -48,16 +64,8 @@ async def index_upload_missing_book_ids(*, book_ids:list[int], sett:Settings) ->
         eval_book_paths = get_path_by_book_id_from_cache(book_id=b_id)
         
         if len(eval_book_paths) == 0:
-            book_content, gb_meta = fetch_book_content_from_id(gutenberg_id=b_id)
-            local_gb_p = Path("eval_data", "gb_meta_objs_by_id", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
-            loc_gb_meta = GBBookMetaLocal(**gb_meta.model_dump(), path_to_content=local_gb_p)
-
-            with open(local_gb_p.with_suffix(".json"), "w") as f:
-                f.write(loc_gb_meta.model_dump_json(indent=4))
-            
-            local_book_content_p = Path("eval_data","books") / local_gb_p.name
-            with open(local_book_content_p, "w", encoding="utf-8") as f:
-                f.write(book_content)
+            book_content, gb_meta = await fetch_book_content_from_id(gutenberg_id=b_id)
+            local_gb_p = _write_to_memory(book_content=book_content, gb_meta=gb_meta)
 
             print(f"GB meta obj not found in cache - fetching from Gutendex. Wrote content + gb obj to: {local_gb_p.name}")
         else:
@@ -67,7 +75,7 @@ async def index_upload_missing_book_ids(*, book_ids:list[int], sett:Settings) ->
             print(f"Loaded content from cache for book id {b_id}")
 
         print(f"Uploading Book id {b_id} to index")
-        await upload_to_index_async(vec_store=await sett.get_search_client(), 
+        await upload_to_index_async(vec_store=await sett.get_vector_store(), 
                                     embed_client=sett.get_emb_client(),
                                     token_limiter=token_lim,
                                     request_limiter=req_lim,
@@ -79,22 +87,22 @@ async def index_upload_missing_book_ids(*, book_ids:list[int], sett:Settings) ->
     return gb_books
 
 
-def _fetch_gutendex_meta_from_id(*, gb_id:int) -> GBBookMeta:
+async def _fetch_gutendex_meta_from_id(*, gb_id:int) -> GBBookMeta:
     url = f"https://gutendex.com/books/{gb_id}"
-    resp = requests.get(url)
+    resp = await requests_async.get(url)
     resp.raise_for_status()
     
     body = resp.json()#["results"]
     return GBBookMeta(**body)
 
     
-def gutendex_book_urls(*, n=25, languages:list[str]=["en"], text_format="text/html") -> list[dict[str, str|int|list[str]]]:
+async def gutendex_book_urls(*, n=25, languages:list[str]=["en"], text_format="text/html") -> list[dict[str, str|int|list[str]]]:
     out = []
     txt_url = "https://gutendex.com/books"
     params = {"languages": ",".join(languages)}
     
     while len(out) < n and txt_url:
-        resp = requests.get(txt_url, params=params if "books" in txt_url else None, timeout=60)
+        resp = await requests_async.get(txt_url, params=params if "books" in txt_url else None, timeout=60)
         resp.raise_for_status()
         data = resp.json()
         
@@ -121,8 +129,7 @@ def gutendex_book_urls(*, n=25, languages:list[str]=["en"], text_format="text/ht
 
 
 
-
-def download_or_load_from_cache(*, book_key:str, url:str) -> str:
+async def download_or_load_from_cache(*, book_key:str, url:str) -> str:
     book_p = Path("books", f'{book_key}.txt')
 
     if book_p.exists():
@@ -131,7 +138,7 @@ def download_or_load_from_cache(*, book_key:str, url:str) -> str:
             book_txt = f.read()
         
     else:
-        book_txt = _fetch_book_content(download_url=url)
+        book_txt = await _fetch_book_content(download_url=url)
 
         with open(book_p, "w", encoding="utf-8") as f:
             f.write(book_txt)
@@ -139,8 +146,10 @@ def download_or_load_from_cache(*, book_key:str, url:str) -> str:
     return book_txt
 
 
-
-if __name__ == "__main__":
-    books = gutendex_book_urls(n=10, text_format="text/plain")
+async def try_book_loader():
+    books = await gutendex_book_urls(n=10, text_format="text/plain")
     for b in books[:5]:
         print(b["id"], b["title"], b["download_url"])
+
+if __name__ == "__main__":
+    asyncio.run(try_book_loader())

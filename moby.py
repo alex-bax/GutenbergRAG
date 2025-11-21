@@ -12,7 +12,7 @@ from preprocess_book import make_slug_book_key
 from search_handler import create_missing_search_index, upload_to_index_async
 from retrieve import answer_api
 from settings import get_settings
-from load_book import gutendex_book_urls
+from book_loader import gutendex_book_urls
 
 from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN
 

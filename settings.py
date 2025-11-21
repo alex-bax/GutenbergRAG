@@ -5,7 +5,7 @@ from db.vector_store_abstract import AsyncVectorStore
 
 from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
-from openai import AzureOpenAI
+from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
 from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, EmbeddingDimension
 
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     )
 
 
-    async def get_search_client(self) -> AsyncVectorStore:
+    async def get_vector_store(self) -> AsyncVectorStore:
         from db.az_search_vector_store import AzSearchVectorStore
         from db.qdrant_vector_store import QdrantVectorStore
         
@@ -79,8 +79,8 @@ class Settings(BaseSettings):
             api_key=self.AZ_OPENAI_GPT_KEY
         )
 
-    def get_emb_client(self) -> AzureOpenAI:
-        return AzureOpenAI(azure_endpoint=self.AZ_OPENAI_EMBED_ENDPOINT,
+    def get_emb_client(self) -> AsyncAzureOpenAI:
+        return AsyncAzureOpenAI(azure_endpoint=self.AZ_OPENAI_EMBED_ENDPOINT,
                                 api_version="2024-12-01-preview",
                                 api_key=self.AZ_OPENAI_EMBED_KEY)
     

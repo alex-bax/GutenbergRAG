@@ -23,10 +23,10 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
 
 from converters import gbbookmeta_to_db_obj, db_obj_to_response
-from load_book import fetch_book_content_from_id, index_upload_missing_book_ids
-from search_handler import  paginated_search
+from book_loader import fetch_book_content_from_id, index_upload_missing_book_ids
+from vector_store_utils import  paginated_search
 from settings import get_settings, Settings
-from retrieve import answer_api
+from retrieval.retrieve import answer_api
 
 app = FastAPI(title="MobyRAG")
 prefix_router = APIRouter(prefix="/v1")
@@ -38,7 +38,7 @@ async def init_models():
 # TODO make config obj
 # TODO: refactor all routes to just use settings via get_settings()
 async def get_search_client() -> AsyncVectorStore:
-    return await get_settings().get_search_client()
+    return await get_settings().get_vector_store()
 
 def get_index_client() -> SearchIndexClient:
     return get_settings().get_index_client()
@@ -74,7 +74,7 @@ async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)],
 async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     db_books = None
     try:
-        db_books = await select_books_db([book_id], db)
+        db_books = await select_books_db(set([book_id]), db)
     except BookNotFoundException: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
 
@@ -130,7 +130,7 @@ async def get_docs(skip:Annotated[int, Query(description="Number of search resul
 #TODO: ensure list items are unique, no dups
 # no body needed, only gutenberg id since we're uploading from Gutenberg 
 @prefix_router.post("/index", status_code=status.HTTP_201_CREATED, response_model=ApiResponse)
-async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(description="Gutenberg IDs to upload", min_length=1, max_length=50)],
+async def upload_book_to_index(gutenberg_ids:Annotated[set[int], Body(description="Gutenberg IDs to upload", min_length=1, max_length=50)],
                       db:Annotated[AsyncSession, Depends(get_async_db_sess)],
                       settings:Annotated[Settings, Depends(get_settings)]
                     ):

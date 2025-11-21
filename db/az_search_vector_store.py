@@ -83,6 +83,13 @@ class AzSearchVectorStore(AsyncVectorStore):
         
         return hits
 
+
+    async def delete_books(self, book_ids: Sequence[int]) -> None:
+        doc_dicts = [{"book_id": b_id} for b_id in book_ids]
+        await self._search_client.delete_documents(doc_dicts)
+
+
+    
     def _get_index_fields(self) -> list[SearchField]:
         index_fields= [
                 SimpleField(name="uuid_str", type=SearchFieldDataType.String, key=True),
@@ -113,12 +120,6 @@ class AzSearchVectorStore(AsyncVectorStore):
             profiles=[VectorSearchProfile(name="vprofile",
                                         algorithm_configuration_name=vector_search_alg_name)]
         )
-
-
-
-    async def delete_books(self, book_ids: Sequence[int]) -> None:
-        doc_dicts = [{"book_id": b_id} for b_id in book_ids]
-        await self._search_client.delete_documents(doc_dicts)
 
 
     async def create_missing_collection(self, collection_name:str) -> None:

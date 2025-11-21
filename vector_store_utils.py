@@ -3,7 +3,8 @@ import asyncio
 from azure.search.documents import SearchClient
 
 from pyrate_limiter import Limiter
-from openai import AzureOpenAI
+from openai import AsyncAzureOpenAI
+
 from constants import CHUNK_SIZE
 
 from ingestion.preprocess_book import clean_headers 
@@ -42,35 +43,13 @@ def paginated_search(*, search_client:SearchClient, q:str="", skip:int, top:int,
 
     return page    # can safely do this (load into memory) since top and skip are limited via api params
 
-#TODO: write test for this
-# TODO: make async?
-# def get_missing_books_in_index(*, search_client:AsyncVectorStore, book_ids:list[int]) -> list[int]:
-#     """
-#     Given a list of Gutenberg IDs return a list of those missing from the index
-#     """
-    # filter_expr = " or ".join([f"book_id eq {b_id}" for b_id in book_ids])
-    # resp = await search_client.get_missing_ids(                
-    #             query_type="simple",
-    #             search_text="*",
-    #             filter=filter_expr,
-    #             facets=["book_name", "book_id"],        # search using facets
-    #             top=len(book_ids),
-    #         )
-    
-    # found_book_ids = [f["value"] for f in resp.get_facets()["book_id"]] # type:ignore
-    # missing_books = list(set(book_ids) - set(found_book_ids))      
-    
-    # return missing_books   
-
-
-
 
 def _split_by_size(data: list, chunk_size: int) -> list[list[UploadChunk]]:
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
 
 
 async def upload_to_index_async(*, vec_store:AsyncVectorStore, 
-                                embed_client:AzureOpenAI, 
+                                embed_client:AsyncAzureOpenAI, 
                                 token_limiter:Limiter,
                                 request_limiter:Limiter,
                                 raw_book_content: str,

@@ -5,13 +5,12 @@ from ragas import evaluate
 import pandas as pd
 from pathlib import Path
 
-from azure.search.documents import SearchClient
-from search_handler import create_missing_search_index
+from embedding_pipeline import create_embeddings_async
 from settings import get_settings, Settings
-from retrieve import search_chunks, answer_with_context
+from retrieval.retrieve import search_chunks, answer_with_context
 # TODO: calculate cost pr run in tokens
 # TODO: take all books and check if in index, if not then upload them
-from load_book import index_upload_missing_book_ids
+from book_loader import index_upload_missing_book_ids
 import asyncio
 from datetime import datetime
 
@@ -22,9 +21,10 @@ async def run_eval():
     sett = get_settings()
     records = []
 
+    vector_store = await sett.get_vector_store()
+
     ## Ingestion
-    test_book_ids = list(df["gb_id"].unique().tolist())[:2]
-    create_missing_search_index(search_index_client=sett.get_index_client())
+    test_book_ids = set(list(df["gb_id"].unique().tolist())[:2])
 
     gb_books = await index_upload_missing_book_ids(book_ids=test_book_ids, sett=sett)
 
@@ -32,10 +32,11 @@ async def run_eval():
     for i, row in tqdm(enumerate(df.itertuples(), 1)):
         print(f" {i} - {row.question}")
 
-        chunks_found = search_chunks(query=str(row.question), 
-                                     search_client=sett.get_search_client(), 
-                                     embed_client=sett.get_emb_client(), 
-                                     embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT)
+        emb_client = sett.get_emb_client() 
+        emb_vec = create_embeddings_async() #str(row.question)
+        chunks_found = await vector_store.search_by_embedding(query=, 
+                                     
+                                     )
 
         ans, relevant_chunks = answer_with_context(query=str(row.question), 
                                   llm_client=sett.get_llm_client(), 
