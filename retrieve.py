@@ -1,48 +1,32 @@
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents import SearchClient
-from azure.search.documents.models import VectorizedQuery, VectorQuery
+# from azure.search.documents.models import VectorizedQuery, VectorQuery
 from openai import AzureOpenAI
 
-from azure.core.paging import ItemPaged
 from constants import MIN_SEARCH_SCORE
 
+from db.vector_store_abstract import AsyncVectorStore
 from models.api_response_model import QueryResponse
 from preprocess_book import create_embeddings
-from typing import Any
-from models.vector_db_model import SearchChunk, VectorChunk
+from models.vector_db_model import SearchChunk
 
-def search_chunks(*, query: str, 
-                  search_client:SearchClient, 
-                  embed_client:AzureOpenAI, 
-                  embed_model_deployed:str, k=5) -> list[SearchChunk]: #list[dict[str, Any]]:
+async def search_chunks(*, query: str, 
+                        search_client:AsyncVectorStore, 
+                        embed_client:AzureOpenAI, 
+                        embed_model_deployed:str, k=5) -> list[SearchChunk]: #list[dict[str, Any]]:
     
     query_emb_vec = create_embeddings(batches=[query], 
                                         embed_client=embed_client, 
                                         model_deployed=embed_model_deployed)[0]
-    
-    vec_q = VectorizedQuery(vector=query_emb_vec.vector, k_nearest_neighbors=40, fields="book_name, content_vector")
 
-    results:ItemPaged = search_client.search(
-        # search_text=query,                         # hybrid: BM25 + vector
-        vector_queries=[vec_q],
-        top=k,
-        # query_type="semantic",      # TODO: use this one?
-        # semantic_configuration_name="default"
-    )
-    
-    hits=[]
-    for r in results:
-        chunk = SearchChunk(search_score=r["@search.score"], 
-                            uuid_str=r["uuid_str"],
-                            chunk_nr=r["chunk_nr"],
-                            book_id=r["book_id"],
-                            content=r["content"],
-                            book_name=r["book_name"],
-                        )
-        hits.append(chunk)
-    
-    return hits
+    results:list[SearchChunk] = await search_client.search_by_embedding(
+                                                embed_query_vector=query_emb_vec,
+                                                k=10
+                                            )
+    return results
 
+
+# TODO: make async - use AzureAsync package
 def answer_with_context(*, query:str, 
                         llm_client:AzureOpenAI, 
                         llm_model_deployed:str, 
@@ -90,15 +74,15 @@ def answer_with_context(*, query:str,
 
 
 
-def answer_api(*, query: str, 
-           search_client:SearchClient, 
+async def answer_api(*, query: str, 
+           search_client:AsyncVectorStore, 
            embed_client:AzureOpenAI, 
            llm_client:AzureOpenAI,
            top_n_matches:int,
            embed_model_deployed:str,
            llm_model_deployed:str) -> QueryResponse:
     
-    chunk_hits = search_chunks(query=query, 
+    chunk_hits = await search_chunks(query=query, 
                          search_client=search_client, 
                          embed_client=embed_client, 
                          embed_model_deployed=embed_model_deployed, 

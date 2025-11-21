@@ -14,7 +14,7 @@ from azure.core.paging import ItemPaged
 from azure.core.credentials import AzureKeyCredential
 from pydantic import PrivateAttr
 from azure.search.documents.models import VectorizedQuery
-from models.vector_db_model import EmbeddingVec
+from models.vector_db_model import EmbeddingVec, UploadChunk
 
 class AzSearchVectorStore(AsyncVectorStore):
     settings:Settings
@@ -32,7 +32,7 @@ class AzSearchVectorStore(AsyncVectorStore):
                                             credential=AzureKeyCredential(self.settings.AZURE_SEARCH_KEY))
         
 
-    async def upsert(self, chunks: list[VectorChunk]) -> None:
+    async def upsert(self, chunks: list[UploadChunk]) -> None:
         docs = [chunk.to_dict() for chunk in chunks]
         
         for docs in docs:
@@ -63,7 +63,7 @@ class AzSearchVectorStore(AsyncVectorStore):
         """
         Returns a list of hits (each hit is a dict with at least: id, score).
         """
-        vec_q = VectorizedQuery(vector=embed_query_vector.vector, k_nearest_neighbors=40, fields="book_name, book_id, content_vector")
+        vec_q = VectorizedQuery(vector=embed_query_vector.vector, k_nearest_neighbors=k, fields="book_name, book_id, content_vector")
 
         results:AsyncSearchItemPaged = await self._search_client.search(
                                                 vector_queries=[vec_q],

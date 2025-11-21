@@ -1,7 +1,10 @@
 from functools import lru_cache
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict,
+from typing import Literal
+from db.vector_store_abstract import AsyncVectorStore
+from db.qdrant_vector_store import QdrantVectorStore
+from db.az_search_vector_store import AzSearchVectorStore
 
-from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from azure.core.credentials import AzureKeyCredential
 from openai import AzureOpenAI
@@ -32,7 +35,8 @@ class Settings(BaseSettings):
     QDRANT_SEARCH_ENDPOINT: str
     QDRANT_SEARCH_KEY: str
 
-    INDEX_NAME: str = "moby"
+    VECTOR_STORE_TO_USE: Literal["Qdrant", "AzureAiSearch"] = "Qdrant"
+    INDEX_NAME: str = "gutenberg"
     EMBED_MODEL_DEPLOYMENT:str
     LLM_MODEL_DEPLOYMENT:str
 
@@ -50,15 +54,17 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    
 
+    async def get_search_client(self) -> AsyncVectorStore:
+        if self.VECTOR_STORE_TO_USE == "Qdrant":
+            qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.INDEX_NAME)
+            await qdrant_v_store.initialize()
+            return qdrant_v_store
 
-    def get_search_client(self) -> SearchClient:
-        return SearchClient(
-            endpoint=self.AZURE_SEARCH_ENDPOINT,
-            index_name=self.INDEX_NAME,
-            credential=AzureKeyCredential(self.AZURE_SEARCH_KEY)
-        )
+        elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":
+            return AzSearchVectorStore(settings=self)
+        else:
+            raise ValueError("No valid Vector store specified - Check settings!")
 
     def get_index_client(self) -> SearchIndexClient:
         return SearchIndexClient(endpoint=self.AZURE_SEARCH_ENDPOINT,

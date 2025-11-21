@@ -5,13 +5,13 @@ from typing import Annotated, Literal,AsyncIterator
 import psycopg2
 import uvicorn, requests
 
-from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 
 # from sqlalchemy import select, delete
 # from sqlalchemy.orm import Session
 from db.database import engine, get_async_db_sess#, SessionLocal
+from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.operations import select_all_books, select_books_db, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
@@ -24,7 +24,7 @@ from fastapi_pagination import Page, add_pagination, paginate
 
 from converters import gbbookmeta_to_db_obj, db_obj_to_response
 from load_book import fetch_book_content_from_id, index_upload_missing_book_ids
-from search_handler import  paginated_search, create_missing_search_index
+from search_handler import  paginated_search
 from settings import get_settings, Settings
 from retrieve import answer_api
 
@@ -37,8 +37,8 @@ async def init_models():
 
 # TODO make config obj
 # TODO: refactor all routes to just use settings via get_settings()
-def get_search_client() -> SearchClient:
-    return get_settings().get_search_client()
+async def get_search_client() -> AsyncVectorStore:
+    return await get_settings().get_search_client()
 
 def get_index_client() -> SearchIndexClient:
     return get_settings().get_index_client()
@@ -136,7 +136,7 @@ async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(descripti
                     ):
     info = ""
     book_added = None
-    create_missing_search_index(search_index_client=settings.get_index_client())
+    # create_missing_search_index(search_index_client=settings.get_index_client())
     
     books_uploaded = await index_upload_missing_book_ids(book_ids=gutenberg_ids, sett=settings)
     resp_book_uploaded = None
@@ -218,7 +218,7 @@ async def show_gutenberg_books_paginated(page_number:Annotated[int, Query(descri
 
 @prefix_router.get("/query/", status_code=status.HTTP_202_ACCEPTED, response_model=ApiResponse)
 async def answer_query(query:Annotated[str, Query()],
-                      search_client:Annotated[SearchClient, Depends(get_search_client)],
+                      search_client:Annotated[AsyncVectorStore, Depends(get_search_client)],
                       llm_client:Annotated[AzureOpenAI, Depends(get_llm_client)],
                       emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
                       top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=50)]=7,
@@ -226,7 +226,7 @@ async def answer_query(query:Annotated[str, Query()],
 
     sett = get_settings()
 
-    llm_resp = answer_api(query=query, 
+    llm_resp = await answer_api(query=query, 
                       search_client=search_client, 
                       embed_client=emb_client, 
                       llm_client=llm_client,

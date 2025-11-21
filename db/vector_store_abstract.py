@@ -10,29 +10,27 @@ class AsyncVectorStore(BaseModel, ABC):
     """Backend-agnostic vector db interface."""
 
     @abstractmethod
-    async def upsert(*, self, chunks: list[UploadChunk]) -> None:
+    async def upsert(self, *, chunks: list[UploadChunk]) -> None:
         ...
 
     @abstractmethod
-    async def get_missing_ids(*, self, book_ids:list[int]) -> list[int]:
+    async def get_missing_ids(self, *, book_ids:list[int]) -> list[int]:
         ...
 
     @abstractmethod
-    async def search_by_embedding(
-        *,
-        self,
-        embed_query_vector:EmbeddingVec,
-        k: int = 10,
-    ) -> list[SearchChunk]:
+    async def search_by_embedding(self, *,
+                                    embed_query_vector:EmbeddingVec,
+                                    k: int = 10,
+                                ) -> list[SearchChunk]:
         """
         Returns a list of hits (each hit is a dict with at least: id, score, payload).
         """
         ...
 
     @abstractmethod
-    async def delete_books(*, self, book_ids:Sequence[int]) -> None:
+    async def delete_books(self, *, book_ids:Sequence[int]) -> None:
         ...
 
     @abstractmethod
-    async def create_missing_collection(*, self, collection_name:str) -> None:
+    async def create_missing_collection(self, *, collection_name:str) -> None:
         ...

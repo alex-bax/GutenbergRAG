@@ -20,6 +20,7 @@ def clean_headers(*, raw_book: str) -> str:
     return raw_book[start_match.end():end_match.start()] if start_match and end_match else ""
 
 
+# TODO: make this async also
 @backoff.on_exception(wait_gen=backoff.expo, exception=RateLimitError, max_time=120, max_tries=6)
 def create_embeddings(*, embed_client:AzureOpenAI, 
                        model_deployed:str, 
