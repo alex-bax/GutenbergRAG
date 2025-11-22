@@ -17,7 +17,7 @@ async def insert_book_db(book:DBBookMetaData, db_sess:AsyncSession) -> None:
     await  db_sess.refresh(book)
 
 
-async def select_all_books(db_sess:AsyncSession) -> list[DBBookMetaData]:
+async def select_all_books_db(db_sess:AsyncSession) -> list[DBBookMetaData]:
     stmt = select(DBBookMetaData)
     res =await db_sess.execute(stmt)
     book_rows = list(res.scalars().all())       # [(<schema.Book object at 0x0000019D638986E0>,)]

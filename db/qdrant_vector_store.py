@@ -115,7 +115,7 @@ class QdrantVectorStore(AsyncVectorStore):
         return hits
 
 
-    async def delete_books(self, book_ids: Sequence[int]) -> None:
+    async def delete_books(self, book_ids: set[int]) -> None:
         await self._client.delete(
                 collection_name=self.collection_name,
                 points_selector=PointIdsList(points=list(book_ids)),
@@ -129,7 +129,6 @@ class QdrantVectorStore(AsyncVectorStore):
                         ],
                     )
                 )
-        
         
 
     async def get_missing_ids(self, book_ids:set[int]) -> set[int]:

@@ -1,4 +1,5 @@
 from openai import AzureOpenAI, AsyncAzureOpenAI
+from settings import Settings
 from pyrate_limiter import Limiter
 from constants import MIN_SEARCH_SCORE
 from db.vector_store_abstract import AsyncVectorStore
@@ -78,23 +79,23 @@ def answer_with_context(*, query:str,
 
 
 async def answer_api(*, query: str, 
-                    search_client:AsyncVectorStore, 
-                    embed_client:AsyncAzureOpenAI, 
-                    llm_client:AzureOpenAI,
+                    sett:Settings,
                     top_n_matches:int,
-                    embed_model_deployed:str,
-                    llm_model_deployed:str) -> QueryResponse:
+                    ) -> QueryResponse:
                 
+    req_lim, tok_lim = sett.get_limiters()
+
     chunk_hits = await search_chunks(query=query, 
-                         search_client=search_client, 
-                         embed_client=embed_client, 
-                         embed_model_deployed=embed_model_deployed, 
-                         k=top_n_matches)
-   
+                                    search_client=await sett.get_vector_store(), 
+                                    embed_client=sett.get_emb_client(), 
+                                    embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
+                                    tok_lim=tok_lim,
+                                    req_lim=req_lim,
+                                    k=top_n_matches)
 
     llm_answer, relevant_chunks = answer_with_context(query=query, 
-                                                      llm_client=llm_client, 
-                                                      llm_model_deployed=llm_model_deployed, 
+                                                      llm_client=sett.get_llm_client(), 
+                                                      llm_model_deployed=sett.LLM_MODEL_DEPLOYMENT, 
                                                       chunk_hits=chunk_hits)    
     
     return QueryResponse(answer=llm_answer, citations= relevant_chunks)

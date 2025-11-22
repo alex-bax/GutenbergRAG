@@ -29,7 +29,7 @@ async def run_eval():
     gb_books = await index_upload_missing_book_ids(book_ids=test_book_ids, sett=sett)
 
     ## Retrival
-    req_lim, tok_lim = sett.make_limiters()
+    req_lim, tok_lim = sett.get_limiters()
 
     for i, row in tqdm(enumerate(df.itertuples(), 1)):
         print(f" {i} - {row.question}")

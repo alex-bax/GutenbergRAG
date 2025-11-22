@@ -57,7 +57,7 @@ async def index_upload_missing_book_ids(*, book_ids:set[int], sett:Settings) -> 
     missing_book_ids = await vector_store.get_missing_ids( book_ids=book_ids)
 
     gb_books = []
-    req_lim, token_lim = sett.make_limiters()
+    req_lim, token_lim = sett.get_limiters()
     print(f'--- Missing book ids: {missing_book_ids}')
 
     for b_id in missing_book_ids:

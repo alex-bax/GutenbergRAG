@@ -99,7 +99,7 @@ async def upload_to_index_async(*, vec_store:AsyncVectorStore,
 
 async def _local_try():
     sett = get_settings()
-    req_lim, token_lim = sett.make_limiters()
+    req_lim, token_lim = sett.get_limiters()
 
     embeddings = await create_embeddings_async(embed_client=sett.get_emb_client(), 
                                             model_deployed=sett.EMBED_MODEL_DEPLOYMENT,

@@ -1,5 +1,5 @@
 from functools import lru_cache
-from pydantic_settings import BaseSettings, SettingsConfigDict,
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import PrivateAttr
 from typing import Literal
 from db.vector_store_abstract import AsyncVectorStore
@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     _emb_client: AsyncAzureOpenAI | None = PrivateAttr(default=None)
     _vector_store: AsyncVectorStore | None = PrivateAttr(default=None)
 
+    _req_limiter: Limiter | None = PrivateAttr(default=None)
+    _tok_limiter: Limiter | None = PrivateAttr(default=None)
+
     model_config = SettingsConfigDict(
         env_file=".env",  # local dev
         env_file_encoding="utf-8",
@@ -87,17 +90,21 @@ class Settings(BaseSettings):
                                                 api_key=self.AZ_OPENAI_EMBED_KEY)
         return self._emb_client
     
-    def make_limiters(self) -> list[Limiter]:
-        REQ_RATE = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
-        TOK_RATE = Rate(TOKEN_PR_MIN, Duration.MINUTE)                 # 501,000 tokens per minute
+    def get_limiters(self) -> list[Limiter]:
+        """Creates the limiters used for embedding if None. 
+        :returns: [req_limiter, tok_limiter] 
+         """
+        if self._req_limiter is None:
+            REQ_RATE = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
+            req_bucket = BucketAsyncWrapper(InMemoryBucket([REQ_RATE]))
+            self._req_limiter = Limiter(req_bucket)
 
-        req_bucket = BucketAsyncWrapper(InMemoryBucket([REQ_RATE]))
-        tok_bucket = BucketAsyncWrapper(InMemoryBucket([TOK_RATE]))
-        
-        req_limiter = Limiter(req_bucket)
-        tok_limiter = Limiter(tok_bucket)
+        if self._tok_limiter is None:
+            TOK_RATE = Rate(TOKEN_PR_MIN, Duration.MINUTE)                 # 501,000 tokens per minute
+            tok_bucket = BucketAsyncWrapper(InMemoryBucket([TOK_RATE]))
+            self._tok_limiter = Limiter(tok_bucket)
 
-        return [req_limiter, tok_limiter]
+        return [self._req_limiter, self._tok_limiter]
 
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed

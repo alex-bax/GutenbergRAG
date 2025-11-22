@@ -13,7 +13,7 @@ from azure.search.documents.indexes import SearchIndexClient
 from db.database import engine, get_async_db_sess#, SessionLocal
 from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.operations import select_all_books, select_books_db, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
+from db.operations import select_all_books_db, select_books_db, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
 from models.schema import DBBookMetaData
 import models.schema as schema
@@ -40,8 +40,6 @@ async def init_models():
 async def get_vector_store() -> AsyncVectorStore:
     return await get_settings().get_vector_store()
 
-def get_llm_client() -> AzureOpenAI:
-    return get_settings().get_llm_client()
 
 def get_emb_client() -> AsyncAzureOpenAI:
     return get_settings().get_emb_client()
@@ -84,7 +82,7 @@ async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_
 # TODO: could be slow if DB is huge, use pagination instead
 @prefix_router.get("/books/", response_model=ApiResponse)
 async def get_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
-    books = await select_all_books(db)
+    books = await select_all_books_db(db)
     return ApiResponse(data=[b.to_book_meta_response() for b in books])
 
 
@@ -158,26 +156,28 @@ async def upload_book_to_index(gutenberg_ids:Annotated[set[int], Body(descriptio
 #TODO: look up specific chunk by uuid?
 @prefix_router.delete("/index/{gutenberg_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
-                                search_client:Annotated[SearchClient, Depends(get_vector_store)],
+                                # search_client:Annotated[SearchClient, Depends(get_vector_store)],
+                                settings:Annotated[Settings, Depends(get_settings)],
                                 db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
-    # Ensure that book exists before deleting it from index
+    
+    vec_store = await settings.get_vector_store()
+    missing_ids = await vec_store.get_missing_ids(book_ids=set([gutenberg_id]))      # get book id if missing
+    
+    err_mess_not_found = ""
+    if not missing_ids or len(missing_ids) > 0:
+        err_mess_not_found =f"No items in vector found with book_id {gutenberg_id}"
+    else:
+        await vec_store.delete_books(book_ids=missing_ids)
+
     try:
         await delete_book_db(book_id=None, gb_id=gutenberg_id, db_sess=db)
-    except BookNotFoundException: 
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {gutenberg_id} not found in DB")
+    except BookNotFoundException:
+        err_mess_not_found += f"\nBook with id {gutenberg_id} not found in DB"
     
-    # get all documents with matching book_key
-    result = search_client.search(search_text="*",  # match all docs
-                                filter=f"book_id eq {gutenberg_id}",
-                                select=["uuid_str"],  # only fetch the ID "PK" field 
-                                )
-    
-    if not result:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"No index docs found with book_id {gutenberg_id}")
-    else:
-        search_client.delete_documents(list(result))
+    if len(err_mess_not_found) > 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=err_mess_not_found)
 
-  
+    
 
 @prefix_router.get("/books/gutenberg/{gutenberg_id}", status_code=status.HTTP_200_OK, response_model=ApiResponse)
 async def show_gutenberg_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID of book", gt=0)]):
@@ -215,21 +215,13 @@ async def show_gutenberg_books_paginated(page_number:Annotated[int, Query(descri
 
 @prefix_router.get("/query/", status_code=status.HTTP_202_ACCEPTED, response_model=ApiResponse)
 async def answer_query(query:Annotated[str, Query()],
-                      search_client:Annotated[AsyncVectorStore, Depends(get_vector_store)],
-                      llm_client:Annotated[AzureOpenAI, Depends(get_llm_client)],
-                      emb_client:Annotated[AsyncAzureOpenAI, Depends(get_emb_client)],
-                      top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=50)]=7,
-                      only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
-
-    sett = get_settings()
+                        settings:Annotated[Settings, Depends(get_settings)],
+                        top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=50)]=7,
+                        only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
 
     llm_resp = await answer_api(query=query, 
-                                search_client=search_client, 
-                                embed_client=emb_client, 
-                                llm_client=llm_client,
-                                top_n_matches=top_n_matches,
-                                embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
-                                llm_model_deployed=sett.LLM_MODEL_DEPLOYMENT)
+                                sett=settings,
+                                top_n_matches=top_n_matches)
 
     return ApiResponse(data=llm_resp)
 

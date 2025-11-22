@@ -30,7 +30,7 @@ class AsyncVectorStore(BaseModel, ABC):
 
 
     @abstractmethod
-    async def delete_books(self, *, book_ids:Sequence[int]) -> None:
+    async def delete_books(self, *, book_ids:set[int]) -> None:
         ...
 
     @abstractmethod
