@@ -54,7 +54,7 @@ async def build_eval_dataset():
 
         ans, relevant_chunks = answer_with_context(query=str(row.question), 
                                                     llm_client=sett.get_llm_client(), 
-                                                    llm_model_deployed=sett.LLM_MODEL_DEPLOYMENT, 
+                                                    llm_model_deployed=sett.AZ_OPENAI_MODEL_DEPLOYMENT, 
                                                     chunk_hits=chunks_found)
         records.append({
             "question": row.question,

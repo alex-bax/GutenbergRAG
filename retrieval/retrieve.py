@@ -25,6 +25,7 @@ async def search_chunks(*, query: str,
 
     results:list[SearchChunk] = await search_client.search_by_embedding(
                                                 embed_query_vector=query_emb_vec[0],
+                                                filter=None,
                                                 k=k
                                             )
     return results
@@ -78,7 +79,7 @@ def answer_with_context(*, query:str,
 
 
 
-async def answer_api(*, query: str, 
+async def answer_rag(*, query: str, 
                     sett:Settings,
                     top_n_matches:int,
                     ) -> QueryResponse:
@@ -95,7 +96,7 @@ async def answer_api(*, query: str,
 
     llm_answer, relevant_chunks = answer_with_context(query=query, 
                                                       llm_client=sett.get_llm_client(), 
-                                                      llm_model_deployed=sett.LLM_MODEL_DEPLOYMENT, 
+                                                      llm_model_deployed=sett.AZ_OPENAI_MODEL_DEPLOYMENT, 
                                                       chunk_hits=chunk_hits)    
     
     return QueryResponse(answer=llm_answer, citations= relevant_chunks)

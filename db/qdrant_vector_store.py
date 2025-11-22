@@ -26,7 +26,8 @@ class QdrantVectorStore(AsyncVectorStore):
 
     def model_post_init(self, __context):
         self._client = AsyncQdrantClient(url=self.settings.QDRANT_SEARCH_ENDPOINT, 
-                                        api_key=self.settings.QDRANT_SEARCH_KEY)
+                                        api_key=self.settings.QDRANT_SEARCH_KEY,
+                                        verify=False)       # TODO: remove before prod and make proper fix
 
     def _build_filter(self, filters: dict[str, Any]) -> Filter:
         return Filter(must=[FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filters.items()])

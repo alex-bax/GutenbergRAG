@@ -25,7 +25,7 @@ from converters import gbbookmeta_to_db_obj, db_obj_to_response
 from ingestion.book_loader import fetch_book_content_from_id, index_upload_missing_book_ids
 from vector_store_utils import  paginated_search
 from settings import get_settings, Settings
-from retrieval.retrieve import answer_api
+from retrieval.retrieve import answer_rag
 
 app = FastAPI(title="MobyRAG")
 prefix_router = APIRouter(prefix="/v1")
@@ -216,7 +216,7 @@ async def answer_query(query:Annotated[str, Query()],
                         top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=50)]=7,
                         only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
 
-    llm_resp = await answer_api(query=query, 
+    llm_resp = await answer_rag(query=query, 
                                 sett=settings,
                                 top_n_matches=top_n_matches)
 

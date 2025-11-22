@@ -18,9 +18,6 @@ class Settings(BaseSettings):
     AZURE_SEARCH_ENDPOINT: str
     AZURE_SEARCH_KEY: str
 
-    AZURE_OPENAI_ENDPOINT: str
-    AZURE_OPENAI_EMBED_KEY: str
-
     AZ_OPENAI_EMBED_ENDPOINT: str
     AZ_OPENAI_EMBED_KEY: str
 
@@ -33,7 +30,8 @@ class Settings(BaseSettings):
     VECTOR_STORE_TO_USE: Literal["Qdrant", "AzureAiSearch"] = "Qdrant"
     INDEX_NAME: str = "gutenberg"
     EMBED_MODEL_DEPLOYMENT:str
-    LLM_MODEL_DEPLOYMENT:str
+    AZ_OPENAI_MODEL_DEPLOYMENT:str
+    AZ_OPENAI_API_VER: str
 
     # Postgres DB
     DB_NAME:str
@@ -78,7 +76,7 @@ class Settings(BaseSettings):
     def get_llm_client(self) -> AzureOpenAI:
         if self._llm_client is None:
             self._llm_client = AzureOpenAI(azure_endpoint=self.AZ_OPENAI_GPT_ENDPOINT,
-                                            api_version="2025-04-01-preview",
+                                            api_version=self.AZ_OPENAI_API_VER,
                                             api_key=self.AZ_OPENAI_GPT_KEY)
         return self._llm_client
 
