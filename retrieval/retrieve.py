@@ -1,27 +1,30 @@
-from azure.search.documents.indexes import SearchIndexClient
-from azure.search.documents import SearchClient
-# from azure.search.documents.models import VectorizedQuery, VectorQuery
-from openai import AzureOpenAI
-
+from openai import AzureOpenAI, AsyncAzureOpenAI
+from pyrate_limiter import Limiter
 from constants import MIN_SEARCH_SCORE
-
 from db.vector_store_abstract import AsyncVectorStore
 from models.api_response_model import QueryResponse
-from ingestion.preprocess_book import create_embeddings
+from embedding_pipeline import create_embeddings_async
 from models.vector_db_model import SearchChunk
 
 async def search_chunks(*, query: str, 
                         search_client:AsyncVectorStore, 
-                        embed_client:AzureOpenAI, 
-                        embed_model_deployed:str, k=5) -> list[SearchChunk]: #list[dict[str, Any]]:
+                        embed_client:AsyncAzureOpenAI, 
+                        embed_model_deployed:str, 
+                        tok_lim:Limiter,
+                        req_lim:Limiter,
+                        k=5
+                        ) -> list[SearchChunk]: #list[dict[str, Any]]:
     
-    query_emb_vec = create_embeddings(batches=[query], 
-                                        embed_client=embed_client, 
-                                        model_deployed=embed_model_deployed)[0]
+    query_emb_vec = await create_embeddings_async(inp_batches=[[query]], 
+                                                embed_client=embed_client, 
+                                                model_deployed=embed_model_deployed,
+                                                tok_limiter=tok_lim,
+                                                req_limiter=req_lim
+                                                )
 
     results:list[SearchChunk] = await search_client.search_by_embedding(
-                                                embed_query_vector=query_emb_vec,
-                                                k=10
+                                                embed_query_vector=query_emb_vec[0],
+                                                k=k
                                             )
     return results
 
@@ -75,13 +78,13 @@ def answer_with_context(*, query:str,
 
 
 async def answer_api(*, query: str, 
-           search_client:AsyncVectorStore, 
-           embed_client:AzureOpenAI, 
-           llm_client:AzureOpenAI,
-           top_n_matches:int,
-           embed_model_deployed:str,
-           llm_model_deployed:str) -> QueryResponse:
-    
+                    search_client:AsyncVectorStore, 
+                    embed_client:AsyncAzureOpenAI, 
+                    llm_client:AzureOpenAI,
+                    top_n_matches:int,
+                    embed_model_deployed:str,
+                    llm_model_deployed:str) -> QueryResponse:
+                
     chunk_hits = await search_chunks(query=query, 
                          search_client=search_client, 
                          embed_client=embed_client, 

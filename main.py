@@ -1,5 +1,5 @@
 from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
-from openai import AzureOpenAI
+from openai import AzureOpenAI, AsyncAzureOpenAI
 from pydantic import BaseModel, Field, field_validator
 from typing import Annotated, Literal,AsyncIterator
 import psycopg2
@@ -23,7 +23,7 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
 
 from converters import gbbookmeta_to_db_obj, db_obj_to_response
-from book_loader import fetch_book_content_from_id, index_upload_missing_book_ids
+from ingestion.book_loader import fetch_book_content_from_id, index_upload_missing_book_ids
 from vector_store_utils import  paginated_search
 from settings import get_settings, Settings
 from retrieval.retrieve import answer_api
@@ -37,16 +37,13 @@ async def init_models():
 
 # TODO make config obj
 # TODO: refactor all routes to just use settings via get_settings()
-async def get_search_client() -> AsyncVectorStore:
+async def get_vector_store() -> AsyncVectorStore:
     return await get_settings().get_vector_store()
-
-def get_index_client() -> SearchIndexClient:
-    return get_settings().get_index_client()
 
 def get_llm_client() -> AzureOpenAI:
     return get_settings().get_llm_client()
 
-def get_emb_client() -> AzureOpenAI:
+def get_emb_client() -> AsyncAzureOpenAI:
     return get_settings().get_emb_client()
 
 
@@ -112,7 +109,7 @@ async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_se
 @prefix_router.get("/index/documents/", response_model=ApiResponse, status_code=status.HTTP_200_OK)
 async def get_docs(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=1)], 
                    take:Annotated[int, Query(description="Number of search result documents to take after skipping", le=100, ge=1)],
-                   search_client:Annotated[SearchClient, Depends(get_search_client)],
+                   search_client:Annotated[SearchClient, Depends(get_vector_store)],
                    select:Annotated[list[Literal["book_name", "book_id", "content", "chunk_id", "content_vector", "*"]], Query(description="Fields to select from the vector index")] = ["*"],
                    query:Annotated[str, Query(description="The search query")] = "", 
                    ):
@@ -161,7 +158,7 @@ async def upload_book_to_index(gutenberg_ids:Annotated[set[int], Body(descriptio
 #TODO: look up specific chunk by uuid?
 @prefix_router.delete("/index/{gutenberg_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
-                                search_client:Annotated[SearchClient, Depends(get_search_client)],
+                                search_client:Annotated[SearchClient, Depends(get_vector_store)],
                                 db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     # Ensure that book exists before deleting it from index
     try:
@@ -218,9 +215,9 @@ async def show_gutenberg_books_paginated(page_number:Annotated[int, Query(descri
 
 @prefix_router.get("/query/", status_code=status.HTTP_202_ACCEPTED, response_model=ApiResponse)
 async def answer_query(query:Annotated[str, Query()],
-                      search_client:Annotated[AsyncVectorStore, Depends(get_search_client)],
+                      search_client:Annotated[AsyncVectorStore, Depends(get_vector_store)],
                       llm_client:Annotated[AzureOpenAI, Depends(get_llm_client)],
-                      emb_client:Annotated[AzureOpenAI, Depends(get_emb_client)],
+                      emb_client:Annotated[AsyncAzureOpenAI, Depends(get_emb_client)],
                       top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=50)]=7,
                       only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
 

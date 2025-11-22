@@ -1,5 +1,6 @@
 from functools import lru_cache
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict,
+from pydantic import PrivateAttr
 from typing import Literal
 from db.vector_store_abstract import AsyncVectorStore
 
@@ -11,8 +12,6 @@ from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, EmbeddingDimension
 
 
 # TODO: merge constants into settings
-# TODO: add input extention type, e.g. whether it's html, txt, etc.
-        # TODO: for each extraction type, use a different pre-processing with Strategy design pattern
 # TODO: separate this into multiple Settings, e.g. for DB, vector store, etc.
 
 # Initializes fields via .env file
@@ -44,6 +43,11 @@ class Settings(BaseSettings):
     DB_PORT:int
 
     EMBEDDING_DIM:EmbeddingDimension = EmbeddingDimension.SMALL
+   
+   # Not to be validated as model fields
+    _llm_client: AzureOpenAI | None = PrivateAttr(default=None)
+    _emb_client: AsyncAzureOpenAI | None = PrivateAttr(default=None)
+    _vector_store: AsyncVectorStore | None = PrivateAttr(default=None)
 
     model_config = SettingsConfigDict(
         env_file=".env",  # local dev
@@ -52,37 +56,36 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-
     async def get_vector_store(self) -> AsyncVectorStore:
         from db.az_search_vector_store import AzSearchVectorStore
         from db.qdrant_vector_store import QdrantVectorStore
         
-        if self.VECTOR_STORE_TO_USE == "Qdrant":
-            qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.INDEX_NAME)
-            await qdrant_v_store.initialize()
-            return qdrant_v_store
+        if self._vector_store is None:
+            if self.VECTOR_STORE_TO_USE == "Qdrant":
+                qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.INDEX_NAME)
+                await qdrant_v_store.initialize()
+                self._vector_store = qdrant_v_store
+            elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":
+                self._vector_store = AzSearchVectorStore(settings=self)
+            else:
+                raise ValueError("No valid Vector store specified - Check settings!")
+        
+        return self._vector_store
 
-        elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":
-
-            return AzSearchVectorStore(settings=self)
-        else:
-            raise ValueError("No valid Vector store specified - Check settings!")
-
-    def get_index_client(self) -> SearchIndexClient:
-        return SearchIndexClient(endpoint=self.AZURE_SEARCH_ENDPOINT,
-                                credential=AzureKeyCredential(self.AZURE_SEARCH_KEY))
 
     def get_llm_client(self) -> AzureOpenAI:
-        return AzureOpenAI(
-            azure_endpoint=self.AZ_OPENAI_GPT_ENDPOINT,
-            api_version="2025-04-01-preview",
-            api_key=self.AZ_OPENAI_GPT_KEY
-        )
+        if self._llm_client is None:
+            self._llm_client = AzureOpenAI(azure_endpoint=self.AZ_OPENAI_GPT_ENDPOINT,
+                                            api_version="2025-04-01-preview",
+                                            api_key=self.AZ_OPENAI_GPT_KEY)
+        return self._llm_client
 
     def get_emb_client(self) -> AsyncAzureOpenAI:
-        return AsyncAzureOpenAI(azure_endpoint=self.AZ_OPENAI_EMBED_ENDPOINT,
-                                api_version="2024-12-01-preview",
-                                api_key=self.AZ_OPENAI_EMBED_KEY)
+        if self._emb_client is None:
+            self._emb_client = AsyncAzureOpenAI(azure_endpoint=self.AZ_OPENAI_EMBED_ENDPOINT,
+                                                api_version="2024-12-01-preview",
+                                                api_key=self.AZ_OPENAI_EMBED_KEY)
+        return self._emb_client
     
     def make_limiters(self) -> list[Limiter]:
         REQ_RATE = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
@@ -97,7 +100,7 @@ class Settings(BaseSettings):
         return [req_limiter, tok_limiter]
 
 
-@lru_cache
+@lru_cache      # Enforces singleton pattern - only one settings instance allowed
 def get_settings() -> Settings:
     return Settings()       # type:ignore
 

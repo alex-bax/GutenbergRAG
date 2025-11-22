@@ -17,7 +17,7 @@ async def _fetch_book_content(*, download_url) -> str:
     return resp.text
 
 async def fetch_book_content_from_id(*, gutenberg_id:int) -> tuple[str, GBBookMeta]:
-    gb_meta = _fetch_gutendex_meta_from_id(gb_id=gutenberg_id)
+    gb_meta = await _fetch_gutendex_meta_from_id(gb_id=gutenberg_id)
     url = gb_meta.get_txt_url()
 
     if not url:
@@ -38,7 +38,7 @@ def get_path_by_book_id_from_cache(*, book_id:int, folder_p:Path = Path("eval_da
     assert len(lst) < 2
     return lst
 
-def _write_to_memory(book_content:str, gb_meta:GBBookMeta) -> Path:
+def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
     local_gb_p = Path("eval_data", "gb_meta_objs_by_id", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
     loc_gb_meta = GBBookMetaLocal(**gb_meta.model_dump(), path_to_content=local_gb_p)
 
@@ -65,7 +65,7 @@ async def index_upload_missing_book_ids(*, book_ids:set[int], sett:Settings) -> 
         
         if len(eval_book_paths) == 0:
             book_content, gb_meta = await fetch_book_content_from_id(gutenberg_id=b_id)
-            local_gb_p = _write_to_memory(book_content=book_content, gb_meta=gb_meta)
+            local_gb_p = _write_to_files(book_content=book_content, gb_meta=gb_meta)
 
             print(f"GB meta obj not found in cache - fetching from Gutendex. Wrote content + gb obj to: {local_gb_p.name}")
         else:
