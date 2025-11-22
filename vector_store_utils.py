@@ -62,7 +62,7 @@ async def upload_to_index_async(*, vec_store:AsyncVectorStore,
         print(f'** INFO No book content str extracted --- skipping {book_meta.title}')
         return []
 
-    docs:list[dict] = []
+    docs:list[UploadChunk] = []
     vector_items_added = []
 
     chunks = fixed_size_chunking(text=book_str, chunk_size=CHUNK_SIZE)
@@ -87,7 +87,7 @@ async def upload_to_index_async(*, vec_store:AsyncVectorStore,
                             content_vector= emb_vec
                         )
         
-        docs.append(chapter_item.to_dict())
+        docs.append(chapter_item)#.to_dict())
         vector_items_added.append(chapter_item)
 
     docs_splitted = _split_by_size(data=docs, chunk_size=CHUNK_SIZE)
@@ -101,7 +101,7 @@ async def _local_try():
     sett = get_settings()
     req_lim, token_lim = sett.get_limiters()
 
-    embeddings = await create_embeddings_async(embed_client=sett.get_emb_client(), 
+    embeddings = await create_embeddings_async(embed_client=sett.get_async_emb_client(), 
                                             model_deployed=sett.EMBED_MODEL_DEPLOYMENT,
                                             inp_batches=[["hej", "med", "dig"]],
                                             tok_limiter=token_lim,

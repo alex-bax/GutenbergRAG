@@ -87,7 +87,7 @@ async def answer_api(*, query: str,
 
     chunk_hits = await search_chunks(query=query, 
                                     search_client=await sett.get_vector_store(), 
-                                    embed_client=sett.get_emb_client(), 
+                                    embed_client=sett.get_async_emb_client(), 
                                     embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
                                     tok_lim=tok_lim,
                                     req_lim=req_lim,

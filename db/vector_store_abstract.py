@@ -1,7 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from pydantic import BaseModel 
-from typing import Sequence
+from typing import Sequence, Any
 from models.vector_db_model import UploadChunk, SearchChunk, EmbeddingVec
 
 # TODO: add paginated_search
@@ -21,6 +21,7 @@ class AsyncVectorStore(BaseModel, ABC):
     @abstractmethod
     async def search_by_embedding(self, *,
                                     embed_query_vector:EmbeddingVec,
+                                    filter:dict[str,Any]|None=None,
                                     k: int = 10,
                                 ) -> list[SearchChunk]:
         """

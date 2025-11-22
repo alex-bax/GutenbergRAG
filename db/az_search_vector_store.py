@@ -1,5 +1,5 @@
 
-from vector_store_abstract import AsyncVectorStore
+from db.vector_store_abstract import AsyncVectorStore
 from settings import Settings
 from models.vector_db_model import SearchChunk
 from azure.search.documents.aio import SearchClient, AsyncSearchItemPaged

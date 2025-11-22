@@ -100,12 +100,12 @@ class QdrantVectorStore(AsyncVectorStore):
             points=points,
         )
 
-    async def search_by_embedding(self, query_embed_vec: EmbeddingVec, filter:dict[str,Any], k: int=10) -> list[SearchChunk]:
-        qdrant_filter = self._build_filter(filter)
+    async def search_by_embedding(self, embed_query_vector: EmbeddingVec, filter:dict[str,Any]|None, k: int=10) -> list[SearchChunk]:
+        qdrant_filter = self._build_filter(filter) if filter else None
 
         results = await self._client.query_points(
                                         collection_name=self.collection_name,
-                                        query=query_embed_vec.vector,
+                                        query=embed_query_vector.vector,
                                         limit=k,
                                         query_filter=qdrant_filter,
                                     )

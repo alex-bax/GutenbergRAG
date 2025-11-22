@@ -4,8 +4,6 @@ from pydantic import PrivateAttr
 from typing import Literal
 from db.vector_store_abstract import AsyncVectorStore
 
-from azure.search.documents.indexes import SearchIndexClient
-from azure.core.credentials import AzureKeyCredential
 from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
 from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, EmbeddingDimension
@@ -46,7 +44,8 @@ class Settings(BaseSettings):
    
    # Not to be validated as model fields
     _llm_client: AzureOpenAI | None = PrivateAttr(default=None)
-    _emb_client: AsyncAzureOpenAI | None = PrivateAttr(default=None)
+    _async_emb_client: AsyncAzureOpenAI | None = PrivateAttr(default=None)
+    _emb_client: AzureOpenAI | None = PrivateAttr(default=None)
     _vector_store: AsyncVectorStore | None = PrivateAttr(default=None)
 
     _req_limiter: Limiter | None = PrivateAttr(default=None)
@@ -83,12 +82,21 @@ class Settings(BaseSettings):
                                             api_key=self.AZ_OPENAI_GPT_KEY)
         return self._llm_client
 
-    def get_emb_client(self) -> AsyncAzureOpenAI:
+    def get_async_emb_client(self) -> AsyncAzureOpenAI:
+        if self._async_emb_client is None:
+            self._async_emb_client = AsyncAzureOpenAI(azure_endpoint=self.AZ_OPENAI_EMBED_ENDPOINT,
+                                                api_version="2024-12-01-preview",
+                                                api_key=self.AZ_OPENAI_EMBED_KEY)
+        return self._async_emb_client
+    
+    # Currently used for eval 
+    def get_emb_client(self) -> AzureOpenAI:
         if self._emb_client is None:
-            self._emb_client = AsyncAzureOpenAI(azure_endpoint=self.AZ_OPENAI_EMBED_ENDPOINT,
+            self._emb_client = AzureOpenAI(azure_endpoint=self.AZ_OPENAI_EMBED_ENDPOINT,
                                                 api_version="2024-12-01-preview",
                                                 api_key=self.AZ_OPENAI_EMBED_KEY)
         return self._emb_client
+
     
     def get_limiters(self) -> list[Limiter]:
         """Creates the limiters used for embedding if None. 

@@ -6,7 +6,6 @@ import psycopg2
 import uvicorn, requests
 
 from azure.search.documents import SearchClient
-from azure.search.documents.indexes import SearchIndexClient
 
 # from sqlalchemy import select, delete
 # from sqlalchemy.orm import Session
@@ -36,13 +35,12 @@ async def init_models():
         await conn.run_sync(schema.Base.metadata.create_all)        # creates the DB tables
 
 # TODO make config obj
-# TODO: refactor all routes to just use settings via get_settings()
 async def get_vector_store() -> AsyncVectorStore:
     return await get_settings().get_vector_store()
 
 
-def get_emb_client() -> AsyncAzureOpenAI:
-    return get_settings().get_emb_client()
+def get_async_emb_client() -> AsyncAzureOpenAI:
+    return get_settings().get_async_emb_client()
 
 
 @prefix_router.post("/books/", status_code=status.HTTP_201_CREATED)
@@ -122,7 +120,6 @@ async def get_docs(skip:Annotated[int, Query(description="Number of search resul
     return ApiResponse(data=page)
 
 #TODO: post book to vector db by using Gutendex ID
-#TODO: ensure list items are unique, no dups
 # no body needed, only gutenberg id since we're uploading from Gutenberg 
 @prefix_router.post("/index", status_code=status.HTTP_201_CREATED, response_model=ApiResponse)
 async def upload_book_to_index(gutenberg_ids:Annotated[set[int], Body(description="Gutenberg IDs to upload", min_length=1, max_length=50)],

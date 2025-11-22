@@ -74,9 +74,9 @@ async def index_upload_missing_book_ids(*, book_ids:set[int], sett:Settings) -> 
                 book_content = f.read()
             print(f"Loaded content from cache for book id {b_id}")
 
-        print(f"Uploading Book id {b_id} to index")
+        print(f"*** Uploading Book id {b_id} to index")
         await upload_to_index_async(vec_store=await sett.get_vector_store(), 
-                                    embed_client=sett.get_emb_client(),
+                                    embed_client=sett.get_async_emb_client(),
                                     token_limiter=token_lim,
                                     request_limiter=req_lim,
                                     raw_book_content=book_content,

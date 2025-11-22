@@ -76,7 +76,7 @@ async def create_embeddings_async(*, embed_client:AsyncAzureOpenAI,
 
     for batch in inp_batches:
         tokens_needed = sum([_count_tokens(chunk, enc=enc_) for chunk in batch])
-        print(f'\ntokens needed from limiter: {tokens_needed}')
+        print(f'\nEmbedding: tokens needed from limiter: {tokens_needed}')
         
         await _acquire_budget_async(tok_limiter=tok_limiter, 
                             req_limiter=req_limiter, 
