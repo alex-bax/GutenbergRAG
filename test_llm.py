@@ -54,11 +54,8 @@ async def build_test_cases(golden_rows: list[dict]) -> list[LLMTestCase]:
         question = row["question"]
         ground_truth = row["ground_truth"]
 
-        # Call your RAG system
         answer, retrieval_context = await run_gutenberg_rag(question)
-
-        # TODO: add metadata for the answer?
-        # Some useful metadata you might want to see in reports
+        
         metadata = {
             "gb_id": row.get("gb_id"),
             "book": row.get("book"),
@@ -89,17 +86,8 @@ async def main(csv_path: Path) -> None:
 
     sett = get_settings()
 
-    # az_model = AzureOpenAIModel(
-    #                 model_name="gpt-5-mini",
-    #                 deployment_name=sett.AZ_OPENAI_MODEL_DEPLOYMENT,
-    #                 azure_openai_api_key=sett.AZ_OPENAI_GPT_KEY,
-    #                 openai_api_version=sett.AZ_OPENAI_API_VER,
-    #                 azure_endpoint=sett.AZ_OPENAI_GPT_ENDPOINT,
-    #                 # temperature=0
-    #             )
-
     az_model_judge = AzureJudgeModel(
-                            azure_endpoint="https://moby-rag-ai-foundry.cognitiveservices.azure.com",#sett.AZ_OPENAI_GPT_ENDPOINT,
+                            azure_endpoint="https://moby-rag-ai-foundry.cognitiveservices.azure.com",
                             api_key=sett.AZ_OPENAI_GPT_KEY,
                             api_version=sett.AZ_OPENAI_API_VER,
                             deployment_name=sett.AZ_OPENAI_MODEL_DEPLOYMENT,
@@ -110,8 +98,8 @@ async def main(csv_path: Path) -> None:
     # RAG metrics:
     # - AnswerRelevancy: how well your answer responds to the question
     # - Faithfulness: does answer stick to retrieved context (hallucinations?)
-    # - ContextualPrecision / Recall: how good your retrieval is
-     # Optional: quick sanity check to confirm DeepEval sees your model
+    # - ContextualPrecision / Recall: how good retrieval is
+     # Optional: quick sanity check to confirm DeepEval sees model
     print("Eval model:", az_model_judge.get_model_name())
 
     answer_relevancy = AnswerRelevancyMetric(threshold=0.7, model=az_model_judge)       # generator metric
