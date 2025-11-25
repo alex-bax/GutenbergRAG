@@ -33,10 +33,11 @@ class Settings(BaseSettings):
     AZ_OPENAI_MODEL_DEPLOYMENT:str
     AZ_OPENAI_API_VER: str
 
-    # Postgres DB
+    # Supabase Postgres DB
     DB_NAME:str
     DB_PW:str
     DB_PORT:int
+    DB_USER:str
 
     EMBEDDING_DIM:EmbeddingDimension = EmbeddingDimension.SMALL
    

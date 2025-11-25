@@ -14,4 +14,3 @@ class DBBookMetaData(Base):
     lang:Mapped[str] = mapped_column(String, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
-
