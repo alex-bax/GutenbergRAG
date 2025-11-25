@@ -37,7 +37,7 @@ stages:
         dockerfile: $(dockerfilePath)
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
-          $(tag)     
+          $(tag)
           latest
   - job: Deploy
     displayName: Deploy container to Web App
