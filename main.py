@@ -1,9 +1,9 @@
+import uvicorn, requests
 from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
 from openai import AzureOpenAI, AsyncAzureOpenAI
 from pydantic import BaseModel, Field, field_validator
-from typing import Annotated, Literal,AsyncIterator
+from typing import Annotated, Literal
 import psycopg2
-import uvicorn, requests
 
 from azure.search.documents import SearchClient
 

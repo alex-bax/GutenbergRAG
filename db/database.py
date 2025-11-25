@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from settings import get_settings
-import asyncio
+
 from typing import AsyncIterator
 
 sett = get_settings()

@@ -1,6 +1,5 @@
 import tiktoken
 from langchain_text_splitters import CharacterTextSplitter, TokenTextSplitter
-import matplotlib.pyplot as plt
 # TODO: Chunking strategies to implement
  
 # 1. Fixed size 

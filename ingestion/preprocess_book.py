@@ -1,7 +1,5 @@
 from pathlib import Path
 import unicodedata, re
-import pandas as pd
-
 
 def clean_headers(*, raw_book: str) -> str:
     start_match = re.search(pattern=r'\*\*\*\s?START OF TH(IS|E) PROJECT GUTENBERG EBOOK', string=raw_book)
