@@ -8,3 +8,4 @@ books
 try_*.py
 
 eval_data/*
+*.ipynb
