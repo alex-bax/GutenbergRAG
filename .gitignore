@@ -1,7 +1,10 @@
+__pycache__/
+*.pyc
 *.env
 *.csv
 books
 
 # All files used for trying code is try_*
 try_*.py
+
 eval_data/*
