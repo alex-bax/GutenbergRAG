@@ -19,6 +19,9 @@ variables:
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
 
+  azureSubscription: 'GutenbergRAGAppReg-ServiceConn'
+  webAppName: 'gbRAGFastAPI'
+
 stages:
 - stage: Build
   displayName: Build and push stage
@@ -37,3 +40,16 @@ stages:
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
           $(tag)
+  - job: Deploy
+    displayName: Deploy container to Web App
+    pool:
+        name: 'SelfHosted'
+    steps:
+    - task: AzureWebAppContainer@1
+      inputs:
+        azureSubscription: 'GutenbergRAGAppReg-ServiceConn'
+        appName: $(webAppName)
+        deployToSlotOrASE: true
+        resourceGroupName: 'rag'
+        slotName: 'production'
+        containers: '''$(containerRegistry)/$(imageRepository):$(tag)'''
