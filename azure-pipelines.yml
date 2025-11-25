@@ -50,4 +50,4 @@ stages:
         deployToSlotOrASE: true
         resourceGroupName: 'rag'
         slotName: 'production'
-        containers: '$(containerRegistry)/$(imageRepository):$(tag)'
+        imageName: '$(containerRegistry)/$(imageRepository):$(tag)'
