@@ -7,5 +7,6 @@ books
 # All files used for trying code is try_*
 try_*.py
 
+envWebAppSettings.json
 eval_data/*
 *.ipynb
