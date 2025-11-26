@@ -16,33 +16,6 @@ from models.api_response_model import GBBookMeta
 from models.vector_db_model import SearchChunk, SearchPage, UploadChunk
 from db.vector_store_abstract import AsyncVectorStore
 
-# def _get_semantinc_search_settings() -> SemanticSearch:
-#     return SemanticSearch(
-#             configurations=[
-#                 SemanticConfiguration(
-#                     name="default",
-#                     prioritized_fields=SemanticPrioritizedFields(
-#                         content_fields=[SemanticField(field_name="content")]
-#                     )
-#                 )
-#             ])
-
-
-def paginated_search(*, search_client:SearchClient, q:str="", skip:int, top:int, select_fields:str|None): #-> list[SearchPage]:
-    results = search_client.search(
-        search_text=q,   # "" gets all
-        include_total_count=True,
-        select=select_fields.split(",") if select_fields else None,
-        skip=skip,
-        top=top
-    )
-    total = results.get_count()
-    results_as_dicts:list[dict] = list(results)
-    search_items = [SearchChunk(**page) for page in results_as_dicts]
-    page = SearchPage(chunks=search_items, skip_n=skip, top=top, total_count=total)
-
-    return page    # can safely do this (load into memory) since top and skip are limited via api params
-
 
 def _split_by_size(data: list, chunk_size: int) -> list[list[UploadChunk]]:
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]

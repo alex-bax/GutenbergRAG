@@ -104,9 +104,10 @@ class AzSearchVectorStore(AsyncVectorStore):
         total = await results.get_count()
         
         search_items = [SearchChunk(*page, search_score=page["@search.score"]) async for page in results]
-        page = SearchPage(chunks=search_items, skip_n=skip, top=limit, total_count=total)
 
-        return page
+        return SearchPage(chunks=search_items, 
+                          skip_n=skip, top=limit, 
+                          total_count=total)
 
     
     def _get_index_fields(self) -> list[SearchField]:
