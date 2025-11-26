@@ -14,7 +14,7 @@ variables:
   imageRepository: 'gutenbergrag'
   containerRegistry: 'raggutenbergregistry.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
-  tag: '$(Build.BuildId)'
+  tag: '$(Build.BuildId)'      # e.g. 9, 10, 11, etc.
 
 
   azureSubscription: 'GutenbergRAGAppReg-ServiceConn'
@@ -37,7 +37,7 @@ stages:
         dockerfile: $(dockerfilePath)
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
-          $(tag)     # e.g. 9, 10, 11, etc.
+          $(tag)
           latest
   - job: Deploy
     displayName: Deploy container to Web App
