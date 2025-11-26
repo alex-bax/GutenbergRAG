@@ -1,6 +1,6 @@
 import uuid
 import asyncio
-from azure.search.documents import SearchClient
+from azure.search.documents import SearchClient,SearchItemPaged
 
 from pyrate_limiter import Limiter
 from openai import AsyncAzureOpenAI
@@ -39,7 +39,7 @@ def paginated_search(*, search_client:SearchClient, q:str="", skip:int, top:int,
     total = results.get_count()
     results_as_dicts:list[dict] = list(results)
     search_items = [SearchChunk(**page) for page in results_as_dicts]
-    page = SearchPage(items=search_items, skip_n=skip, top=top, total_count=total)
+    page = SearchPage(chunks=search_items, skip_n=skip, top=top, total_count=total)
 
     return page    # can safely do this (load into memory) since top and skip are limited via api params
 
@@ -54,7 +54,7 @@ async def upload_to_index_async(*, vec_store:AsyncVectorStore,
                                 request_limiter:Limiter,
                                 raw_book_content: str,
                                 book_meta: GBBookMeta,
-                    ) -> list[UploadChunk]:
+                            ) -> list[UploadChunk]:
     sett = get_settings()
 
     book_str = clean_headers(raw_book=raw_book_content) 
@@ -92,7 +92,7 @@ async def upload_to_index_async(*, vec_store:AsyncVectorStore,
 
     docs_splitted = _split_by_size(data=docs, chunk_size=CHUNK_SIZE)
     for doc_chunks in docs_splitted:
-        await vec_store.upsert(chunks=doc_chunks)
+        await vec_store.upsert_chunks(chunks=doc_chunks)
 
     return vector_items_added
 

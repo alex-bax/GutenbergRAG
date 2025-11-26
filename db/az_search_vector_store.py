@@ -1,7 +1,7 @@
 
 from db.vector_store_abstract import AsyncVectorStore
 from settings import Settings
-from models.vector_db_model import SearchChunk
+from models.vector_db_model import SearchChunk, SearchPage
 from azure.search.documents.aio import SearchClient, AsyncSearchItemPaged
 from azure.search.documents.indexes.aio import SearchIndexClient
 from azure.search.documents.indexes.models import SearchIndex
@@ -10,7 +10,6 @@ from azure.search.documents.indexes.models import (
     VectorSearch, HnswAlgorithmConfiguration, VectorSearchProfile, ExhaustiveKnnAlgorithmConfiguration,
 )
 from typing import Sequence
-from azure.core.paging import ItemPaged
 from azure.core.credentials import AzureKeyCredential
 from pydantic import PrivateAttr
 from azure.search.documents.models import VectorizedQuery
@@ -32,7 +31,7 @@ class AzSearchVectorStore(AsyncVectorStore):
                                             credential=AzureKeyCredential(self.settings.AZURE_SEARCH_KEY))
         
 
-    async def upsert(self, chunks: list[UploadChunk]) -> None:
+    async def upsert_chunks(self, chunks: list[UploadChunk]) -> None:
         docs = [chunk.to_dict() for chunk in chunks]
         
         for docs in docs:
@@ -88,6 +87,26 @@ class AzSearchVectorStore(AsyncVectorStore):
         doc_dicts = [{"book_id": b_id} for b_id in book_ids]
         await self._search_client.delete_documents(doc_dicts)
 
+
+    async def paginated_search_by_text(self, *, 
+                                text_query:str,
+                                skip: int,  
+                                limit: int = 50,
+                            ) -> SearchPage:
+        
+        results = await self._search_client.search(
+                            search_text=text_query,   # "" gets all
+                            include_total_count=True,
+                            select=None,        # As None returns all fields
+                            skip=skip,
+                            top=limit
+                        )
+        total = await results.get_count()
+        
+        search_items = [SearchChunk(*page, search_score=page["@search.score"]) async for page in results]
+        page = SearchPage(chunks=search_items, skip_n=skip, top=limit, total_count=total)
+
+        return page
 
     
     def _get_index_fields(self) -> list[SearchField]:

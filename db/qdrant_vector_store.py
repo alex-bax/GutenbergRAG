@@ -3,7 +3,7 @@ from typing import Any, Sequence
 from pydantic import PrivateAttr
 from settings import Settings 
 from constants import EmbeddingDimension
-from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk
+from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk, SearchPage
 # from vector_store_abstract import AsyncVectorStore
 from .vector_store_abstract import AsyncVectorStore
 
@@ -14,10 +14,20 @@ from qdrant_client.models import (
     FieldCondition,
     MatchValue,
     MatchAny,
+    MatchText,
     Distance,
     VectorParams,
     PointIdsList
 )
+
+
+INDEXED_PAYL_FIELDS = { "chunk_nr":"integer", 
+                        "book_id":"integer",
+                        "book_name":"keyword",
+                        "uuid_str":"uuid",
+                        "content":"text",
+                    }
+
 class QdrantVectorStore(AsyncVectorStore):
     settings:Settings
     distance:Distance = Distance.COSINE
@@ -32,37 +42,91 @@ class QdrantVectorStore(AsyncVectorStore):
     def _build_filter(self, filters: dict[str, Any]) -> Filter:
         return Filter(must=[FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filters.items()])
         
-    
     async def initialize(self):
         await self.create_missing_collection(self.collection_name)
 
+
+    async def result_count_text_query(self, *, text_match_filter:Filter) -> int:
+        count_res = await self._client.count(
+                                collection_name=self.collection_name,
+                                count_filter=text_match_filter,
+                                exact=True,
+                            )
+        return count_res.count
+    
+
     async def _create_indexes(self) -> None:
-        await self._client.create_payload_index(
-                        collection_name=self.collection_name,
-                        field_name="chunk_nr",
-                        field_schema="integer",
-                    )
+        for field_name,field_type in INDEXED_PAYL_FIELDS.items():
+            await self._client.create_payload_index(
+                            collection_name=self.collection_name,
+                            field_name=field_name,
+                            field_schema=field_type,
+                        )
         
-        await self._client.create_payload_index(
-                        collection_name=self.collection_name,
-                        field_name="book_id",
-                        field_schema="integer",
-                    )
-        
-        await self._client.create_payload_index(
-                        collection_name=self.collection_name,
-                        field_name="book_name",
-                        field_schema="keyword",
-                    )
-        
-        await self._client.create_payload_index(
-                        collection_name=self.collection_name,
-                        field_name="uuid_str",
-                        field_schema="uuid",
-                    )
+
+    # TODO: add feature to filter payload fields 
+    async def paginated_search_by_text(self, *, 
+                            text_query:str,
+                            skip: int,  
+                            limit: int = 50,
+                            ) -> SearchPage:
+        """
+            Keyword-based search (no embeddings) in Qdrant matching on full-text field `content`.
+            The search is paginated based on the 'skip' and 'limit' parameters, and returns a custom SearchPage having all payload fields.
+            Args:
+                skip (int): Number of chunk items to skip in the search. Similar to an 'offset'.
+                limit (int): Number of chunk items to include after skipping. 
+        """
+        text_filter = Filter(
+            must=[
+                FieldCondition(
+                    key="content",
+                    match=MatchText(text=text_query)
+                )
+            ]
+        )
+
+        collected_points = []
+        next_offset = None
+
+        total_count = await self.result_count_text_query(text_match_filter=text_filter)
+
+        while len(collected_points) < skip + limit:
+            points, next_offset = await self._client.scroll(
+                                            collection_name=self.collection_name,
+                                            scroll_filter=text_filter,
+                                            limit=limit,       # no. chunk items to return for each scroll call
+                                            offset=next_offset,
+                                            with_payload=True,
+                                            with_vectors=False,
+                                        )
+            if not points:
+                break  # no more results
+
+            collected_points.extend(points)
+
+            if next_offset is None:
+                break  # reached end
+
+        page_points = collected_points[skip:skip + limit]               # apply skip/top on the collected points
+
+        chunks: list[SearchChunk] = []
+        for p in page_points:
+            payload = p.payload or {}
+            chunk = SearchChunk(
+                search_score=-1.0,              # scroll in Qdrant doesn't give a text relevance score - using dummy value instead
+                **payload)
+            chunks.append(chunk)
+
+        # 6) Return your SearchPage
+        return SearchPage(
+            chunks=chunks,
+            skip_n=skip,
+            top=limit,
+            total_count=total_count,
+        )
 
 
-    # TODO: do this during initialization
     async def create_missing_collection(self, collection_name: str) -> None:
         if not await self._client.collection_exists(collection_name=collection_name):
             await self._client.create_collection(
@@ -79,7 +143,7 @@ class QdrantVectorStore(AsyncVectorStore):
             print("Collection exists")
         
 
-    async def upsert(self, chunks: list[UploadChunk]) -> None:
+    async def upsert_chunks(self, chunks: list[UploadChunk]) -> None:
         if not chunks:
             return
         

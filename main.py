@@ -105,14 +105,14 @@ async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_se
 @prefix_router.get("/index/documents/", response_model=ApiResponse, status_code=status.HTTP_200_OK)
 async def get_docs(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=1)], 
                    take:Annotated[int, Query(description="Number of search result documents to take after skipping", le=100, ge=1)],
-                   search_client:Annotated[SearchClient, Depends(get_vector_store)],
+                   settings:Annotated[Settings, Depends(get_settings)],
                    select:Annotated[list[Literal["book_name", "book_id", "content", "chunk_id", "content_vector", "*"]], Query(description="Fields to select from the vector index")] = ["*"],
                    query:Annotated[str, Query(description="The search query")] = "", 
                    ):
     
     select_str = ", ".join(select)
     page = paginated_search(q=query, 
-                            search_client=search_client, 
+                            search_client=, 
                             skip=skip, 
                             top=take, 
                             select_fields=select_str)

@@ -38,7 +38,7 @@ class SearchChunk(BaseModel):
     search_score: float
 
 class SearchPage(BaseModel):
-    items: list[SearchChunk]
+    chunks: list[SearchChunk]
     skip_n: int = Field(..., title="Skip N Items", description="Number of items from search result to skip")
     top: int = Field(..., title="Top", description="Starting from the 'skip', take the next 'top' no. items from the search result")
     total_count: int | None = Field(None, description="Total count of results found from the query")
