@@ -6,8 +6,9 @@ from db.vector_store_abstract import AsyncVectorStore
 
 from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
-from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, EmbeddingDimension
-
+from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, DEF_BOOK_GB_IDS_SMALL, EmbeddingDimension
+from db.database import get_async_db_sess, get_db
+from ingestion.book_loader import upload_missing_book_ids
 
 # TODO: merge constants into settings
 # TODO: separate this into multiple Settings, e.g. for DB, vector store, etc.
@@ -72,7 +73,8 @@ class Settings(BaseSettings):
                 raise ValueError("No valid Vector store specified - Check settings!")
         
             await self._vector_store.create_missing_collection(self.INDEX_NAME)
-            await self._vector_store.populate_small_collection()
+            async with get_db() as db_sess:
+                await upload_missing_book_ids(book_ids=DEF_BOOK_GB_IDS_SMALL, db_sess=db_sess, sett=self)
 
         return self._vector_store
 

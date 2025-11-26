@@ -1,14 +1,13 @@
 import uvicorn, requests
 from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
 from openai import AzureOpenAI, AsyncAzureOpenAI
-from pydantic import Field, field_validator
 from typing import Annotated
 import psycopg2
 
 from db.database import engine, get_async_db_sess
 from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.operations import select_all_books_db, select_books_db, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
+from db.operations import select_all_books_db, select_books_db_by_id, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
 from models.schema import DBBookMetaData
 import models.schema as schema
@@ -18,7 +17,7 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
 
 from converters import gbbookmeta_to_db_obj, db_obj_to_response
-from ingestion.book_loader import fetch_book_content_from_id, index_upload_missing_book_ids
+from ingestion.book_loader import fetch_book_content_from_id, upload_missing_book_ids
 from settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
 
@@ -62,7 +61,7 @@ async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)],
 async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     db_books = None
     try:
-        db_books = await select_books_db(set([book_id]), db)
+        db_books = await select_books_db_by_id(set([book_id]), db)
     except BookNotFoundException: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
 
@@ -115,28 +114,28 @@ async def search_docs_by_texts(skip:Annotated[int, Query(description="Number of 
 # no body needed, only gutenberg id since we're uploading from Gutenberg 
 @prefix_router.post("/index", status_code=status.HTTP_201_CREATED, response_model=ApiResponse)
 async def upload_book_to_index(gutenberg_ids:Annotated[set[int], Body(description="Gutenberg IDs to upload", min_length=1, max_length=50)],
-                      db:Annotated[AsyncSession, Depends(get_async_db_sess)],
+                      db_sess:Annotated[AsyncSession, Depends(get_async_db_sess)],
                       settings:Annotated[Settings, Depends(get_settings)]
                     ):
     info = ""
-    book_added = None
+    # book_added = None
     # create_missing_search_index(search_index_client=settings.get_index_client())
     
-    books_uploaded = await index_upload_missing_book_ids(book_ids=gutenberg_ids, sett=settings)
-    resp_book_uploaded = None
+    books_uploaded, info = await upload_missing_book_ids(book_ids=gutenberg_ids, sett=settings, db_sess=db_sess)
+    resp_book_uploaded = []
 
-    if len(books_uploaded) > 0:
-        for b in books_uploaded:
-            await insert_book_db(book=gbbookmeta_to_db_obj(b), db_sess=db)
-        resp_book_uploaded = books_uploaded
-    else:
-        info = f"Book ids:{gutenberg_ids} already in index {settings.INDEX_NAME}"
+    # if len(books_uploaded) > 0:
+        # for b in books_uploaded:
+        #     await insert_book_db(book=gbbookmeta_to_db_obj(b), db_sess=db_sess)
+        # resp_book_uploaded = books_uploaded
+    if len(books_uploaded) == 0:
+        info += f"\nBook ids:{gutenberg_ids} already in index {settings.INDEX_NAME}"
 
-        try:
-            books_from_db = await select_books_db(book_ids=None, db_sess=db, gb_ids=gutenberg_ids)
-            resp_book_uploaded = books_from_db
-        except BookNotFoundException: 
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with ids {gutenberg_ids} not found in DB, but was in index")
+        # books_from_db = await select_books_db_by_id(book_ids=None, db_sess=db_sess, gb_ids=gutenberg_ids)
+        # resp_book_uploaded = books_from_db
+        
+        # if len(books_from_db) == 0:
+        #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with ids {gutenberg_ids} not found in DB, but was in index")
 
     book_meta_objs = [db_obj_to_response(b) for b in resp_book_uploaded]
     return ApiResponse(data=book_meta_objs, message=info) 

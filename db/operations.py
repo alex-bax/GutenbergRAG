@@ -16,6 +16,15 @@ async def insert_book_db(book:DBBookMetaData, db_sess:AsyncSession) -> None:
     await db_sess.commit()
     await  db_sess.refresh(book)
 
+async def insert_missing_book_db(book:DBBookMetaData, db_sess:AsyncSession) -> str:
+    existing_books = await select_books_db_by_id(set([book.id]), db_sess=db_sess)
+    
+    if len(existing_books) == 0:
+        await insert_book_db(book=book, db_sess=db_sess)
+        return f"\n Didn't find book {book.title} {book.id} in metadata DB - inserting it now"
+    else:
+        return f"\n Already in metadata DB: {book.title} {book.id}"
+
 
 async def select_all_books_db(db_sess:AsyncSession) -> list[DBBookMetaData]:
     stmt = select(DBBookMetaData)
@@ -24,17 +33,17 @@ async def select_all_books_db(db_sess:AsyncSession) -> list[DBBookMetaData]:
 
     return book_rows
 
-async def select_books_db(book_ids:set[int]|None, db_sess:AsyncSession, gb_ids:set[int]|None=None) -> list[DBBookMetaData]:
+async def select_books_db_by_id(book_ids:set[int]|None, db_sess:AsyncSession, gb_ids:set[int]|None=None) -> list[DBBookMetaData]:
     if gb_ids:
         stmt = select(DBBookMetaData).filter(DBBookMetaData.gb_id.in_(gb_ids))#.where(DBBookMetaData.gb_id == gb_id)
     else:
         stmt = select(DBBookMetaData).where(DBBookMetaData.id == book_ids)
 
     res = await db_sess.execute(stmt)
-    books = res.scalars().all()
+    books = res.scalars().all() 
     
     if not books:
-        raise BookNotFoundException(f"Book with id {book_ids} not found")
+        books = []
     
     return list(books)
 

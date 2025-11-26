@@ -4,7 +4,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from settings import get_settings
 
-from typing import AsyncIterator
+from typing import AsyncGenerator, AsyncIterator
 
 sett = get_settings()
 
@@ -19,6 +19,22 @@ AsyncSessionLocal = async_sessionmaker(
 
 Base = declarative_base() 
 
-async def get_async_db_sess() -> AsyncIterator[AsyncSession]:
+# async def get_async_db_sess() -> AsyncIterator[AsyncSession]:
+#     async with AsyncSessionLocal() as session:
+#         yield session
+
+async def get_async_db_sess() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
+
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def get_db():
+    gen = get_async_db_sess()
+    session = await anext(gen)
+    try:
+        yield session
+    finally:
+        await gen.aclose()

@@ -1,9 +1,10 @@
 import asyncio
 from typing import Any, Sequence
 from pydantic import PrivateAttr
+from db.database import get_async_db_sess
 from settings import Settings 
 from constants import EmbeddingDimension, DEF_BOOK_GB_IDS_SMALL
-from ingestion.book_loader import index_upload_missing_book_ids
+from ingestion.book_loader import upload_missing_book_ids
 from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk, SearchPage
 from models.api_response_model import GBBookMeta
 from .vector_store_abstract import AsyncVectorStore
@@ -180,8 +181,9 @@ class QdrantVectorStore(AsyncVectorStore):
         
         return hits
 
-    async def populate_small_collection(self) -> list[GBBookMeta]:
-        return await index_upload_missing_book_ids(book_ids=DEF_BOOK_GB_IDS_SMALL, sett=self.settings)
+        # async def populate_small_collection(self) -> tuple[list[GBBookMeta], str]:
+        #     async_db_sess = get_async_db_sess()
+        #     return await upload_missing_book_ids(book_ids=DEF_BOOK_GB_IDS_SMALL, sett=self.settings, db_sess=async_db_sess)
 
 
     async def delete_books(self, book_ids: set[int]) -> None:
@@ -255,8 +257,6 @@ async def try_local() :
             ),
         ]
 
-    # qdrant_filter = client._build_filter({"book_id":42})
-
     results = await client._client.query_points(
                                         collection_name=client.collection_name,
                                         query=[0.0]*EmbeddingDimension.SMALL,
@@ -264,9 +264,7 @@ async def try_local() :
                                         # query_filter=qdrant_filter,
                                     )
     return results
-    # await client.upsert(
-    #             chunks=docs,
-    #         )
+
 
 
 if __name__ == "__main__":

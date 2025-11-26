@@ -11,7 +11,7 @@ import asyncio
 from embedding_pipeline import create_embeddings_async
 from settings import get_settings, Settings
 from retrieval.retrieve import answer_with_context
-from ingestion.book_loader import index_upload_missing_book_ids
+from ingestion.book_loader import upload_missing_book_ids
 # TODO: calculate cost pr run in tokens
 # TODO: take all books and check if in index, if not then upload them
 
@@ -34,7 +34,7 @@ async def build_eval_dataset():
     ## Ingestion
     test_book_ids = set(list(df["gb_id"].unique().tolist())[:2])
 
-    gb_books = await index_upload_missing_book_ids(book_ids=test_book_ids, sett=sett)
+    gb_books = await upload_missing_book_ids(book_ids=test_book_ids, sett=sett)
 
     ## Retrival
     req_lim, tok_lim = sett.get_limiters()

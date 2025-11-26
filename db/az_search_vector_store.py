@@ -1,7 +1,7 @@
 
 from constants import DEF_BOOK_GB_IDS_SMALL
 from db.vector_store_abstract import AsyncVectorStore
-from ingestion.book_loader import index_upload_missing_book_ids
+from ingestion.book_loader import upload_missing_book_ids
 from models.api_response_model import GBBookMeta
 from settings import Settings
 from models.vector_db_model import SearchChunk, SearchPage
@@ -112,8 +112,8 @@ class AzSearchVectorStore(AsyncVectorStore):
                           skip_n=skip, top=limit, 
                           total_count=total)
     
-    async def populate_small_collection(self) -> list[GBBookMeta]:
-        return await index_upload_missing_book_ids(book_ids=DEF_BOOK_GB_IDS_SMALL, sett=self.settings)
+    # async def populate_small_collection(self) -> list[GBBookMeta]:
+    #     return await upload_missing_book_ids(book_ids=DEF_BOOK_GB_IDS_SMALL, sett=self.settings)
 
     
     def _get_index_fields(self) -> list[SearchField]:

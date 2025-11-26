@@ -1,12 +1,13 @@
 import requests_async
 import asyncio
-import pandas as pd
 from pathlib import Path
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from models.api_response_model import GBBookMeta
 from models.local_gb_book_model import GBBookMetaLocal
 from vector_store_utils import upload_to_index_async
-from retrieval.retrieve import search_chunks, answer_with_context
+from db.operations import insert_missing_book_db
+from converters import gbbookmeta_to_db_obj
+
 from settings import get_settings, Settings
 from ingestion.preprocess_book import make_slug_book_key
 
@@ -43,7 +44,9 @@ def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
     local_gb_p = Path("eval_data", "gb_meta_objs_by_id", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
     loc_gb_meta = GBBookMetaLocal(**gb_meta.model_dump(), path_to_content=local_gb_p)
     loc_gb_json = loc_gb_meta.model_dump_json(indent=4)
+
     assert len(loc_gb_json) > 0
+    local_gb_p.mkdir(parents=True, exist_ok=True)
 
     with open(local_gb_p.with_suffix(".json"), "w", encoding='utf-8') as f:
         f.write(loc_gb_json)
@@ -54,7 +57,7 @@ def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
 
     return local_gb_p
 
-async def index_upload_missing_book_ids(*, book_ids:set[int], sett:Settings) -> list[GBBookMeta]:
+async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:AsyncSession) -> tuple[list[GBBookMeta], str]:
     """Upload and book ids to vector index and insert into book meta DB if missing"""
     vector_store = await sett.get_vector_store()
     missing_book_ids = await vector_store.get_missing_ids( book_ids=book_ids)
@@ -62,6 +65,7 @@ async def index_upload_missing_book_ids(*, book_ids:set[int], sett:Settings) -> 
     gb_books = []
     req_lim, token_lim = sett.get_limiters()
     print(f'--- Missing book ids: {missing_book_ids}')
+    mess = ""
 
     for b_id in missing_book_ids:
         eval_book_paths = get_path_by_book_id_from_cache(book_id=b_id)
@@ -71,25 +75,29 @@ async def index_upload_missing_book_ids(*, book_ids:set[int], sett:Settings) -> 
             assert len(book_content) > 0
 
             local_gb_p = _write_to_files(book_content=book_content, gb_meta=gb_meta)
-
+            mess += " Wrote book to cache."
             print(f"GB meta obj not found in cache - fetching from Gutendex. Wrote content + gb obj to: {local_gb_p.name}")
         else:
             gb_meta = _load_gb_meta_local(path=eval_book_paths[0])
             with open(Path("eval_data", "books", eval_book_paths[0].with_suffix(".txt").name), "r", encoding="utf-8") as f:
                 book_content = f.read()
-            print(f"Loaded content from cache for book id {b_id}")
+            mess += f"Loaded content from cache for book id {b_id}"
+            print(mess)
 
         print(f"*** Uploading Book id {b_id} to index")
-        await upload_to_index_async(vec_store=await sett.get_vector_store(), 
+        await upload_to_index_async(vec_store=vector_store, 
                                     embed_client=sett.get_async_emb_client(),
                                     token_limiter=token_lim,
                                     request_limiter=req_lim,
                                     raw_book_content=book_content,
                                     book_meta=gb_meta
                                 )
+        db_book = gbbookmeta_to_db_obj(gbm=gb_meta)
+        mess += await insert_missing_book_db(db_book, db_sess)
+
         gb_books.append(gb_meta)
 
-    return gb_books
+    return gb_books, mess
 
 
 async def _fetch_gutendex_meta_from_id(*, gb_id:int) -> GBBookMeta:
