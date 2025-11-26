@@ -44,6 +44,9 @@ class GBBookMeta(BaseModel):
         author_names = [a.get("name", "Unknown") for a in self.authors]
         return "; ".join(author_names)
     
+    def get_new_txt_url(self, id:int) -> str:
+        return f"http://www.gutenberg.org/cache/epub/{id}/pg{id}.txt"
+
     def get_txt_url(self) -> str|None:
         found = None
         for format, url in self.formats.items():

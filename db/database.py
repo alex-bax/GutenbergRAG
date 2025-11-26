@@ -9,8 +9,6 @@ from typing import AsyncIterator
 sett = get_settings()
 
 POSTGRES_DB_URL = f"postgresql+asyncpg://{sett.DB_USER}:{sett.DB_PW}@aws-1-eu-north-1.pooler.supabase.com:{sett.DB_PORT}/postgres"
-                  
-print(POSTGRES_DB_URL)
 
 engine = create_async_engine(POSTGRES_DB_URL, echo=True) #create_engine(SQLALCHEMY_DATABASE_URL)
 

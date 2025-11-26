@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     # Supabase Postgres DB
     DB_NAME:str
     DB_PW:str
-    DB_PORT:int
     DB_USER:str
+    DB_PORT:int
 
     EMBEDDING_DIM:EmbeddingDimension = EmbeddingDimension.SMALL
    
@@ -64,13 +64,16 @@ class Settings(BaseSettings):
         if self._vector_store is None:
             if self.VECTOR_STORE_TO_USE == "Qdrant":
                 qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.INDEX_NAME)
-                await qdrant_v_store.initialize()
                 self._vector_store = qdrant_v_store
             elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":
-                self._vector_store = AzSearchVectorStore(settings=self)
+                az_vec_store = AzSearchVectorStore(settings=self)
+                self._vector_store = az_vec_store
             else:
                 raise ValueError("No valid Vector store specified - Check settings!")
         
+            await self._vector_store.create_missing_collection(self.INDEX_NAME)
+            await self._vector_store.populate_small_collection()
+
         return self._vector_store
 
 
@@ -80,6 +83,7 @@ class Settings(BaseSettings):
                                             api_version=self.AZ_OPENAI_API_VER,
                                             api_key=self.AZ_OPENAI_GPT_KEY)
         return self._llm_client
+
 
     def get_async_emb_client(self) -> AsyncAzureOpenAI:
         if self._async_emb_client is None:

@@ -1,15 +1,11 @@
 import uvicorn, requests
 from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
 from openai import AzureOpenAI, AsyncAzureOpenAI
-from pydantic import BaseModel, Field, field_validator
-from typing import Annotated, Literal
+from pydantic import Field, field_validator
+from typing import Annotated
 import psycopg2
 
-from azure.search.documents import SearchClient
-
-# from sqlalchemy import select, delete
-# from sqlalchemy.orm import Session
-from db.database import engine, get_async_db_sess#, SessionLocal
+from db.database import engine, get_async_db_sess
 from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.operations import select_all_books_db, select_books_db, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
@@ -23,7 +19,6 @@ from fastapi_pagination import Page, add_pagination, paginate
 
 from converters import gbbookmeta_to_db_obj, db_obj_to_response
 from ingestion.book_loader import fetch_book_content_from_id, index_upload_missing_book_ids
-from vector_store_utils import  paginated_search
 from settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
 
@@ -103,17 +98,17 @@ async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_se
 
 
 @prefix_router.get("/index/documents/", response_model=ApiResponse, status_code=status.HTTP_200_OK)
-async def search_docs_by_texts(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=1)], 
+async def search_docs_by_texts(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=0)], 
                                 take:Annotated[int, Query(description="Number of search result documents to take after skipping", le=100, ge=1)],
                                 settings:Annotated[Settings, Depends(get_settings)],
                                 # select:Annotated[list[Literal["book_name", "book_id", "content", "chunk_id", "content_vector", "*"]], Query(description="Fields to select from the vector index")] = ["*"],
                                 query:Annotated[str, Query(description="The search query")] = "", 
                                 ):
-    assert settings._vector_store
-    page = await settings._vector_store.paginated_search_by_text(text_query=query, 
-                                                                skip=skip, 
-                                                                limit=take, 
-                                                            ) 
+    vec_store = await settings.get_vector_store()
+    page = await vec_store.paginated_search_by_text(text_query=query, 
+                                                        skip=skip, 
+                                                        limit=take, 
+                                                    ) 
     return ApiResponse(data=page)
 
 #TODO: post book to vector db by using Gutendex ID

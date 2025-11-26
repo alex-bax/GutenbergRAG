@@ -8,6 +8,8 @@ REQUESTS_PR_MIN = 3000
 
 MIN_SEARCH_SCORE = 0.01
 
+DEF_BOOK_GB_IDS_SMALL = set([1661, 84, 2701])
+
 class EmbeddingDimension(int, Enum):
     SMALL = 1536
     LARGE = 3072

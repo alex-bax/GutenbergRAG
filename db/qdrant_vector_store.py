@@ -2,9 +2,10 @@ import asyncio
 from typing import Any, Sequence
 from pydantic import PrivateAttr
 from settings import Settings 
-from constants import EmbeddingDimension
+from constants import EmbeddingDimension, DEF_BOOK_GB_IDS_SMALL
+from ingestion.book_loader import index_upload_missing_book_ids
 from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk, SearchPage
-# from vector_store_abstract import AsyncVectorStore
+from models.api_response_model import GBBookMeta
 from .vector_store_abstract import AsyncVectorStore
 
 from qdrant_client import AsyncQdrantClient
@@ -19,7 +20,6 @@ from qdrant_client.models import (
     VectorParams,
     PointIdsList
 )
-
 
 INDEXED_PAYL_FIELDS = { "chunk_nr":"integer", 
                         "book_id":"integer",
@@ -42,8 +42,9 @@ class QdrantVectorStore(AsyncVectorStore):
     def _build_filter(self, filters: dict[str, Any]) -> Filter:
         return Filter(must=[FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filters.items()])
         
-    async def initialize(self):
-        await self.create_missing_collection(self.collection_name)
+    # async def initialize(self):
+    #     await self.create_missing_collection(self.collection_name)
+    #     await self.populate_small_collection()
 
 
     async def result_count_text_query(self, *, text_match_filter:Filter) -> int:
@@ -179,6 +180,9 @@ class QdrantVectorStore(AsyncVectorStore):
         
         return hits
 
+    async def populate_small_collection(self) -> list[GBBookMeta]:
+        return await index_upload_missing_book_ids(book_ids=DEF_BOOK_GB_IDS_SMALL, sett=self.settings)
+
 
     async def delete_books(self, book_ids: set[int]) -> None:
         await self._client.delete(
@@ -237,7 +241,7 @@ async def try_local() :
     from settings import get_settings
     client = QdrantVectorStore(settings=get_settings(), 
                                collection_name="gutenberg")
-    await client.initialize()
+    # await client.initialize()
 
     docs = [
             UploadChunk(

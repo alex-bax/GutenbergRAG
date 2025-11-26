@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel 
 from typing import Sequence, Any
 from models.vector_db_model import UploadChunk, SearchChunk, SearchPage, EmbeddingVec
-
+from models.api_response_model import GBBookMeta
 # TODO: add paginated_search
 
 class AsyncVectorStore(BaseModel, ABC):
@@ -44,4 +44,17 @@ class AsyncVectorStore(BaseModel, ABC):
 
     @abstractmethod
     async def create_missing_collection(self, *, collection_name:str) -> None:
+        ...
+
+
+    @abstractmethod
+    async def populate_small_collection(self) -> list[GBBookMeta]:
+        """
+        Populate the vector collection with a small default list of books, if they're missing: 
+            1661,The Adventures of Sherlock Holmes,
+            84,Frankenstein,Mary Shelley,
+            2701,Moby-Dick,Herman Melville
+
+        Returns list of books actually uploaded.
+        """
         ...
