@@ -8,7 +8,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from db.database import Base
-
+from db.vector_store_abstract import AsyncVectorStore
+from models.api_response_model import ApiResponse
 # Importing fastapi.Depends that is used to retrieve SQLAlchemy's session
 from db.database import get_async_db_sess
 from db.operations import insert_book_db, DBBookMetaData
@@ -87,9 +88,7 @@ async def session(
 def test_settings() -> Settings:
     sett = get_settings()
     sett.is_test = True
-    sett.COLLECTION_NAME = "test_gutenberg"   # explicit if needed
     return sett
-
 
 # Use this fixture to get HTTPX's client to test API.
 # All changes that occur in a test function are rolled back
@@ -99,7 +98,6 @@ def test_settings() -> Settings:
 async def client(
     connection: AsyncConnection,
     test_settings:Settings,
-    # transaction: AsyncTransaction,  # we depend on it so we join the same outer tx
 ) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
         async_session = AsyncSession(
@@ -116,6 +114,9 @@ async def client(
     try:
         yield test_client
     finally:
+        v_store = await test_settings.get_vector_store()
+        await v_store.delete_collection(collection_name=test_settings.active_collection)
+
         await test_client.aclose()
         del app.dependency_overrides[get_async_db_sess]
 
@@ -153,7 +154,9 @@ async def test_upload_to_index(client: AsyncClient):
         resp = await ac.post("/v1/index", json=body)
         assert resp.status_code == status.HTTP_201_CREATED
 
-        # data = resp.json()["data"]  
+        data = ApiResponse(**resp.json())
+        print(data)
+
 
 
 # async def test_client_rollbacks(client: AsyncClient):

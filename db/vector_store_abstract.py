@@ -24,6 +24,7 @@ class AsyncVectorStore(BaseModel, ABC):
         """Return a list of book_ids from NOT present from given list"""
         ...
 
+
     @abstractmethod
     async def search_by_embedding(self, *,
                                     embed_query_vector:EmbeddingVec,
@@ -44,6 +45,10 @@ class AsyncVectorStore(BaseModel, ABC):
 
     @abstractmethod
     async def create_missing_collection(self, *, collection_name:str) -> None:
+        ...
+
+    @abstractmethod
+    async def delete_collection(self, *, collection_name:str) -> None:
         ...
 
 

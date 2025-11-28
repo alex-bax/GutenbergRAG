@@ -139,7 +139,7 @@ async def upload_book_to_index(gutenberg_ids:Annotated[set[int], Body(descriptio
     resp_book_uploaded = []
 
     if len(books_uploaded) == 0:
-        info += f"\nBook ids:{gutenberg_ids} already in index {settings.COLLECTION_NAME}"
+        info += f"\nBook ids:{gutenberg_ids} already in index {settings.active_collection}"
 
         # books_from_db = await select_books_db_by_id(book_ids=None, db_sess=db_sess, gb_ids=gutenberg_ids)
         # resp_book_uploaded = books_from_db

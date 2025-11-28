@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     _req_limiter: Limiter | None = PrivateAttr(default=None)
     _tok_limiter: Limiter | None = PrivateAttr(default=None)
 
+    @property
+    def active_collection(self) -> str:
+        return "test_" + self.COLLECTION_NAME if self.is_test else self.COLLECTION_NAME
+
+
     model_config = SettingsConfigDict(
         env_file=".env",  # local dev
         env_file_encoding="utf-8",
@@ -65,11 +70,8 @@ class Settings(BaseSettings):
         from db.qdrant_vector_store import QdrantVectorStore
         
         if self._vector_store is None:
-            if self.is_test:
-                self.COLLECTION_NAME = "test_gutenberg"
-
             if self.VECTOR_STORE_TO_USE == "Qdrant":
-                qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.COLLECTION_NAME)
+                qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.active_collection)
                 self._vector_store = qdrant_v_store
             elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":
                 az_vec_store = AzSearchVectorStore(settings=self)
@@ -77,7 +79,7 @@ class Settings(BaseSettings):
             else:
                 raise ValueError("No valid Vector store specified - Check settings!")
         
-            await self._vector_store.create_missing_collection(self.COLLECTION_NAME)
+            await self._vector_store.create_missing_collection(self.active_collection)
             
             book_ids = DEF_BOOK_GB_IDS_SMALL if not self.is_test else set([84])        # 84 is Frankenstein
 
@@ -137,4 +139,4 @@ def get_settings(is_test:bool=False) -> Settings:
 
 if __name__ == "__main__":
     s = get_settings()
-    print(s.AZURE_SEARCH_ENDPOINT, s.COLLECTION_NAME)
+    print(s.AZURE_SEARCH_ENDPOINT, s.active_collection)
