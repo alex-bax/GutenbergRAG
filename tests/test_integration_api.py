@@ -98,7 +98,8 @@ def test_settings() -> Settings:
 @pytest.fixture()
 async def client(
     connection: AsyncConnection,
-    transaction: AsyncTransaction,  # we depend on it so we join the same outer tx
+    test_settings:Settings,
+    # transaction: AsyncTransaction,  # we depend on it so we join the same outer tx
 ) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
         async_session = AsyncSession(
@@ -109,6 +110,7 @@ async def client(
             yield async_session
     
     app.dependency_overrides[get_async_db_sess] = override_get_async_session
+    app.dependency_overrides[get_settings] = lambda: test_settings
     test_client = AsyncClient(transport=ASGITransport(app=app), base_url="http://")
 
     try:
@@ -130,7 +132,7 @@ async def test_post_then_get_book(client: AsyncClient, session: AsyncSession):
             f"/v1/books/{created_book_id}",
         )
         # TODO convert to ApiResponse type 
-        assert response.status_code == 200
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()["data"]  
         assert len(data) == 1
         book = data[0]
@@ -143,12 +145,13 @@ async def test_get_book_not_found_returns_404(client: AsyncClient):
         resp = await ac.get(f"/v1/books/{non_existing_id}")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
+# NB Only testing code correctness, not the quality of the reponses, check eval instead
 
 async def test_upload_to_index(client: AsyncClient):
     async with client as ac:
         body = [42]
         resp = await ac.post("/v1/index", json=body)
-        assert resp.status_code == 200
+        assert resp.status_code == status.HTTP_201_CREATED
 
         # data = resp.json()["data"]  
 

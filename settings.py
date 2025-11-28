@@ -78,9 +78,12 @@ class Settings(BaseSettings):
                 raise ValueError("No valid Vector store specified - Check settings!")
         
             await self._vector_store.create_missing_collection(self.COLLECTION_NAME)
+            
+            book_ids = DEF_BOOK_GB_IDS_SMALL if not self.is_test else set([84])        # 84 is Frankenstein
+
             async with get_db() as db_sess:
                 # Populate the both vector store and postgresql db with the small default book list
-                await upload_missing_book_ids(book_ids=DEF_BOOK_GB_IDS_SMALL, db_sess=db_sess, sett=self)
+                await upload_missing_book_ids(book_ids=book_ids, db_sess=db_sess, sett=self)
 
         return self._vector_store
 
