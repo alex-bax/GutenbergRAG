@@ -11,10 +11,12 @@ class BookNotFoundException(Exception):
     pass
 
 # def insert_book(book:DBBookMetaData, db_sess:Session) -> None:
-async def insert_book_db(book:DBBookMetaData, db_sess:AsyncSession) -> None:
+async def insert_book_db(book:DBBookMetaData, db_sess:AsyncSession) -> int:
     db_sess.add(book)
     await db_sess.commit()
     await  db_sess.refresh(book)
+
+    return book.id
 
 async def insert_missing_book_db(book:DBBookMetaData, db_sess:AsyncSession) -> str:
     existing_books = await select_books_db_by_id(set([book.id]), db_sess=db_sess)
@@ -34,10 +36,15 @@ async def select_all_books_db(db_sess:AsyncSession) -> list[DBBookMetaData]:
     return book_rows
 
 async def select_books_db_by_id(book_ids:set[int]|None, db_sess:AsyncSession, gb_ids:set[int]|None=None) -> list[DBBookMetaData]:
-    if gb_ids:
+    if book_ids is not None and gb_ids is not None:
+        raise ValueError("Provide either book_ids or gb_ids")
+
+    if gb_ids is not None:
         stmt = select(DBBookMetaData).filter(DBBookMetaData.gb_id.in_(gb_ids))#.where(DBBookMetaData.gb_id == gb_id)
     else:
-        stmt = select(DBBookMetaData).where(DBBookMetaData.id == book_ids)
+        assert book_ids is not None
+        stmt = select(DBBookMetaData).filter(DBBookMetaData.id.in_(book_ids))
+
 
     res = await db_sess.execute(stmt)
     books = res.scalars().all() 

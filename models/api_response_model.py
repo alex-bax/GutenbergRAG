@@ -9,7 +9,7 @@ class QueryResponse(BaseModel):
     #canditates:list[]  #TODO: add content chunks?
 
 class BookBase(BaseModel):
-    # id: int
+    id: int
     gb_id: int = Field(..., title="Gutenberg book ID")
     title: str
 

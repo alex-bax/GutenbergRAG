@@ -23,7 +23,6 @@ from settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
 
 
-
 # async def init_models():
 #     async with engine.begin() as conn:
 #         await conn.run_sync(schema.Base.metadata.create_all)        # creates the DB tables
@@ -51,11 +50,13 @@ async def get_vector_store() -> AsyncVectorStore:
 def get_async_emb_client() -> AsyncAzureOpenAI:
     return get_settings().get_async_emb_client()
 
-
-@prefix_router.post("/books/", status_code=status.HTTP_201_CREATED)
-async def create_book(book:BookMetaDataResponse, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
-    new_db_book = DBBookMetaData(**book.model_dump())
-    await insert_book_db(new_db_book, db)
+# not doing this since db and vector store has to be aligned
+# @prefix_router.post("/books/", response_model=ApiResponse, status_code=status.HTTP_201_CREATED)
+# async def create_book(book:BookMetaDataResponse, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
+#     new_db_book = DBBookMetaData(**book.model_dump())
+#     new_id = await insert_book_db(new_db_book, db)
+#     new_db_book.id = new_id
+#     return ApiResponse(data=new_db_book)
 
 @prefix_router.get("/books/search", response_model=ApiResponse, status_code=status.HTTP_200_OK)
 async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)], 

@@ -11,6 +11,7 @@ from db.database import Base
 
 # Importing fastapi.Depends that is used to retrieve SQLAlchemy's session
 from db.database import get_async_db_sess
+from db.operations import insert_book_db, DBBookMetaData
 # Importing main FastAPI instance
 from main import app
 
@@ -57,9 +58,16 @@ async def connection(anyio_backend) -> AsyncGenerator[AsyncConnection, None]:
 async def transaction(
     connection: AsyncConnection,
 ) -> AsyncGenerator[AsyncTransaction, None]:
-    async with connection.begin() as transaction:
-        yield transaction
+    # async with connection.begin() as transaction:
+    #     yield transaction
 
+    # await transaction.rollback()
+    trans = await connection.begin()
+    try:
+        yield trans
+    finally:
+        # Always rollback so DB is clean between tests
+        await trans.rollback()
 
 # Use this fixture to get SQLAlchemy's AsyncSession.
 # All changes that occur in a test function are rolled back
@@ -72,36 +80,36 @@ async def session(
         bind=connection,
         join_transaction_mode="create_savepoint",
     )
-
-    yield async_session
-
-    await transaction.rollback()
+    
+    try:
+        yield async_session
+    finally:
+        await async_session.close()  # only close the session
+    # await transaction.rollback()
 
         
 # Tests showing rollbacks between functions when using SQLAlchemy's session
-async def test_create_profile(session: AsyncSession):
-    existing_profiles = (await session.execute(select(Profile))).scalars().all()
-    assert len(existing_profiles) == 0
+# async def test_create_profile(session: AsyncSession):
+#     existing_profiles = (await session.execute(select(Profile))).scalars().all()
+#     assert len(existing_profiles) == 0
 
-    test_name = "test"
-    session.add(Profile(name=test_name))
-    await session.commit()
+#     test_name = "test"
+#     session.add(Profile(name=test_name))
+#     await session.commit()
 
-    existing_profiles = (await session.execute(select(Profile))).scalars().all()
-    assert len(existing_profiles) == 1
-    assert existing_profiles[0].name == test_name
-
-
-async def test_rollbacks_between_functions(session: AsyncSession):
-    existing_profiles = (await session.execute(select(Profile))).scalars().all()
-    assert len(existing_profiles) == 0
+#     existing_profiles = (await session.execute(select(Profile))).scalars().all()
+#     assert len(existing_profiles) == 1
+#     assert existing_profiles[0].name == test_name
 
 # Use this fixture to get HTTPX's client to test API.
 # All changes that occur in a test function are rolled back
 # after function exits, even if session.commit() is called
 # in FastAPI's application endpoints
 @pytest.fixture()
-async def client(connection: AsyncConnection, transaction: AsyncTransaction) -> AsyncGenerator[AsyncClient, None]:
+async def client(
+    connection: AsyncConnection,
+    transaction: AsyncTransaction,  # we depend on it so we join the same outer tx
+) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
         async_session = AsyncSession(
             bind=connection,
@@ -110,39 +118,33 @@ async def client(connection: AsyncConnection, transaction: AsyncTransaction) -> 
         async with async_session:
             yield async_session
     
-    # Here you have to override the dependency that is used in FastAPI's
-    # endpoints to get SQLAlchemy's AsyncSession. In my case, it is
-    # get_async_session
     app.dependency_overrides[get_async_db_sess] = override_get_async_session
-    yield AsyncClient(transport=ASGITransport(app=app), base_url="http://")
-    del app.dependency_overrides[get_async_db_sess]
+    test_client = AsyncClient(transport=ASGITransport(app=app), base_url="http://")
 
-    await transaction.rollback()
-
+    try:
+        yield test_client
+    finally:
+        await test_client.aclose()
+        del app.dependency_overrides[get_async_db_sess]
 
 
 # Tests showing rollbacks between functions when using API client
-async def test_post_then_get_book(client: AsyncClient):
+async def test_post_then_get_book(client: AsyncClient, session: AsyncSession):
+    book_id = await insert_book_db(book=DBBookMetaData(gb_id=42, title="string", lang="en", authors="string"), 
+                                   db_sess=session)
+    
     async with client as ac:
-        response = await ac.post(
-            "/v1/books/",
-            json={
-                "id": 42,
-                "gb_id": 0,
-                "title": "string",
-                "lang": "en",
-                "authors": "string"
-            },
-        )
-        created_book_id = response.json()["id"]
-
-        assert response.status_code == 200
+        created_book_id = book_id #response.json()["id"]
         
         response = await ac.get(
             f"/v1/books/{created_book_id}",
         )
+        # TODO convert to ApiResponse type 
         assert response.status_code == 200
-        assert response.json()["id"] == created_book_id
+        data = response.json()["data"]  
+        assert len(data) == 1
+        book = data[0]
+        assert book["id"] == created_book_id
 
 
 async def test_get_book_not_found_returns_404(client: AsyncClient):
