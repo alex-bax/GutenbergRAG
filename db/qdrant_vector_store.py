@@ -3,7 +3,7 @@ from typing import Any, Sequence
 from pydantic import PrivateAttr
 from db.database import get_async_db_sess
 from settings import Settings 
-from constants import EmbeddingDimension, DEF_BOOK_GB_IDS_SMALL
+from constants import EmbeddingDimension 
 from ingestion.book_loader import upload_missing_book_ids
 from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk, SearchPage
 from models.api_response_model import GBBookMeta

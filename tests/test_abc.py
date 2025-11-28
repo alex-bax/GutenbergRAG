@@ -64,8 +64,7 @@ async def transaction(
 # in inner functions
 @pytest.fixture()
 async def session(
-    connection: AsyncConnection, transaction: AsyncTransaction
-) -> AsyncGenerator[AsyncSession, None]:
+    connection: AsyncConnection, transaction: AsyncTransaction) -> AsyncGenerator[AsyncSession, None]:
     async_session = AsyncSession(
         bind=connection,
         join_transaction_mode="create_savepoint",
@@ -99,9 +98,7 @@ async def test_rollbacks_between_functions(session: AsyncSession):
 # after function exits, even if session.commit() is called
 # in FastAPI's application endpoints
 @pytest.fixture()
-async def client(
-    connection: AsyncConnection, transaction: AsyncTransaction
-) -> AsyncGenerator[AsyncClient, None]:
+async def client(connection: AsyncConnection, transaction: AsyncTransaction) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
         async_session = AsyncSession(
             bind=connection,
@@ -135,7 +132,7 @@ async def test_api_create_profile(client: AsyncClient):
                 "title": "string",
                 "lang": "en",
                 "authors": "string"
-                },
+            },
         )
         created_profile_id = response.json()["id"]
 
