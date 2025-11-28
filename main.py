@@ -1,16 +1,17 @@
+from contextlib import asynccontextmanager
 import uvicorn, requests
 from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
 from openai import AzureOpenAI, AsyncAzureOpenAI
 from typing import Annotated
 import psycopg2
 
-from db.database import engine, get_async_db_sess
+from db.database import engine, get_async_db_sess, Base
 from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.operations import select_all_books_db, select_books_db_by_id, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
 from models.schema import DBBookMetaData
-import models.schema as schema
+# import models.schema as schema
 from models.api_response_model import ApiResponse, BookMetaDataResponse, GBBookMeta, QueryResponse
 # from models.vector_db import SearchPage
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -21,12 +22,26 @@ from ingestion.book_loader import fetch_book_content_from_id, upload_missing_boo
 from settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
 
-app = FastAPI(title="MobyRAG")
-prefix_router = APIRouter(prefix="/v1")
 
-async def init_models():
-    async with engine.begin() as conn:
-        await conn.run_sync(schema.Base.metadata.create_all)        # creates the DB tables
+
+# async def init_models():
+#     async with engine.begin() as conn:
+#         await conn.run_sync(schema.Base.metadata.create_all)        # creates the DB tables
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Running startup, creating tables...")
+    async with engine.begin() as conn:      # startup
+        await conn.run_sync(Base.metadata.create_all)
+
+    yield  # Now the app starts serving
+
+    await engine.dispose()  # shutdown
+
+
+app = FastAPI(title="MobyRAG", lifespan=lifespan)
+prefix_router = APIRouter(prefix="/v1")
 
 # TODO make config obj
 async def get_vector_store() -> AsyncVectorStore:
@@ -60,9 +75,10 @@ async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)],
 @prefix_router.get("/books/{book_id}", response_model=ApiResponse, status_code=status.HTTP_200_OK)
 async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     db_books = None
-    try:
-        db_books = await select_books_db_by_id(set([book_id]), db)
-    except BookNotFoundException: 
+    
+    db_books = await select_books_db_by_id(set([book_id]), db)
+
+    if len(db_books) == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
 
     if not db_books:
@@ -212,6 +228,8 @@ async def answer_query(query:Annotated[str, Query()],
                                 top_n_matches=top_n_matches)
 
     return ApiResponse(data=llm_resp)
+
+
 
 
 app.include_router(prefix_router)

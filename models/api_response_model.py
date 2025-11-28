@@ -9,7 +9,7 @@ class QueryResponse(BaseModel):
     #canditates:list[]  #TODO: add content chunks?
 
 class BookBase(BaseModel):
-    id: int
+    # id: int
     gb_id: int = Field(..., title="Gutenberg book ID")
     title: str
 
@@ -18,9 +18,6 @@ class BookMetaDataResponse(BookBase):
     authors: str 
     model_config = {"from_attributes": True}        
 
-# class Book(BookBase):
-#     book_name:str
-#     chunks: list[VectorChunk]       
 
 class GBBookMeta(BaseModel):
     title:str
@@ -47,13 +44,13 @@ class GBBookMeta(BaseModel):
     def get_new_txt_url(self, id:int) -> str:
         return f"http://www.gutenberg.org/cache/epub/{id}/pg{id}.txt"
 
-    def get_txt_url(self) -> str|None:
-        found = None
-        for format, url in self.formats.items():
-            if "text/plain;" in format:
-                return url
+    # def get_txt_url(self) -> str|None:
+    #     found = None
+    #     for format, url in self.formats.items():
+    #         if "text/plain;" in format:
+    #             return url
     
-        return found
+    #     return found
     
 
 class ApiResponse(BaseModel):

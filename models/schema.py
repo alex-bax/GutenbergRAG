@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 # table=True means this class represent a DB table
 class DBBookMetaData(Base):
-    __tablename__ = "metaDataBook"
+    __tablename__ = "book_metadata"
 
     id:Mapped[int] = mapped_column(Integer,primary_key=True,nullable=False, autoincrement=True)
     gb_id:Mapped[int] = mapped_column(Integer,nullable=False)

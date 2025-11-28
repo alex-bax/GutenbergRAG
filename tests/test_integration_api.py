@@ -2,6 +2,7 @@ from typing import AsyncGenerator
 from uuid import UUID, uuid4
 
 import pytest
+from fastapi import status
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction, create_async_engine
@@ -12,6 +13,8 @@ from db.database import Base
 from db.database import get_async_db_sess
 # Importing main FastAPI instance
 from main import app
+
+### The test DB is rolled back after each test fixture
 
 # To run async tests
 pytestmark = pytest.mark.anyio
@@ -118,41 +121,41 @@ async def client(connection: AsyncConnection, transaction: AsyncTransaction) -> 
 
 
 
-
 # Tests showing rollbacks between functions when using API client
-async def test_api_create_profile(client: AsyncClient):
-    test_name = "test"
+async def test_post_then_get_book(client: AsyncClient):
     async with client as ac:
         response = await ac.post(
-            # "/api/profiles",
             "/v1/books/",
             json={
-                "id": 0,
+                "id": 42,
                 "gb_id": 0,
                 "title": "string",
                 "lang": "en",
                 "authors": "string"
             },
         )
-        created_profile_id = response.json()["id"]
+        created_book_id = response.json()["id"]
 
-        response = await ac.get(
-            "/api/profiles",
-        )
         assert response.status_code == 200
-        assert len(response.json()) == 1
         
         response = await ac.get(
-            f"/api/profiles/{created_profile_id}",
+            f"/v1/books/{created_book_id}",
         )
         assert response.status_code == 200
-        assert response.json()["id"] == created_profile_id
-        assert response.json()["name"] == test_name
+        assert response.json()["id"] == created_book_id
 
 
-async def test_client_rollbacks(client: AsyncClient):
+async def test_get_book_not_found_returns_404(client: AsyncClient):
     async with client as ac:
-        response = await ac.get(
-            "/api/profiles",
-        )
-        assert len(response.json()) == 0
+        non_existing_id = 999999  
+        resp = await ac.get(f"/v1/books/{non_existing_id}")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+
+# async def test_client_rollbacks(client: AsyncClient):
+#     async with client as ac:
+#         response = await ac.get(
+#             "/api/profiles",
+#         )
+#         assert len(response.json()) == 0
