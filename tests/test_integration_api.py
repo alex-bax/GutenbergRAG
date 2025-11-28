@@ -1,6 +1,6 @@
 from typing import AsyncGenerator
 from uuid import UUID, uuid4
-
+from settings import Settings, get_settings
 import pytest
 from fastapi import status
 from httpx import AsyncClient, ASGITransport
@@ -58,10 +58,6 @@ async def connection(anyio_backend) -> AsyncGenerator[AsyncConnection, None]:
 async def transaction(
     connection: AsyncConnection,
 ) -> AsyncGenerator[AsyncTransaction, None]:
-    # async with connection.begin() as transaction:
-    #     yield transaction
-
-    # await transaction.rollback()
     trans = await connection.begin()
     try:
         yield trans
@@ -87,19 +83,13 @@ async def session(
         await async_session.close()  # only close the session
     # await transaction.rollback()
 
-        
-# Tests showing rollbacks between functions when using SQLAlchemy's session
-# async def test_create_profile(session: AsyncSession):
-#     existing_profiles = (await session.execute(select(Profile))).scalars().all()
-#     assert len(existing_profiles) == 0
+@pytest.fixture()
+def test_settings() -> Settings:
+    sett = get_settings()
+    sett.is_test = True
+    sett.COLLECTION_NAME = "test_gutenberg"   # explicit if needed
+    return sett
 
-#     test_name = "test"
-#     session.add(Profile(name=test_name))
-#     await session.commit()
-
-#     existing_profiles = (await session.execute(select(Profile))).scalars().all()
-#     assert len(existing_profiles) == 1
-#     assert existing_profiles[0].name == test_name
 
 # Use this fixture to get HTTPX's client to test API.
 # All changes that occur in a test function are rolled back
@@ -153,6 +143,14 @@ async def test_get_book_not_found_returns_404(client: AsyncClient):
         resp = await ac.get(f"/v1/books/{non_existing_id}")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
+
+async def test_upload_to_index(client: AsyncClient):
+    async with client as ac:
+        body = [42]
+        resp = await ac.post("/v1/index", json=body)
+        assert resp.status_code == 200
+
+        # data = resp.json()["data"]  
 
 
 # async def test_client_rollbacks(client: AsyncClient):

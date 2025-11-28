@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import PrivateAttr
+from pydantic import PrivateAttr, Field
 from typing import Literal
 from db.vector_store_abstract import AsyncVectorStore
 
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     QDRANT_SEARCH_KEY: str
 
     VECTOR_STORE_TO_USE: Literal["Qdrant", "AzureAiSearch"] = "Qdrant"
-    INDEX_NAME: str = "gutenberg"
+    COLLECTION_NAME: str = Field(default="gutenberg", description="Name of the vector store collection") 
     EMBED_MODEL_DEPLOYMENT:str
     AZ_OPENAI_MODEL_DEPLOYMENT:str
     AZ_OPENAI_API_VER: str
@@ -39,7 +39,9 @@ class Settings(BaseSettings):
     DB_PORT:int
 
     EMBEDDING_DIM:EmbeddingDimension = EmbeddingDimension.SMALL
-   
+    
+    is_test:bool = False
+
    # Not to be validated as model fields
     _llm_client: AzureOpenAI | None = PrivateAttr(default=None)
     _async_emb_client: AsyncAzureOpenAI | None = PrivateAttr(default=None)
@@ -63,8 +65,11 @@ class Settings(BaseSettings):
         from db.qdrant_vector_store import QdrantVectorStore
         
         if self._vector_store is None:
+            if self.is_test:
+                self.COLLECTION_NAME = "test_gutenberg"
+
             if self.VECTOR_STORE_TO_USE == "Qdrant":
-                qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.INDEX_NAME)
+                qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.COLLECTION_NAME)
                 self._vector_store = qdrant_v_store
             elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":
                 az_vec_store = AzSearchVectorStore(settings=self)
@@ -72,7 +77,7 @@ class Settings(BaseSettings):
             else:
                 raise ValueError("No valid Vector store specified - Check settings!")
         
-            await self._vector_store.create_missing_collection(self.INDEX_NAME)
+            await self._vector_store.create_missing_collection(self.COLLECTION_NAME)
             async with get_db() as db_sess:
                 # Populate the both vector store and postgresql db with the small default book list
                 await upload_missing_book_ids(book_ids=DEF_BOOK_GB_IDS_SMALL, db_sess=db_sess, sett=self)
@@ -122,11 +127,11 @@ class Settings(BaseSettings):
 
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
-def get_settings() -> Settings:
-    return Settings()       # type:ignore
+def get_settings(is_test:bool=False) -> Settings:
+    return Settings(is_test=is_test)       # type:ignore
 
 
 
 if __name__ == "__main__":
     s = get_settings()
-    print(s.AZURE_SEARCH_ENDPOINT, s.INDEX_NAME)
+    print(s.AZURE_SEARCH_ENDPOINT, s.COLLECTION_NAME)

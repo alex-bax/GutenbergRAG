@@ -95,14 +95,14 @@ async def get_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     return ApiResponse(data=[b.to_book_meta_response() for b in books])
 
 
-@prefix_router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
-    try:
-        await delete_book_db(book_id, db)
-    except BookNotFoundException:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'{exc}')
+# @prefix_router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def remove_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
+#     try:
+#         await delete_book_db(book_id, db)
+#     except BookNotFoundException:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
+#     except Exception as exc:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'{exc}')
 
 
 # TODO: test this - how is the result paginated
@@ -135,18 +135,11 @@ async def upload_book_to_index(gutenberg_ids:Annotated[set[int], Body(descriptio
                       settings:Annotated[Settings, Depends(get_settings)]
                     ):
     info = ""
-    # book_added = None
-    # create_missing_search_index(search_index_client=settings.get_index_client())
-    
     books_uploaded, info = await upload_missing_book_ids(book_ids=gutenberg_ids, sett=settings, db_sess=db_sess)
     resp_book_uploaded = []
 
-    # if len(books_uploaded) > 0:
-        # for b in books_uploaded:
-        #     await insert_book_db(book=gbbookmeta_to_db_obj(b), db_sess=db_sess)
-        # resp_book_uploaded = books_uploaded
     if len(books_uploaded) == 0:
-        info += f"\nBook ids:{gutenberg_ids} already in index {settings.INDEX_NAME}"
+        info += f"\nBook ids:{gutenberg_ids} already in index {settings.COLLECTION_NAME}"
 
         # books_from_db = await select_books_db_by_id(book_ids=None, db_sess=db_sess, gb_ids=gutenberg_ids)
         # resp_book_uploaded = books_from_db

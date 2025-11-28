@@ -40,7 +40,7 @@ async def main_moby() -> None:
     ### Ingestion
     sett = get_settings()
     
-    INDEX = sett.INDEX_NAME
+    INDEX = sett.COLLECTION_NAME
 
     query = "Who's Ishmael?"
 

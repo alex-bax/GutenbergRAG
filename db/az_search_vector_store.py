@@ -26,7 +26,7 @@ class AzSearchVectorStore(AsyncVectorStore):
     async def model_post_init(self, __context):
         # Run after Pydantic validates input and creates the object
         self._search_client = SearchClient(endpoint=self.settings.AZURE_SEARCH_ENDPOINT,
-                                        index_name=self.settings.INDEX_NAME,
+                                        index_name=self.settings.COLLECTION_NAME,
                                         credential=AzureKeyCredential(self.settings.AZURE_SEARCH_KEY)
                                     )
 
