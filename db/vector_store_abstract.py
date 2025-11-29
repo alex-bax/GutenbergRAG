@@ -21,7 +21,7 @@ class AsyncVectorStore(BaseModel, ABC):
 
     @abstractmethod
     async def get_missing_ids_in_store(self, *, book_ids:set[int]) -> set[int]:
-        """Return a list of book_ids NOT present from given list"""
+        """Return a set of book_ids NOT present from given param"""
         ...
 
 
@@ -39,6 +39,8 @@ class AsyncVectorStore(BaseModel, ABC):
     
     @abstractmethod
     async def get_paginated_chunks_by_book_ids(self, *, book_ids:set[int]) -> SearchPage:
+        """Return one SearchPage with chunks matching the book_ids given.
+        """
         ...
     
     @abstractmethod
@@ -51,8 +53,11 @@ class AsyncVectorStore(BaseModel, ABC):
 
 
     @abstractmethod
-    async def paginated_search_by_text(self, *, text_query:str, limit:int, skip:int, cont_token:str|None=None) -> SearchPage:
-        """Return a list of chunks matching with the text_query argument"""
+    async def paginated_search_by_text(self, *, text_query:str, limit:int, skip:int, continuation_token:str|None=None) -> SearchPage:
+        """Return a list of chunks matching with the text_query argument
+            If using Azure AI Search a continuation_token can be given,
+            with Qdrant adjust the skip and top parameters 
+        """
         ...
 
 
@@ -63,6 +68,7 @@ class AsyncVectorStore(BaseModel, ABC):
     @abstractmethod
     async def delete_collection(self, *, collection_name:str) -> None:
         ...
+
 
 
     # @abstractmethod

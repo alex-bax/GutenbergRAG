@@ -4,7 +4,7 @@ from db.vector_store_abstract import AsyncVectorStore
 from ingestion.book_loader import upload_missing_book_ids
 from models.api_response_model import GBBookMeta
 from settings import Settings
-from models.vector_db_model import SearchChunk, SearchPage
+from models.vector_db_model import SearchChunk, SearchPage, AzureAiSearchPage
 from azure.search.documents.aio import SearchClient, AsyncSearchItemPaged
 from azure.core.async_paging import AsyncPageIterator
 from azure.search.documents.indexes.aio import SearchIndexClient
@@ -49,7 +49,7 @@ class AzSearchVectorStore(AsyncVectorStore):
         
 
     async def _items_to_search_page(self, *, items:AsyncSearchItemPaged[dict[Any, Any]], 
-                                    skip:int, limit:int, total_count:int|None=None) -> SearchPage:
+                                    total_count:int|None=None) -> SearchPage:
         chunks = []
 
         async for r in items:
@@ -58,7 +58,7 @@ class AzSearchVectorStore(AsyncVectorStore):
                 self._dict_to_search_page(payload)
             )
         total_count_ = total_count if total_count is not None else len(chunks) 
-        return SearchPage(chunks=chunks, skip_n=skip, top=limit, total_count=total_count_)        
+        return AzureAiSearchPage(chunks=chunks, total_count=total_count_, continuation_token=None)        
 
 
     async def upsert_chunks(self, chunks: list[UploadChunk]) -> None:
@@ -71,6 +71,8 @@ class AzSearchVectorStore(AsyncVectorStore):
     async def _scroll_chunks_by_filter(
                 self,*,
                 filter_expr:str, 
+                limit:int, 
+                search_text:str="*",
                 continuation_token: str | None = None,
             ) -> tuple[list[SearchChunk], str | None, int]:
         """
@@ -80,7 +82,7 @@ class AzSearchVectorStore(AsyncVectorStore):
 
         # search returns AsyncSearchItemPaged[Dict]
         results = await self._search_client.search(
-                                                search_text="*",
+                                                search_text=search_text,
                                                 filter=filter_expr,
                                                 query_type="simple",
                                                 include_total_count=True,
@@ -105,14 +107,6 @@ class AzSearchVectorStore(AsyncVectorStore):
             next_token = page_iter.continuation_token   
             break  # only one page per call
 
-        # page = SearchPage(
-        #     chunks=chunks,
-        #     # skip_n/top not applicable for token-based paging, but used as best as possible
-        #     skip_n=0,
-        #     top=len(chunks),
-        #     total_count=total_count,
-        # )
-
         return chunks, next_token, total_count
 
 
@@ -128,7 +122,7 @@ class AzSearchVectorStore(AsyncVectorStore):
                                         top=1000
                                     )
         
-        sp = await self._items_to_search_page(items=resp, skip=0, limit=1)
+        sp = await self._items_to_search_page(items=resp)
         return sp
 
 
@@ -144,38 +138,36 @@ class AzSearchVectorStore(AsyncVectorStore):
         return await resp.get_count()
 
 
-    async def get_missing_ids_in_store(self, book_ids: set[int]) -> set[int]:
-        search_page_matches = await self.get_paginated_chunks_by_book_ids(book_ids=book_ids)
-        existing_ids = {sp.book_id for sp in search_page_matches.chunks if sp.book_id}
-        
-        missing_book_ids = set(book_ids) - set(existing_ids)
+    async def get_missing_ids_in_store(self, book_ids: set[int], cont_token:str|None, limit:int) -> set[int]:
+        all_chunks = []
+        all_pages_count = 0
+        all_book_ids = set()
+
+        while True:
+            az_sp = await self.get_paginated_chunks_by_book_ids(book_ids=book_ids,cont_token=cont_token,limit=limit)
+            all_chunks.extend(az_sp.chunks)
+            all_pages_count += az_sp.total_count if az_sp.total_count else 0
+
+            all_book_ids.add( {sp.book_id for sp in az_sp.chunks if sp.book_id})
+            if az_sp.continuation_token is None:
+                break  # no more pages
+
+        missing_book_ids = set(book_ids) - set(all_book_ids)
         return missing_book_ids  
 
         
-    async def get_paginated_chunks_by_book_ids(self, *, book_ids:set[int]) -> SearchPage:
+    async def get_paginated_chunks_by_book_ids(self, *, book_ids:set[int], cont_token:str|None, limit:int) -> AzureAiSearchPage:
         filter_expr = " or ".join([f"book_id eq {b_id}" for b_id in book_ids])
-        # resp = await self._search_client.search(                
-        #             query_type="simple",
-        #             search_text="*",
-        #             filter=filter_expr,
-        #             # facets=["book_name", "book_id"],        # search using facets
-        #             facets=ALL_COLLECTION_FIELDS,
-        #             include_total_count=True,
-        #             top=1000
-        #         )
-        all_chunks: list[SearchChunk] = []
-        while True:
-            chunks, token, total_count = await self._scroll_chunks_by_filter(
-                                                    filter_expr=filter_expr,
-                                                    continuation_token=token,
-                                                )
-            all_chunks.extend(chunks)
-
-            if token is None:
-                break  # no more pages
         
+        chunks, new_cont_token, total_count = await self._scroll_chunks_by_filter(
+                                                                filter_expr=filter_expr,
+                                                                continuation_token=cont_token,
+                                                                limit=limit
+                                                            )
         # found_book_ids = [SearchChunk(**f["value"]) for f in resp.get_facets()["book_id"]] # type:ignore
-        sp = SearchPage(chunks=all_chunks, skip_n=0, top=l, total_count=total_count)
+        sp = AzureAiSearchPage(chunks=chunks, 
+                               total_count=total_count, 
+                               continuation_token=new_cont_token)
         return sp
 
 
@@ -215,25 +207,19 @@ class AzSearchVectorStore(AsyncVectorStore):
 
     async def paginated_search_by_text(self, *, 
                                 text_query:str,
-                                skip: int,  
-                                limit: int = 50,
-                            ) -> SearchPage:
-        
-        results = await self._search_client.search(
-                            search_text=text_query,   # "" gets all
-                            include_total_count=True,
-                            select=None,        # As None returns all fields
-                            skip=skip,
-                            top=limit
-                        )
-        total = await results.get_count()
-        
-        search_items = [SearchChunk(*page, search_score=page["@search.score"]) async for page in results]
+                                limit:int,
+                                cont_token:str|None
+                            ) -> AzureAiSearchPage:
+        chunks, next_token, total_count = await self._scroll_chunks_by_filter(search_text=text_query, 
+                                                                            filter_expr="",     # no filter applied
+                                                                            continuation_token=cont_token,
+                                                                            limit=limit)
 
-        return SearchPage(chunks=search_items, 
-                          skip_n=skip, top=limit, 
-                          total_count=total)
-    
+        return AzureAiSearchPage(chunks=chunks, 
+                                total_count=total_count, 
+                               continuation_token=next_token)
+        
+       
     
     async def create_missing_collection(self, collection_name:str) -> None:
         """Collection in Azure lingo for Search Index"""

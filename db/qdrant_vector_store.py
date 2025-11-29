@@ -1,12 +1,10 @@
 import asyncio
 from typing import Any, Callable
 from pydantic import PrivateAttr
-from db.database import get_async_db_sess
+
 from settings import Settings 
-from constants import EmbeddingDimension 
-from ingestion.book_loader import upload_missing_book_ids
-from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk, SearchPage
-from models.api_response_model import GBBookMeta
+from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk, SearchPage, QDrantSearchPage
+
 from .vector_store_abstract import AsyncVectorStore
 
 from qdrant_client import AsyncQdrantClient
@@ -54,7 +52,7 @@ class QdrantVectorStore(AsyncVectorStore):
                         )
             
             
-    def _points_to_search_page(self, *, points:list[Record], skip:int, limit:int, total_count:int) -> SearchPage:
+    def _points_to_search_page(self, *, points:list[Record], skip:int, limit:int, total_count:int) -> QDrantSearchPage:
         chunks: list[SearchChunk] = []
         
         for p in points:
@@ -64,7 +62,7 @@ class QdrantVectorStore(AsyncVectorStore):
                 **payload)
             chunks.append(chunk)
 
-        return SearchPage(
+        return QDrantSearchPage(
             chunks=chunks,
             skip_n=skip,
             top=limit,
@@ -81,7 +79,7 @@ class QdrantVectorStore(AsyncVectorStore):
         return count_res.count
     
 
-    async def get_paginated_chunks_by_book_ids(self, book_ids:set[int]) -> SearchPage:
+    async def get_paginated_chunks_by_book_ids(self, book_ids:set[int]) -> QDrantSearchPage:
         filter = Filter(      
             must=[FieldCondition(key="book_id", match=MatchAny(any=list(book_ids))) ]
         )
@@ -105,13 +103,13 @@ class QdrantVectorStore(AsyncVectorStore):
             if offset is None:
                 break
 
-        return SearchPage(chunks=list(point_matches), skip_n=0, top=1, total_count=len(point_matches))
+        return QDrantSearchPage(chunks=list(point_matches), skip_n=0, top=1, total_count=len(point_matches))
         
 
     async def get_chunk_count_in_book(self, *, book_id: int) -> int:
         filter = Filter(
-            must=[FieldCondition(key="book_id", match=MatchValue(value=book_id))]
-        )
+                must=[FieldCondition(key="book_id", match=MatchValue(value=book_id))]
+            )
 
         count = await self._result_count_text_query(filter=filter)
         return count
