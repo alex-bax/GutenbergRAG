@@ -6,7 +6,7 @@ from db.vector_store_abstract import AsyncVectorStore
 
 from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
-from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, DEF_BOOK_GB_IDS_SMALL, EmbeddingDimension
+from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, DEF_BOOK_GB_IDS_SMALL, ID_FRANKENSTEIN, EmbeddingDimension
 
 # TODO: merge constants into settings
 # TODO: separate this into multiple Settings, e.g. for DB, vector store, etc.
@@ -81,11 +81,12 @@ class Settings(BaseSettings):
         
             await self._vector_store.create_missing_collection(self.active_collection)
             
-            book_ids = DEF_BOOK_GB_IDS_SMALL if not self.is_test else set([84])        # 84 is Frankenstein
+            book_ids = DEF_BOOK_GB_IDS_SMALL if not self.is_test else set([ID_FRANKENSTEIN])        # 84 is Frankenstein
 
-            async with get_db() as db_sess:
-                # Populate the both vector store and postgresql db with the small default book list
-                await upload_missing_book_ids(book_ids=book_ids, db_sess=db_sess, sett=self)
+            if not self.is_test:
+                async with get_db() as db_sess:
+                    # Populate the both vector store and postgresql db with the small default book list
+                    await upload_missing_book_ids(book_ids=book_ids, db_sess=db_sess, sett=self)
 
         return self._vector_store
 
@@ -132,8 +133,8 @@ class Settings(BaseSettings):
 
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
-def get_settings(is_test:bool=False) -> Settings:
-    return Settings(is_test=is_test)       # type:ignore
+def get_settings() -> Settings:
+    return Settings(is_test=False)       # type:ignore
 
 
 

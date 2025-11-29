@@ -3,6 +3,8 @@ from models.vector_db_model import SearchPage, SearchChunk
 from pydantic import BaseModel, Field, field_validator
 
 
+### TODO: make response model for Search and one DB
+
 class QueryResponse(BaseModel):
     answer:str
     citations:list[SearchChunk] #?

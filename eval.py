@@ -50,7 +50,7 @@ async def build_eval_dataset():
                                                 tok_limiter=tok_lim
                                                 ) 
         
-        chunks_found = await vector_store.search_by_embedding(embed_query_vector=emb_vecs[0], filter=None)
+        chunks_found = await vector_store.search_chunks_by_embedding(embed_query_vector=emb_vecs[0], filter=None)
 
         ans, relevant_chunks = answer_with_context(query=str(row.question), 
                                                     llm_client=sett.get_llm_client(), 

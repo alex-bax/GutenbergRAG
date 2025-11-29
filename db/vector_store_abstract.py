@@ -20,8 +20,8 @@ class AsyncVectorStore(BaseModel, ABC):
 
 
     @abstractmethod
-    async def get_missing_ids(self, *, book_ids:set[int]) -> set[int]:
-        """Return a list of book_ids from NOT present from given list"""
+    async def get_missing_ids_in_store(self, *, book_ids:set[int]) -> set[int]:
+        """Return a list of book_ids NOT present from given list"""
         ...
 
 
@@ -32,13 +32,26 @@ class AsyncVectorStore(BaseModel, ABC):
                                     k: int = 10,
                                 ) -> list[SearchChunk]:
         """
-        Returns a list of chunks (each hit is a dict with at least: id, score, payload).
+        Returns a list of chunks.
         """
         ...
 
     
     @abstractmethod
-    async def paginated_search_by_text(self, *, text_query:str, limit:int, skip:int) -> SearchPage:
+    async def get_paginated_chunks_by_book_ids(self, *, book_ids:set[int]) -> SearchPage:
+        ...
+    
+    @abstractmethod
+    async def get_chunk_by_nr(self, *, chunk_nr:int, book_id:int) -> SearchPage:
+        ...
+    
+    @abstractmethod
+    async def get_chunk_count_in_book(self, *, book_id:int) -> int:
+        ...
+
+
+    @abstractmethod
+    async def paginated_search_by_text(self, *, text_query:str, limit:int, skip:int, cont_token:str|None=None) -> SearchPage:
         """Return a list of chunks matching with the text_query argument"""
         ...
 

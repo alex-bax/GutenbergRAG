@@ -1,19 +1,18 @@
 from typing import AsyncGenerator
 from uuid import UUID, uuid4
+from constants import ID_DR_JEK_MR_H, ID_FRANKENSTEIN, VER_PREFIX
 from settings import Settings, get_settings
 import pytest
 from fastapi import status
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction, create_async_engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
 from db.database import Base
 from db.vector_store_abstract import AsyncVectorStore
-from models.api_response_model import ApiResponse
+from models.api_response_model import ApiResponse, BookMetaDataResponse
 # Importing fastapi.Depends that is used to retrieve SQLAlchemy's session
 from db.database import get_async_db_sess
 from db.operations import insert_book_db, DBBookMetaData
-# Importing main FastAPI instance
 from main import app
 
 ### The test DB is rolled back after each test fixture
@@ -22,16 +21,6 @@ from main import app
 pytestmark = pytest.mark.anyio
 
 engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-
-
-# SQLAlchemy model for demo purposes
-class Profile(DeclarativeBase):
-    id: Mapped[UUID] = mapped_column(
-        primary_key=True,
-        default=uuid4,
-        server_default=func.gen_random_uuid(),
-    )
-    name: Mapped[str]
 
 @pytest.fixture(scope="session", autouse=True)
 async def create_test_schema():
@@ -74,10 +63,9 @@ async def transaction(
 async def session(
     connection: AsyncConnection, transaction: AsyncTransaction) -> AsyncGenerator[AsyncSession, None]:
     async_session = AsyncSession(
-        bind=connection,
-        join_transaction_mode="create_savepoint",
-    )
-    
+                        bind=connection,
+                        join_transaction_mode="create_savepoint",
+                    )
     try:
         yield async_session
     finally:
@@ -109,6 +97,7 @@ async def client(
     
     app.dependency_overrides[get_async_db_sess] = override_get_async_session
     app.dependency_overrides[get_settings] = lambda: test_settings
+    
     test_client = AsyncClient(transport=ASGITransport(app=app), base_url="http://")
 
     try:
@@ -129,39 +118,72 @@ async def test_post_then_get_book(client: AsyncClient, session: AsyncSession):
     async with client as ac:
         created_book_id = book_id #response.json()["id"]
         
-        response = await ac.get(
-            f"/v1/books/{created_book_id}",
+        resp = await ac.get(
+            f"/{VER_PREFIX}/books/{created_book_id}",
         )
-        # TODO convert to ApiResponse type 
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()["data"]  
-        assert len(data) == 1
-        book = data[0]
-        assert book["id"] == created_book_id
+        resp_model = ApiResponse(**resp.json())
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert isinstance(resp_model.data, list) and len(resp_model.data) == 1
+        assert isinstance(resp_model.data[0], BookMetaDataResponse) 
+        assert resp_model.data[0].id == created_book_id
 
 
 async def test_get_book_not_found_returns_404(client: AsyncClient):
     async with client as ac:
         non_existing_id = 999999  
-        resp = await ac.get(f"/v1/books/{non_existing_id}")
+        resp = await ac.get(f"/VER_PREFIX/books/{non_existing_id}")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
-# NB Only testing code correctness, not the quality of the reponses, check eval instead
+# NB Only testing code correctness, not the LLM quality of the reponses, check eval instead
 
-async def test_upload_to_index(client: AsyncClient):
+async def test_upload_1_to_index(client: AsyncClient):
     async with client as ac:
-        body = [42]
-        resp = await ac.post("/v1/index", json=body)
+        body = [ID_DR_JEK_MR_H]
+        resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
         assert resp.status_code == status.HTTP_201_CREATED
 
-        data = ApiResponse(**resp.json())
-        print(data)
+        resp_model = ApiResponse(**resp.json())
+        print(resp_model)
 
 
+async def test_upload_same_twice_to_index_returns_422(client: AsyncClient):
+    async with client as ac:
+        body = [ID_DR_JEK_MR_H, ID_DR_JEK_MR_H]
+        resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
+        assert resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
-# async def test_client_rollbacks(client: AsyncClient):
-#     async with client as ac:
-#         response = await ac.get(
-#             "/api/profiles",
-#         )
-#         assert len(response.json()) == 0
+
+async def test_upload_delete_book_index(client:AsyncClient, test_settings: Settings):
+    async with client as ac:
+        body = [ID_FRANKENSTEIN]
+        vec_store = await test_settings.get_vector_store()
+        chunk_count_before = await vec_store.get_chunk_count_in_book(book_id=body[0])
+
+        resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
+        assert resp.status_code == status.HTTP_201_CREATED
+
+        resp_model = ApiResponse(**resp.json())
+        # assert resp_model.data.
+
+        resp_del = await ac.delete(f"/{VER_PREFIX}/index/{body[0]}")
+        assert resp_del.status_code == status.HTTP_204_NO_CONTENT
+
+        # Check that it's not there
+        # TODO! get count directly from vector store!
+        chunk_count_after = await vec_store.get_chunk_count_in_book(book_id=body[0])
+        assert chunk_count_before == chunk_count_after
+
+
+async def test_delete_book_index_not_found_returns_422(client:AsyncClient, test_settings: Settings):
+    ...
+
+
+async def get_gutenberg_book_by_id(client: AsyncClient):
+    ...
+
+
+# TODO - if possible try make parameterised for multiple top N chunks
+async def answer_query_top_1_match(client: AsyncClient):
+    ...
+

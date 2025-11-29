@@ -10,10 +10,9 @@ from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.operations import select_all_books_db, select_books_db_by_id, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
-from models.schema import DBBookMetaData
-# import models.schema as schema
+
 from models.api_response_model import ApiResponse, BookMetaDataResponse, GBBookMeta, QueryResponse
-# from models.vector_db import SearchPage
+# from models.api_response_model import SearchPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
 
@@ -88,7 +87,7 @@ async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_
     book_meta_objs = [db_obj_to_response(b) for b in db_books]
     return ApiResponse(data=book_meta_objs)
 
-# TODO: could be slow if DB is huge, use pagination instead
+# TODO: update this
 @prefix_router.get("/books/", response_model=ApiResponse)
 async def get_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     books = await select_all_books_db(db)
@@ -113,8 +112,22 @@ async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_se
     return books
 
 
+@prefix_router.get("/index/{gutenberg_id}", response_model=ApiResponse, status_code=status.HTTP_204_NO_CONTENT)
+async def get_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
+                                settings:Annotated[Settings, Depends(get_settings)],
+                                db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
+    vec_store = await settings.get_vector_store()
+    book_search_page = await vec_store.get_paginated_chunks_by_book_ids(book_ids=set([gutenberg_id]))
+
+    return ApiResponse(data=book_search_page)
+
+
+@prefix_router.get("/index/{gutenberg_id}", response_model=ApiResponse, status_code=status.HTTP_204_NO_CONTENT)
+async def get_chunk_count_in_book(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)]):
+    ...
+
 @prefix_router.get("/index/documents/", response_model=ApiResponse, status_code=status.HTTP_200_OK)
-async def search_docs_by_texts(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=0)], 
+async def search_index_by_texts(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=0)], 
                                 take:Annotated[int, Query(description="Number of search result documents to take after skipping", le=100, ge=1)],
                                 settings:Annotated[Settings, Depends(get_settings)],
                                 # select:Annotated[list[Literal["book_name", "book_id", "content", "chunk_id", "content_vector", "*"]], Query(description="Fields to select from the vector index")] = ["*"],
@@ -130,36 +143,36 @@ async def search_docs_by_texts(skip:Annotated[int, Query(description="Number of 
 #TODO: post book to vector db by using Gutendex ID
 # no body needed, only gutenberg id since we're uploading from Gutenberg 
 @prefix_router.post("/index", status_code=status.HTTP_201_CREATED, response_model=ApiResponse)
-async def upload_book_to_index(gutenberg_ids:Annotated[set[int], Body(description="Gutenberg IDs to upload", min_length=1, max_length=50)],
-                      db_sess:Annotated[AsyncSession, Depends(get_async_db_sess)],
-                      settings:Annotated[Settings, Depends(get_settings)]
-                    ):
+async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(description="Unique Gutenberg IDs to upload", min_length=1, max_length=30)],
+                                db_sess:Annotated[AsyncSession, Depends(get_async_db_sess)],
+                                settings:Annotated[Settings, Depends(get_settings)]):
     info = ""
-    books_uploaded, info = await upload_missing_book_ids(book_ids=gutenberg_ids, sett=settings, db_sess=db_sess)
+
+    if len(gutenberg_ids) != len(set(gutenberg_ids)):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="gutenberg_ids must be unique",
+        )
+
+    books_uploaded, info = await upload_missing_book_ids(book_ids=set(gutenberg_ids), sett=settings, db_sess=db_sess)
     resp_book_uploaded = []
 
     if len(books_uploaded) == 0:
         info += f"\nBook ids:{gutenberg_ids} already in index {settings.active_collection}"
 
-        # books_from_db = await select_books_db_by_id(book_ids=None, db_sess=db_sess, gb_ids=gutenberg_ids)
-        # resp_book_uploaded = books_from_db
-        
-        # if len(books_from_db) == 0:
-        #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with ids {gutenberg_ids} not found in DB, but was in index")
-
     book_meta_objs = [db_obj_to_response(b) for b in resp_book_uploaded]
     return ApiResponse(data=book_meta_objs, message=info) 
 
 
-#TODO: look up specific chunk by uuid?
+
+#TODO: add delete and lookup by specific chunk by uuid?
 @prefix_router.delete("/index/{gutenberg_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
-                                # search_client:Annotated[SearchClient, Depends(get_vector_store)],
                                 settings:Annotated[Settings, Depends(get_settings)],
                                 db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     
     vec_store = await settings.get_vector_store()
-    missing_ids = await vec_store.get_missing_ids(book_ids=set([gutenberg_id]))      # get book id if missing
+    missing_ids = await vec_store.get_missing_ids_in_store(book_ids=set([gutenberg_id]))      # get book id if missing
     
     err_mess_not_found = ""
     if not missing_ids or len(missing_ids) > 0:

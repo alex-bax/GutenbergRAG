@@ -23,7 +23,7 @@ async def search_chunks(*, query: str,
                                                 req_limiter=req_lim
                                                 )
 
-    results:list[SearchChunk] = await search_client.search_by_embedding(
+    results:list[SearchChunk] = await search_client.search_chunks_by_embedding(
                                                 embed_query_vector=query_emb_vec[0],
                                                 filter=None,
                                                 k=k

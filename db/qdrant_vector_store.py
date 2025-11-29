@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Sequence
+from typing import Any, Callable
 from pydantic import PrivateAttr
 from db.database import get_async_db_sess
 from settings import Settings 
@@ -19,7 +19,8 @@ from qdrant_client.models import (
     MatchText,
     Distance,
     VectorParams,
-    PointIdsList
+    PointIdsList,
+    Record
 )
 
 INDEXED_PAYL_FIELDS = { "chunk_nr":"integer", 
@@ -40,22 +41,9 @@ class QdrantVectorStore(AsyncVectorStore):
                                         api_key=self.settings.QDRANT_SEARCH_KEY,
                                         verify=False)       # TODO: remove before prod and make proper fix
 
-    def _build_filter(self, filters: dict[str, Any]) -> Filter:
+    def _build_must_filter(self, filters: dict[str, Any]) -> Filter:
         return Filter(must=[FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filters.items()])
         
-    # async def initialize(self):
-    #     await self.create_missing_collection(self.collection_name)
-    #     await self.populate_small_collection()
-
-
-    async def result_count_text_query(self, *, text_match_filter:Filter) -> int:
-        count_res = await self._client.count(
-                                collection_name=self.collection_name,
-                                count_filter=text_match_filter,
-                                exact=True,
-                            )
-        return count_res.count
-    
 
     async def _create_indexes(self) -> None:
         for field_name,field_type in INDEXED_PAYL_FIELDS.items():
@@ -64,7 +52,105 @@ class QdrantVectorStore(AsyncVectorStore):
                             field_name=field_name,
                             field_schema=field_type,
                         )
+            
+            
+    def _points_to_search_page(self, *, points:list[Record], skip:int, limit:int, total_count:int) -> SearchPage:
+        chunks: list[SearchChunk] = []
         
+        for p in points:
+            payload = p.payload or {}
+            chunk = SearchChunk(
+                search_score=-1.0,              # scroll in Qdrant doesn't give a text relevance score - using dummy value instead
+                **payload)
+            chunks.append(chunk)
+
+        return SearchPage(
+            chunks=chunks,
+            skip_n=skip,
+            top=limit,
+            total_count=total_count,
+        )
+        
+
+    async def _result_count_text_query(self, *, filter:Filter) -> int:
+        count_res = await self._client.count(
+                                collection_name=self.collection_name,
+                                count_filter=filter,
+                                exact=True,
+                            )
+        return count_res.count
+    
+
+    async def get_paginated_chunks_by_book_ids(self, book_ids:set[int]) -> SearchPage:
+        filter = Filter(      
+            must=[FieldCondition(key="book_id", match=MatchAny(any=list(book_ids))) ]
+        )
+
+        point_matches = set()
+        offset = None
+
+        while True:
+            points, offset = await self._client.scroll(
+                                                    collection_name=self.collection_name,
+                                                    scroll_filter=filter,
+                                                    limit=500,
+                                                    offset=offset,
+                                                    with_payload=True,
+                                                    with_vectors=False,
+                                                )
+            for p in points:
+                if p.payload: 
+                    point_matches.add(SearchChunk(**p.payload))
+
+            if offset is None:
+                break
+
+        return SearchPage(chunks=list(point_matches), skip_n=0, top=1, total_count=len(point_matches))
+        
+
+    async def get_chunk_count_in_book(self, *, book_id: int) -> int:
+        filter = Filter(
+            must=[FieldCondition(key="book_id", match=MatchValue(value=book_id))]
+        )
+
+        count = await self._result_count_text_query(filter=filter)
+        return count
+
+
+    async def get_chunk_by_nr(self, *, chunk_nr:int, book_id:int) -> SearchPage:
+        qdrant_filter = Filter(
+            must=[
+                FieldCondition(key="book_id", match=MatchValue(value=book_id)),
+                FieldCondition(key="chunk_nr",match=MatchValue(value=chunk_nr))
+            ]
+        )
+
+        # Scroll allows retrieving all matching points with payload only
+        points, next_offset = await self._client.scroll(
+                                                collection_name=self.collection_name,
+                                                scroll_filter=qdrant_filter,
+                                                with_payload=True,
+                                                with_vectors=False,
+                                                limit=100,   # adjust as needed
+                                            )
+        assert len(points) == 1
+
+        sp = self._points_to_search_page(points=points, 
+                                         skip=0, limit=1, 
+                                         total_count=1)
+
+        return sp
+
+    
+    async def get_missing_ids_in_store(self, book_ids:set[int]) -> set[int]:
+        search_page_matches = await self.get_paginated_chunks_by_book_ids(book_ids)
+        existing_ids = {sp.book_id for sp in search_page_matches.chunks if sp.book_id}
+        if not book_ids:
+            return set()
+
+        return book_ids - existing_ids
+
+
 
     # TODO: add feature to filter payload fields 
     async def paginated_search_by_text(self, *, 
@@ -91,7 +177,7 @@ class QdrantVectorStore(AsyncVectorStore):
         collected_points = []
         next_offset = None
 
-        total_count = await self.result_count_text_query(text_match_filter=text_filter)
+        total_count = await self._result_count_text_query(filter=text_filter)
 
         while len(collected_points) < skip + limit:
             points, next_offset = await self._client.scroll(
@@ -112,21 +198,11 @@ class QdrantVectorStore(AsyncVectorStore):
 
         page_points = collected_points[skip:skip + limit]               # apply skip/top on the collected points
 
-        chunks: list[SearchChunk] = []
-        for p in page_points:
-            payload = p.payload or {}
-            chunk = SearchChunk(
-                search_score=-1.0,              # scroll in Qdrant doesn't give a text relevance score - using dummy value instead
-                **payload)
-            chunks.append(chunk)
+        sp = self._points_to_search_page(points=page_points, 
+                                    skip=skip, limit=limit, 
+                                    total_count=total_count)
 
-        # 6) Return your SearchPage
-        return SearchPage(
-            chunks=chunks,
-            skip_n=skip,
-            top=limit,
-            total_count=total_count,
-        )
+        return sp
 
 
     async def create_missing_collection(self, collection_name: str) -> None:
@@ -173,7 +249,7 @@ class QdrantVectorStore(AsyncVectorStore):
         )
 
     async def search_by_embedding(self, embed_query_vector: EmbeddingVec, filter:dict[str,Any]|None, k: int=10) -> list[SearchChunk]:
-        qdrant_filter = self._build_filter(filter) if filter else None
+        qdrant_filter = self._build_must_filter(filter) if filter else None
 
         results = await self._client.query_points(
                                         collection_name=self.collection_name,
@@ -193,54 +269,13 @@ class QdrantVectorStore(AsyncVectorStore):
 
     async def delete_books(self, book_ids: set[int]) -> None:
         await self._client.delete(
-                collection_name=self.collection_name,
-                points_selector=PointIdsList(points=list(book_ids)),
-
-                filter=Filter(      # payload field book_id IN book_ids
-                        must=[
-                            FieldCondition(
-                                key="book_id",
-                                match=MatchAny(any=list(book_ids)),
-                            ),
-                        ],
-                    )
-                )
-        
-
-    async def get_missing_ids(self, book_ids:set[int]) -> set[int]:
-        if not book_ids:
-            return set()
-
-        q_filter = Filter(      # filter: return only points where book_id is in our provided list
-            must=[
-                FieldCondition(
-                    key="book_id",
-                    match=MatchAny(any=list(book_ids)),
-                )
-            ]
-        )
-
-        existing_ids: set[int] = set()
-        offset = None
-
-        # Scroll `book_id` to reduce payload load
-        while True:
-            points, offset = await self._client.scroll(
-                                                    collection_name=self.collection_name,
-                                                    scroll_filter=q_filter,
-                                                    limit=500,
-                                                    offset=offset,
-                                                    with_payload=True,
-                                                    with_vectors=False,
-                                                )
-            for p in points:
-                if p.payload: 
-                    existing_ids.add(p.payload["book_id"])      
-
-            if offset is None:
-                break
-
-        return book_ids - existing_ids
+                                collection_name=self.collection_name,
+                                points_selector=PointIdsList(points=list(book_ids)),
+                                # book_id IN book_ids
+                                filter=Filter(must=[FieldCondition(key="book_id", match=MatchAny(any=list(book_ids))) ])
+                            )
+                        
+            
 
 
 
@@ -249,26 +284,26 @@ async def try_local() :
     client = QdrantVectorStore(settings=get_settings(), 
                                collection_name="gutenberg")
     # await client.initialize()
+      
+    # docs = [
+    #         UploadChunk(
+    #             uuid_str="550e8400-e29b-41d4-a716-446655440000",
+    #             book_id = 42,
+    #             book_name = "Moby",
+    #             chunk_nr = 0,
+    #             content = "Test test",
+    #             content_vector=EmbeddingVec(vector=[0.0]*EmbeddingDimension.SMALL, 
+    #                                         dim=EmbeddingDimension.SMALL),
+    #         ),
+    #     ]
 
-    docs = [
-            UploadChunk(
-                uuid_str="550e8400-e29b-41d4-a716-446655440000",
-                book_id = 42,
-                book_name = "Moby",
-                chunk_nr = 0,
-                content = "Test test",
-                content_vector=EmbeddingVec(vector=[0.0]*EmbeddingDimension.SMALL, 
-                                            dim=EmbeddingDimension.SMALL),
-            ),
-        ]
-
-    results = await client._client.query_points(
-                                        collection_name=client.collection_name,
-                                        query=[0.0]*EmbeddingDimension.SMALL,
-                                        limit=5,
-                                        # query_filter=qdrant_filter,
-                                    )
-    return results
+    # results = await client._client.query_points(
+    #                                     collection_name=client.collection_name,
+    #                                     query=[0.0]*EmbeddingDimension.SMALL,
+    #                                     limit=5,
+    #                                     # query_filter=qdrant_filter,
+    #                                 )
+    # return results
 
 
 
