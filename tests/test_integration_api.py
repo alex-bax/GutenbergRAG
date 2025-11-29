@@ -1,5 +1,4 @@
 from typing import AsyncGenerator
-from uuid import UUID, uuid4
 from constants import ID_DR_JEK_MR_H, ID_FRANKENSTEIN, VER_PREFIX
 from settings import Settings, get_settings
 import pytest
@@ -8,8 +7,7 @@ from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction, create_async_engine
 
 from db.database import Base
-from db.vector_store_abstract import AsyncVectorStore
-from models.api_response_model import ApiResponse, BookMetaDataResponse
+from models.api_response_model import BookMetaApiResponse, BookMetaDataResponse, GBMetaApiResponse, SearchApiResponse
 # Importing fastapi.Depends that is used to retrieve SQLAlchemy's session
 from db.database import get_async_db_sess
 from db.operations import insert_book_db, DBBookMetaData
@@ -121,7 +119,7 @@ async def test_post_then_get_book(client: AsyncClient, session: AsyncSession):
         resp = await ac.get(
             f"/{VER_PREFIX}/books/{created_book_id}",
         )
-        resp_model = ApiResponse(**resp.json())
+        resp_model = BookMetaApiResponse(**resp.json())
 
         assert resp.status_code == status.HTTP_200_OK
         assert isinstance(resp_model.data, list) and len(resp_model.data) == 1
@@ -143,9 +141,11 @@ async def test_upload_1_to_index(client: AsyncClient):
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
         assert resp.status_code == status.HTTP_201_CREATED
 
-        resp_model = ApiResponse(**resp.json())
+        resp_model = SearchApiResponse(**resp.json())
         print(resp_model)
 
+# TODO: test this from api
+# search_books
 
 async def test_upload_same_twice_to_index_returns_422(client: AsyncClient):
     async with client as ac:
@@ -163,7 +163,7 @@ async def test_upload_delete_book_index(client:AsyncClient, test_settings: Setti
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
         assert resp.status_code == status.HTTP_201_CREATED
 
-        resp_model = ApiResponse(**resp.json())
+        resp_model = GBMetaApiResponse(**resp.json())
         # assert resp_model.data.
 
         resp_del = await ac.delete(f"/{VER_PREFIX}/index/{body[0]}")
@@ -175,15 +175,15 @@ async def test_upload_delete_book_index(client:AsyncClient, test_settings: Setti
         assert chunk_count_before == chunk_count_after
 
 
-async def test_delete_book_index_not_found_returns_422(client:AsyncClient, test_settings: Settings):
-    ...
+# async def test_delete_book_index_not_found_returns_422(client:AsyncClient, test_settings: Settings):
+#     ...
 
 
-async def get_gutenberg_book_by_id(client: AsyncClient):
-    ...
+# async def get_gutenberg_book_by_id(client: AsyncClient):
+#     ...
 
 
-# TODO - if possible try make parameterised for multiple top N chunks
-async def answer_query_top_1_match(client: AsyncClient):
-    ...
+# # TODO - if possible try make parameterised for multiple top N chunks
+# async def answer_query_top_1_match(client: AsyncClient):
+#     ...
 

@@ -78,13 +78,13 @@ class QdrantVectorStore(AsyncVectorStore):
                             )
         return count_res.count
     
-
+    #TODO: make another version that just returns 1 SP!! 
     async def get_paginated_chunks_by_book_ids(self, book_ids:set[int]) -> QDrantSearchPage:
         filter = Filter(      
             must=[FieldCondition(key="book_id", match=MatchAny(any=list(book_ids))) ]
         )
 
-        point_matches = set()
+        point_matches = []
         offset = None
 
         while True:
@@ -98,12 +98,12 @@ class QdrantVectorStore(AsyncVectorStore):
                                                 )
             for p in points:
                 if p.payload: 
-                    point_matches.add(SearchChunk(**p.payload))
+                    point_matches.append(SearchChunk(search_score=-1.0, **p.payload))     
 
             if offset is None:
                 break
 
-        return QDrantSearchPage(chunks=list(point_matches), skip_n=0, top=1, total_count=len(point_matches))
+        return QDrantSearchPage(chunks=point_matches, skip_n=0, top=1, total_count=len(point_matches))
         
 
     async def get_chunk_count_in_book(self, *, book_id: int) -> int:
@@ -267,11 +267,17 @@ class QdrantVectorStore(AsyncVectorStore):
 
     async def delete_books(self, book_ids: set[int]) -> None:
         await self._client.delete(
-                                collection_name=self.collection_name,
-                                points_selector=PointIdsList(points=list(book_ids)),
-                                # book_id IN book_ids
-                                filter=Filter(must=[FieldCondition(key="book_id", match=MatchAny(any=list(book_ids))) ])
-                            )
+            collection_name=self.collection_name,
+            points_selector=Filter(
+                must=[
+                    FieldCondition(
+                        key="book_id",
+                        match=MatchAny(any=list(book_ids)),
+                    )
+                ]
+            ),
+        )  
+            
                         
             
 

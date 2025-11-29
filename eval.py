@@ -34,7 +34,8 @@ async def build_eval_dataset():
     ## Ingestion
     test_book_ids = set(list(df["gb_id"].unique().tolist())[:2])
 
-    gb_books = await upload_missing_book_ids(book_ids=test_book_ids, sett=sett)
+    # TODO: update to use test sess, i.e. not prod DB and vector store
+    gb_books = await upload_missing_book_ids(book_ids=test_book_ids, sett=sett, db_sess=)
 
     ## Retrival
     req_lim, tok_lim = sett.get_limiters()
@@ -50,7 +51,7 @@ async def build_eval_dataset():
                                                 tok_limiter=tok_lim
                                                 ) 
         
-        chunks_found = await vector_store.search_chunks_by_embedding(embed_query_vector=emb_vecs[0], filter=None)
+        chunks_found = await vector_store.search_by_embedding(embed_query_vector=emb_vecs[0], filter=None)
 
         ans, relevant_chunks = answer_with_context(query=str(row.question), 
                                                     llm_client=sett.get_llm_client(), 
