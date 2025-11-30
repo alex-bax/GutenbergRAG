@@ -133,8 +133,8 @@ class Settings(BaseSettings):
 
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
-def get_settings() -> Settings:
-    return Settings(is_test=False)       # type:ignore
+def get_settings(is_test=False) -> Settings:
+    return Settings(is_test)       # type:ignore
 
 
 
