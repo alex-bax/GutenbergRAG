@@ -46,6 +46,10 @@ stages:
         AZ_OPENAI_GPT_KEY: $(AZ_OPENAI_GPT_KEY)
         QDRANT_SEARCH_ENDPOINT: $(QDRANT_SEARCH_ENDPOINT)
         QDRANT_SEARCH_KEY: $(QDRANT_SEARCH_KEY)
+        DB_NAME: $(DB_NAME)
+        DB_PW: $(DB_PW)
+        DB_USER: $(DB_USER)
+        DB_PORT: $(DB_PORT)
 
     - task: PublishTestResults@2
       displayName: Publish pytest results
