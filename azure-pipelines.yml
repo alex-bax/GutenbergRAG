@@ -35,9 +35,7 @@ stages:
         pip install -r requirements.txt
       displayName: Install Python dependencies
 
-    - script: |
-        pytest tests/test_integration_api.py \
-          --junitxml=test-results.xml
+    - script: pytest tests/test_integration_api.py --junitxml=test-results.xml
       displayName: Run pytest
       env:
         AZURE_SEARCH_ENDPOINT: $(AZURE_SEARCH_ENDPOINT)
