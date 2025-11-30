@@ -109,6 +109,7 @@ async def client(
 
 
 def test_settings_load_env_sanity_check(test_settings: Settings):
+    # Sanity check that agent in pipeline has access to env vars
     assert test_settings.AZURE_SEARCH_ENDPOINT is not None
     assert test_settings.QDRANT_SEARCH_ENDPOINT is not None
     
