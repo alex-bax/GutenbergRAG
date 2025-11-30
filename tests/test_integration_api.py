@@ -108,6 +108,11 @@ async def client(
         del app.dependency_overrides[get_async_db_sess]
 
 
+def test_settings_load_env_sanity_check(test_settings: Settings):
+    assert test_settings.AZURE_SEARCH_ENDPOINT is not None
+    assert test_settings.QDRANT_SEARCH_ENDPOINT is not None
+    
+
 # Tests showing rollbacks between functions when using API client
 async def test_get_book(client: AsyncClient, session: AsyncSession):
     book_id = await insert_book_db(book=DBBookMetaData(gb_id=42, title="string", lang="en", authors="string"), 
@@ -139,16 +144,17 @@ async def test_upload_1_to_index(client: AsyncClient, test_settings: Settings):
     async with client as ac:
         body = [ID_DR_JEK_MR_H]
         vec_store = await test_settings.get_vector_store()
-        chunk_count_before = await vec_store.get_chunk_count_in_book(book_id=body[0])
+        missing_ids_before = await vec_store.get_missing_ids_in_store(book_ids=set(body))
+        assert body[0] in missing_ids_before
 
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
         assert resp.status_code == status.HTTP_201_CREATED
 
-        resp_model = SearchApiResponse(**resp.json())
+        resp_model = GBMetaApiResponse(**resp.json())
         print(resp_model)
 
-        chunk_count_after = await vec_store.get_chunk_count_in_book(book_id=body[0])
-        assert chunk_count_before+1 == chunk_count_after
+        missing_ids_after = await vec_store.get_missing_ids_in_store(book_ids=set(body))
+        assert body[0] not in missing_ids_after 
 
 # TODO: test this from api
 # search_books

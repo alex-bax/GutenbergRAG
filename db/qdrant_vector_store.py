@@ -279,8 +279,6 @@ class QdrantVectorStore(AsyncVectorStore):
         )  
             
                         
-            
-
 
 
 async def try_local() :
