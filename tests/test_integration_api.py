@@ -7,7 +7,7 @@ from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction, create_async_engine
 
 from db.database import Base
-from models.api_response_model import BookMetaApiResponse, BookMetaDataResponse, GBMetaApiResponse, SearchApiResponse
+from models.api_response_model import BookMetaApiResponse, BookMetaDataResponse, GBMetaApiResponse, QueryResponseApiResponse, SearchApiResponse
 # Importing fastapi.Depends that is used to retrieve SQLAlchemy's session
 from db.database import get_async_db_sess
 from db.operations import insert_book_db, DBBookMetaData
@@ -109,7 +109,7 @@ async def client(
 
 
 # Tests showing rollbacks between functions when using API client
-async def test_post_then_get_book(client: AsyncClient, session: AsyncSession):
+async def test_get_book(client: AsyncClient, session: AsyncSession):
     book_id = await insert_book_db(book=DBBookMetaData(gb_id=42, title="string", lang="en", authors="string"), 
                                    db_sess=session)
     
@@ -135,14 +135,20 @@ async def test_get_book_not_found_returns_404(client: AsyncClient):
 
 # NB Only testing code correctness, not the LLM quality of the reponses, check eval instead
 
-async def test_upload_1_to_index(client: AsyncClient):
+async def test_upload_1_to_index(client: AsyncClient, test_settings: Settings):
     async with client as ac:
         body = [ID_DR_JEK_MR_H]
+        vec_store = await test_settings.get_vector_store()
+        chunk_count_before = await vec_store.get_chunk_count_in_book(book_id=body[0])
+
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
         assert resp.status_code == status.HTTP_201_CREATED
 
         resp_model = SearchApiResponse(**resp.json())
         print(resp_model)
+
+        chunk_count_after = await vec_store.get_chunk_count_in_book(book_id=body[0])
+        assert chunk_count_before+1 == chunk_count_after
 
 # TODO: test this from api
 # search_books
@@ -162,28 +168,56 @@ async def test_upload_delete_book_index(client:AsyncClient, test_settings: Setti
 
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
         assert resp.status_code == status.HTTP_201_CREATED
-
         resp_model = GBMetaApiResponse(**resp.json())
-        # assert resp_model.data.
+        assert resp_model.data[0].id == body[0]
 
         resp_del = await ac.delete(f"/{VER_PREFIX}/index/{body[0]}")
         assert resp_del.status_code == status.HTTP_204_NO_CONTENT
 
         # Check that it's not there
-        # TODO! get count directly from vector store!
         chunk_count_after = await vec_store.get_chunk_count_in_book(book_id=body[0])
         assert chunk_count_before == chunk_count_after
 
 
-# async def test_delete_book_index_not_found_returns_422(client:AsyncClient, test_settings: Settings):
-#     ...
+async def test_delete_book_index_not_found_returns_422(client:AsyncClient):
+    async with client as ac:
+        resp = await ac.delete(f"/{VER_PREFIX}/index/{ID_FRANKENSTEIN}")
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
-# async def get_gutenberg_book_by_id(client: AsyncClient):
-#     ...
+# TODO - if possible try make parameterised for multiple top N chunks
+async def test_answer_query_top_1_match(client: AsyncClient):
+    async with client as ac:
+        body = [ID_DR_JEK_MR_H]
+        resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
+        assert resp.status_code == status.HTTP_201_CREATED
+        gb_meta_model = GBMetaApiResponse(**resp.json())
+        assert gb_meta_model.data[0].id == body[0]
+
+        params = {
+            "query": "What is the book Dr Jekyll and Mr Hyde about?",
+            "top_n_matches": 5,
+        }
+
+        resp = await ac.get(f"/{VER_PREFIX}/query/", params=params)
+        assert resp.status_code == status.HTTP_202_ACCEPTED
+
+        query_resp = QueryResponseApiResponse(**resp.json())
+        
+        assert isinstance(query_resp.data.answer, str)
+        assert query_resp.data.answer.strip() != ""
+        assert len(query_resp.data.citations) > 0
 
 
-# # TODO - if possible try make parameterised for multiple top N chunks
-# async def answer_query_top_1_match(client: AsyncClient):
-#     ...
+async def test_show_gutenberg_book(client: AsyncClient):
+    async with client as ac:
+        test_id = ID_FRANKENSTEIN
+        resp = await ac.get(f"/{VER_PREFIX}/books/gutenberg/{test_id}")
+        assert resp.status_code == status.HTTP_200_OK
 
+        gb_meta_model = GBMetaApiResponse(**resp.json())
+        assert len(gb_meta_model.data) > 0
+        assert gb_meta_model.data[0].id == test_id
+        assert gb_meta_model.data[0].title.lower() == "Frankenstein; Or, The Modern Prometheus".lower()
+
+        
