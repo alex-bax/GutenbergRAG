@@ -71,10 +71,12 @@ async def session(
     # await transaction.rollback()
 
 @pytest.fixture()
+# def test_settings() -> Settings:
+#     sett = get_settings()
+#     sett.is_test = True
+#     return sett
 def test_settings() -> Settings:
-    sett = get_settings()
-    sett.is_test = True
-    return sett
+    return get_settings(is_test=True)
 
 # Use this fixture to get HTTPX's client to test API.
 # All changes that occur in a test function are rolled back
