@@ -101,11 +101,21 @@ async def client(
     try:
         yield test_client
     finally:
-        v_store = await test_settings.get_vector_store()
-        await v_store.delete_collection(collection_name=test_settings.active_collection)
+        try:
+            v_store = await test_settings.get_vector_store()
+            await v_store.delete_collection(collection_name=test_settings.active_collection)
+        except Exception as e:
+            # Don't fail tests on cleanup
+            print(f"[TEST CLEANUP WARNING] Could not delete collection: {e}")
 
         await test_client.aclose()
         del app.dependency_overrides[get_async_db_sess]
+        del app.dependency_overrides[get_settings]
+        # v_store = await test_settings.get_vector_store()
+        # await v_store.delete_collection(collection_name=test_settings.active_collection)
+
+        # await test_client.aclose()
+        # del app.dependency_overrides[get_async_db_sess]
 
 
 def test_settings_load_env_sanity_check(test_settings: Settings):
@@ -136,7 +146,7 @@ async def test_get_book(client: AsyncClient, session: AsyncSession):
 async def test_get_book_not_found_returns_404(client: AsyncClient):
     async with client as ac:
         non_existing_id = 999999  
-        resp = await ac.get(f"/VER_PREFIX/books/{non_existing_id}")
+        resp = await ac.get(f"/{VER_PREFIX}/books/{non_existing_id}")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 # NB Only testing code correctness, not the LLM quality of the reponses, check eval instead
