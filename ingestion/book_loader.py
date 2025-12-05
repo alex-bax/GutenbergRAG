@@ -47,7 +47,7 @@ def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
     loc_gb_json = loc_gb_meta.model_dump_json(indent=4)
 
     assert len(loc_gb_json) > 0
-    local_gb_p.mkdir(parents=True, exist_ok=True)
+    local_gb_p.parent.mkdir(parents=True, exist_ok=True)
 
     with open(local_gb_p.with_suffix(".json"), "w", encoding='utf-8') as f:
         f.write(loc_gb_json)
