@@ -96,8 +96,10 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
                 mess += f"Loaded content from cache for book id {b_id}"
                 print(mess)
             except Exception as exc:
+                import os
                 print(f"***else: tried {str(eval_books_p)}  {exc}")
-                print("DIR::", list(eval_books_p.parent.glob("*")))
+                print("DIR::", list(Path("eval_data", "books").parent.glob("*")))
+                print(f"DIRRR: {os.getcwd()}")
 
         print(f"*** Uploading Book id {b_id} to index")
         await upload_to_index_async(vec_store=vector_store, 
