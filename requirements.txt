@@ -25,6 +25,7 @@ fastapi-pagination
 sqlmodel
 sqlalchemy
 asyncpg
+scipy
 
 # psycopg2
 psycopg2-binary

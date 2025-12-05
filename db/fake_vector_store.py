@@ -6,7 +6,7 @@ from pydantic_settings import SettingsConfigDict  # if you want config
 from .vector_store_abstract import AsyncVectorStore
 from models.api_response_model import SearchChunk, SearchPage
 from models.vector_db_model import UploadChunk, EmbeddingVec
-# from sklearn.metrics.pairwise import cosine_similarity
+
 from scipy.spatial import distance
 import numpy as np
 
