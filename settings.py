@@ -2,6 +2,7 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import PrivateAttr, Field
 from typing import Literal
+from db.fake_vector_store import InMemoryVectorStore
 from db.vector_store_abstract import AsyncVectorStore
 
 from openai import AsyncAzureOpenAI, AzureOpenAI
@@ -38,9 +39,10 @@ class Settings(BaseSettings):
     DB_USER:str
     DB_PORT:int
 
-    EMBEDDING_DIM:EmbeddingDimension = EmbeddingDimension.SMALL
+    EMBEDDING_DIM:Literal[EmbeddingDimension.SMALL] = EmbeddingDimension.SMALL
     
     is_test:bool = False
+    RUN_QDRANT_TESTS:bool
 
    # Not to be validated as model fields
     _llm_client: AzureOpenAI | None = PrivateAttr(default=None)
@@ -69,8 +71,11 @@ class Settings(BaseSettings):
         from db.az_search_vector_store import AzSearchVectorStore
         from db.qdrant_vector_store import QdrantVectorStore
         
+
         if self._vector_store is None:
-            if self.VECTOR_STORE_TO_USE == "Qdrant":
+            if self.is_test:
+                self._vector_store = InMemoryVectorStore()
+            elif self.VECTOR_STORE_TO_USE == "Qdrant":
                 qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.active_collection)
                 self._vector_store = qdrant_v_store
             elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":
@@ -79,7 +84,7 @@ class Settings(BaseSettings):
             else:
                 raise ValueError("No valid Vector store specified - Check settings!")
         
-            await self._vector_store.create_missing_collection(self.active_collection)
+            await self._vector_store.create_missing_collection(collection_name=self.active_collection)
             
             book_ids = DEF_BOOK_GB_IDS_SMALL if not self.is_test else set([ID_FRANKENSTEIN])        # 84 is Frankenstein
 
@@ -87,6 +92,7 @@ class Settings(BaseSettings):
                 async with get_db() as db_sess:
                     # Populate the both vector store and postgresql db with the small default book list
                     await upload_missing_book_ids(book_ids=book_ids, db_sess=db_sess, sett=self)
+                
 
         return self._vector_store
 
@@ -134,7 +140,7 @@ class Settings(BaseSettings):
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
 def get_settings(is_test=False) -> Settings:
-    return Settings(is_test)       # type:ignore
+    return Settings(is_test=is_test)       # type:ignore
 
 
 

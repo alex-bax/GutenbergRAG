@@ -15,6 +15,7 @@ class EmbeddingVec(BaseModel):
         
         return self
 
+
 class UploadChunk(BaseModel):
     uuid_str:str = Field(...)
     book_name:str = Field(..., description="Name/title of the book")
@@ -47,7 +48,6 @@ class QDrantSearchPage(SearchPage):
     top: int = Field(..., title="Top", description="Starting from the 'skip', take the next 'top' no. items from the search result")
 class AzureAiSearchPage(SearchPage):
     continuation_token:str|None = Field(..., description="Determines where to continue search from last time.")
-
 
 
 

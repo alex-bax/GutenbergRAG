@@ -154,6 +154,7 @@ async def test_get_book_not_found_returns_404(client: AsyncClient):
 # NB Only testing code correctness, not the LLM quality of the reponses, check eval instead
 
 async def test_upload_1_to_index(client: AsyncClient, test_settings: Settings):
+    print(test_settings.is_test)
     async with client as ac:
         body = [ID_DR_JEK_MR_H]
         vec_store = await test_settings.get_vector_store()
