@@ -32,9 +32,8 @@ def _load_gb_meta_local(*, path: Path) -> GBBookMetaLocal:
     return GBBookMetaLocal.model_validate_json(json_text)
 
 
-def get_path_by_book_id_from_cache(*, book_id:int, folder_p:Path) -> list[Path]:
-    lst = [file for file in folder_p.iterdir() if file.is_file() and str(book_id) == file.stem.split('_')[-1]]
-    assert len(lst) < 2
+def get_cached_paths_by_book_id(*, book_id:int, folder_p:Path) -> list[Path]:
+    lst = [file for file in folder_p.iterdir() if file.is_file() and str(book_id) == file.stem.split('_')[-1] and file.suffix == '.json']
     return lst
 
 
@@ -75,7 +74,7 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
 
 
     for b_id in missing_book_ids:
-        eval_book_paths = get_path_by_book_id_from_cache(book_id=b_id, folder_p=cache_p)
+        eval_book_paths = get_cached_paths_by_book_id(book_id=b_id, folder_p=cache_p)
         
         if len(eval_book_paths) == 0:
             book_content, gb_meta = await fetch_book_content_from_id(gutenberg_id=b_id)
