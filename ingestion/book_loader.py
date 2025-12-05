@@ -33,8 +33,9 @@ def _load_gb_meta_local(*, path: Path) -> GBBookMetaLocal:
 
 
 def get_path_by_book_id_from_cache(*, book_id:int, folder_p:Path = Path("eval_data", "gb_meta_objs_by_id")) -> list[Path]:
-    if not folder_p.is_dir():
-        raise FileNotFoundError(f"Folder not found: {str(folder_p)}")
+    folder_p.mkdir(parents=True, exist_ok=True)
+    # if not folder_p.is_dir():
+    #     raise FileNotFoundError(f"Folder not found: {str(folder_p)}")
 
     lst = [file for file in folder_p.iterdir() if file.is_file() and str(book_id) == file.stem.split('_')[-1]]
     assert len(lst) < 2
