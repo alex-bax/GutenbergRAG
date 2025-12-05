@@ -97,7 +97,7 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
                 print(mess)
             except Exception as exc:
                 print(f"***else: tried {str(eval_books_p)}  {exc}")
-                print("DIR::", list(eval_books_p.glob("*")))
+                print("DIR::", list(eval_books_p.parent.glob("*")))
 
         print(f"*** Uploading Book id {b_id} to index")
         await upload_to_index_async(vec_store=vector_store, 
