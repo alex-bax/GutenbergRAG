@@ -59,7 +59,7 @@ def qdrant_settings() -> Settings:
 
 
 @pytest.fixture(scope="function")
-async def store(qdrant_settings: Settings) -> AsyncGenerator[AsyncVectorStore]:
+async def store(qdrant_settings: Settings) -> AsyncGenerator[AsyncVectorStore, None]:
     """
     Session-scoped store that creates the test collection once and
     deletes it after all tests.
