@@ -50,6 +50,7 @@ stages:
         DB_PW: $(DB_PW)
         DB_USER: $(DB_USER)
         DB_PORT: $(DB_PORT)
+        RUN_QDRANT_TESTS: $(RUN_QDRANT_TESTS)
 
     - task: PublishTestResults@2
       displayName: Publish pytest results
