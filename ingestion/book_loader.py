@@ -58,6 +58,7 @@ def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
         with open(local_book_content_p, "w", encoding="utf-8") as f:
             f.write(book_content)
     except Exception as ex:
+        print("!! DEBUG TRACE !!")
         print(ex)
         print([p.name for p in list(local_book_content_p.parent.glob("*"))])
 
@@ -87,10 +88,15 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
             print(f"GB meta obj not found in cache - fetching from Gutendex. Wrote content + gb obj to: {local_gb_p.name}")
         else:
             gb_meta = _load_gb_meta_local(path=eval_book_paths[0])
-            with open(Path("eval_data", "books", eval_book_paths[0].with_suffix(".txt").name), "r", encoding="utf-8") as f:
-                book_content = f.read()
-            mess += f"Loaded content from cache for book id {b_id}"
-            print(mess)
+            eval_books_p = Path("eval_data", "books", eval_book_paths[0].with_suffix(".txt").name)
+            eval_books_p.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                with open(eval_books_p, "r", encoding="utf-8") as f:
+                    book_content = f.read()
+                mess += f"Loaded content from cache for book id {b_id}"
+                print(mess)
+            except Exception as exc:
+                print(f"***else: tried {str(eval_books_p)}  {exc}")
 
         print(f"*** Uploading Book id {b_id} to index")
         await upload_to_index_async(vec_store=vector_store, 
