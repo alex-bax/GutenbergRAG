@@ -32,37 +32,32 @@ def _load_gb_meta_local(*, path: Path) -> GBBookMetaLocal:
     return GBBookMetaLocal.model_validate_json(json_text)
 
 
-def get_path_by_book_id_from_cache(*, book_id:int, folder_p:Path = Path("eval_data", "gb_meta_objs_by_id")) -> list[Path]:
-    folder_p.mkdir(parents=True, exist_ok=True)
-    # if not folder_p.is_dir():
-    #     raise FileNotFoundError(f"Folder not found: {str(folder_p)}")
-
+def get_path_by_book_id_from_cache(*, book_id:int, folder_p:Path) -> list[Path]:
     lst = [file for file in folder_p.iterdir() if file.is_file() and str(book_id) == file.stem.split('_')[-1]]
     assert len(lst) < 2
     return lst
 
 
 def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
-    local_gb_p = Path("eval_data", "books", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
-    local_gb_p.parent.mkdir(parents=True, exist_ok=True)
+    loc_gb_p = Path("eval_data", "books", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
+    loc_gb_p.parent.mkdir(parents=True, exist_ok=True)
     
-    loc_gb_meta = GBBookMetaLocal(**gb_meta.model_dump(), path_to_content=local_gb_p)
-    loc_gb_json = loc_gb_meta.model_dump_json(indent=4)
+    loc_gb_meta = GBBookMetaLocal(**gb_meta.model_dump(), path_to_content=loc_gb_p)
+    gb_json = loc_gb_meta.model_dump_json(indent=4)
 
-    assert len(loc_gb_json) > 0
+    assert len(gb_json) > 0
 
     try:
-        with open(local_gb_p, "w", encoding="utf-8") as f:
+        with open(loc_gb_p, "w", encoding="utf-8") as f:
             f.write(book_content)
         
-        local_book_content_p = Path("eval_data", "gb_meta_objs_by_id") / local_gb_p.name
-        with open(local_gb_p.with_suffix(".json"), "w", encoding='utf-8') as f:
-            f.write(loc_gb_json)
+        with open(loc_gb_p.with_suffix(".json"), "w", encoding='utf-8') as f:
+            f.write(gb_json)
     except Exception as ex:
-        print(f"!! DEBUG TRACE local_book_content_p:{str(local_book_content_p)}")
-        print(f"local_gb_p {local_gb_p}")
+        print(f"!! DEBUG TRACE local_book_content_p:{str(loc_gb_p)}")
+        print(f"local_gb_p {loc_gb_p}")
 
-    return local_gb_p
+    return loc_gb_p
 
 
 #TODO - make unit test
@@ -75,9 +70,12 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
     req_lim, token_lim = sett.get_limiters()
     print(f'--- Missing book ids: {missing_book_ids}')
     mess = ""
+    cache_p = Path("eval_data", "books")
+    cache_p.mkdir(parents=True, exist_ok=True)
+
 
     for b_id in missing_book_ids:
-        eval_book_paths = get_path_by_book_id_from_cache(book_id=b_id)
+        eval_book_paths = get_path_by_book_id_from_cache(book_id=b_id, folder_p=cache_p)
         
         if len(eval_book_paths) == 0:
             book_content, gb_meta = await fetch_book_content_from_id(gutenberg_id=b_id)
@@ -88,16 +86,16 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
             print(f"GB meta obj not found in cache - fetching from Gutendex. Wrote content + gb obj to: {local_gb_p.name}")
         else:
             gb_meta = _load_gb_meta_local(path=eval_book_paths[0])
-            eval_books_p = Path("eval_data", "books", eval_book_paths[0].with_suffix(".txt").name)
-            eval_books_p.parent.mkdir(parents=True, exist_ok=True)
+            gb_meta.path_to_content.parent.mkdir(parents=True, exist_ok=True)
+            
             try:
-                with open(eval_books_p, "r", encoding="utf-8") as f:
+                with open(gb_meta.path_to_content, "r", encoding="utf-8") as f:
                     book_content = f.read()
                 mess += f"Loaded content from cache for book id {b_id}"
                 print(mess)
             except Exception as exc:
                 import os
-                print(f"***else: tried {str(eval_books_p)}  {exc}")
+                print(f"***else: tried {str(gb_meta.path_to_content)}  {exc}")
                 print("DIR::", list(Path("eval_data", "books").parent.glob("*")))
                 print(f"DIRRR: {os.getcwd()}")
 
