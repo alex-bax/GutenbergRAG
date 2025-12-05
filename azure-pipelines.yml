@@ -50,13 +50,22 @@ stages:
         DB_PW: $(DB_PW)
         DB_USER: $(DB_USER)
         DB_PORT: $(DB_PORT)
-        RUN_QDRANT_TESTS: $(RUN_QDRANT_TESTS)
+        # Run Qdrant integration tests (only if enabled)
+    - script: |
+        RUN_QDRANT_TESTS=1 pytest tests/test_qdrant_unit_test.py --junitxml=qdrant-test-results.xml
+      displayName: Run Qdrant integration tests
+      env:
+        QDRANT_SEARCH_ENDPOINT: $(QDRANT_SEARCH_ENDPOINT)
+        QDRANT_SEARCH_KEY: $(QDRANT_SEARCH_KEY)
+        RUN_QDRANT_TESTS: $(RUN_QDRANT_TESTS)      
+
 
     - task: PublishTestResults@2
-      displayName: Publish pytest results
       inputs:
         testResultsFormat: 'JUnit'
-        testResultsFiles: 'test-results.xml'
+        testResultsFiles: |
+          test-results.xml
+          qdrant-test-results.xml
         failTaskOnFailedTests: true
 
 
