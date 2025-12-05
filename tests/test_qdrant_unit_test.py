@@ -80,7 +80,7 @@ async def store(qdrant_settings: Settings) -> AsyncGenerator[AsyncVectorStore]:
 
 # --- Tests
 
-@qdrant_required
+
 async def test_create_missing_collection_idempotent(store: AsyncVectorStore, qdrant_settings:Settings):
     """
     Calling create_missing_collection twice should not error.
@@ -90,7 +90,7 @@ async def test_create_missing_collection_idempotent(store: AsyncVectorStore, qdr
     # If we get here without exceptions, it's fine.
 
 
-@qdrant_required
+
 async def test_upsert_chunks_and_get_missing_ids(store: AsyncVectorStore, qdrant_settings:Settings):
     """
     After upserting chunks for some book IDs, get_missing_ids_in_store
@@ -107,7 +107,7 @@ async def test_upsert_chunks_and_get_missing_ids(store: AsyncVectorStore, qdrant
     assert missing == {3333}
 
 
-@qdrant_required
+
 async def test_delete_books_removes_from_store(store: AsyncVectorStore, qdrant_settings:Settings):
     """
     After deleting a book ID, it should appear as missing.
@@ -129,7 +129,7 @@ async def test_delete_books_removes_from_store(store: AsyncVectorStore, qdrant_s
     assert missing_after == {4444}
 
 
-@qdrant_required
+
 async def test_delete_collection_clears_all_data(store: AsyncVectorStore, qdrant_settings:Settings):
     """
     Deleting the collection should make all ids appear missing afterwards.
