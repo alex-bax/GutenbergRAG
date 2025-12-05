@@ -11,13 +11,13 @@ from models.vector_db_model import UploadChunk, EmbeddingVec
 
 # Only run these tests if explicitly enabled.
 # e.g.: RUN_QDRANT_TESTS=1 pytest tests/integration/test_qdrant_vector_store.py
-qdrant_required = pytest.mark.skipif(
-    not os.getenv("RUN_QDRANT_TESTS"),
-    reason="Set RUN_QDRANT_TESTS=1 to run Qdrant integration tests",
-)
-
 pytestmark = pytest.mark.anyio  # all tests in this module are async
 
+if not os.getenv("RUN_QDRANT_TESTS"):
+    pytest.skip(
+        "Set RUN_QDRANT_TESTS=1 to run Qdrant integration tests",
+        allow_module_level=True,
+    )
 
 # --- Helpers
 
@@ -53,13 +53,11 @@ def make_test_settings() -> Settings:
 
 # ---  Fixtures 
 
-@qdrant_required
 @pytest.fixture(scope="session")
 def qdrant_settings() -> Settings:
     return make_test_settings()
 
 
-@qdrant_required
 @pytest.fixture(scope="function")
 async def store(qdrant_settings: Settings) -> AsyncGenerator[AsyncVectorStore]:
     """
