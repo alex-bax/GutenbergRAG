@@ -43,24 +43,24 @@ def get_path_by_book_id_from_cache(*, book_id:int, folder_p:Path = Path("eval_da
 
 
 def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
-    local_gb_p = Path("eval_data", "gb_meta_objs_by_id", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
+    local_gb_p = Path("eval_data", "books", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
+    local_gb_p.parent.mkdir(parents=True, exist_ok=True)
+    
     loc_gb_meta = GBBookMetaLocal(**gb_meta.model_dump(), path_to_content=local_gb_p)
     loc_gb_json = loc_gb_meta.model_dump_json(indent=4)
 
     assert len(loc_gb_json) > 0
-    local_gb_p.parent.mkdir(parents=True, exist_ok=True)
 
     try:
+        with open(local_gb_p, "w", encoding="utf-8") as f:
+            f.write(book_content)
+        
+        local_book_content_p = Path("eval_data", "gb_meta_objs_by_id") / local_gb_p.name
         with open(local_gb_p.with_suffix(".json"), "w", encoding='utf-8') as f:
             f.write(loc_gb_json)
-        
-        local_book_content_p = Path("eval_data","books") / local_gb_p.name
-        with open(local_book_content_p, "w", encoding="utf-8") as f:
-            f.write(book_content)
     except Exception as ex:
-        print("!! DEBUG TRACE !!")
-        print(ex)
-        print([p.name for p in list(local_book_content_p.parent.glob("*"))])
+        print(f"!! DEBUG TRACE local_book_content_p:{str(local_book_content_p)}")
+        print(f"local_gb_p {local_gb_p}")
 
     return local_gb_p
 
