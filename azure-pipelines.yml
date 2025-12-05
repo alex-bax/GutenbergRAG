@@ -52,7 +52,7 @@ stages:
         DB_PORT: $(DB_PORT)
         # Run Qdrant integration tests (only if enabled)
     - script: |
-        RUN_QDRANT_TESTS=1 pytest tests/test_qdrant_unit_test.py --junitxml=qdrant-test-results.xml
+        pytest tests/test_qdrant_unit_test.py --junitxml=qdrant-test-results.xml
       displayName: Run Qdrant integration tests
       env:
         QDRANT_SEARCH_ENDPOINT: $(QDRANT_SEARCH_ENDPOINT)
