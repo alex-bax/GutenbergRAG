@@ -31,8 +31,8 @@ scipy
 psycopg2-binary
 httpx
 httpx
-
 pytest
+pytest-asyncio
 deepeval
 uvicorn[standard]
 

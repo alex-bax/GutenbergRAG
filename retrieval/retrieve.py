@@ -1,5 +1,5 @@
 from openai import AzureOpenAI, AsyncAzureOpenAI
-from settings import Settings
+from settings import Settings, get_settings
 from pyrate_limiter import Limiter
 from constants import MIN_SEARCH_SCORE
 from db.vector_store_abstract import AsyncVectorStore
@@ -78,7 +78,6 @@ def answer_with_context(*, query:str,
     return llm_answer, relev_chunk_hits
 
 
-
 async def answer_rag(*, query: str, 
                     sett:Settings,
                     top_n_matches:int,
@@ -100,3 +99,18 @@ async def answer_rag(*, query: str,
                                                       chunk_hits=chunk_hits)    
     
     return QueryResponse(answer=llm_answer, citations= relevant_chunks)
+
+
+
+async def run_gutenberg_rag(question: str, sett:Settings) -> tuple[str, list[str]]:
+    """
+    Entire RAG retrival hook
+    Returns:
+        - answer: str                   (model's final answer)
+        - contexts: list[str]           (list of retrieved passages / chunks)
+    """
+    
+    q_resp = await answer_rag(query=question, sett=sett, top_n_matches=10)
+    
+    contexts_found = [c.content for c in q_resp.citations if c.content]
+    return q_resp.answer, contexts_found
