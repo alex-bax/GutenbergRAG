@@ -1,17 +1,17 @@
 from contextlib import asynccontextmanager
 import uvicorn, requests
 from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
-from openai import AzureOpenAI, AsyncAzureOpenAI
+from openai import AsyncAzureOpenAI
 from typing import Annotated
 import psycopg2
 
 from db.database import engine, get_async_db_sess, Base
 from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.operations import select_all_books_db, select_books_db_by_id, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
+from db.operations import select_all_books_db, select_books_db_by_id, delete_book_db,  select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
 
-from models.api_response_model import ApiResponse, BookMetaDataResponse, BookMetaApiResponse, GBBookMeta, GBMetaApiResponse, QueryResponse, QueryResponseApiResponse, SearchApiResponse
+from models.api_response_model import ApiResponse, BookMetaDataResponse, BookMetaApiResponse, GBBookMeta, GBMetaApiResponse, QueryResponseApiResponse, SearchApiResponse
 # from models.api_response_model import SearchPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate

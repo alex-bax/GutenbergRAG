@@ -102,10 +102,10 @@ async def main(csv_path: Path) -> None:
      # Optional: quick sanity check to confirm DeepEval sees model
     print("Eval model:", az_model_judge.get_model_name())
 
-    answer_relevancy = AnswerRelevancyMetric(threshold=0.7, model=az_model_judge)       # generator metric
-    faithfulness = FaithfulnessMetric(threshold=0.7, model=az_model_judge)              # generator metric
-    contextual_precision = ContextualPrecisionMetric(threshold=0.7, model=az_model_judge)  # retriever metric
-    contextual_recall = ContextualRecallMetric(threshold=0.7, model=az_model_judge)        # retriever metric
+    answer_relevancy = AnswerRelevancyMetric(threshold=0.7, model=az_model_judge)           # generator metric
+    faithfulness = FaithfulnessMetric(threshold=0.7, model=az_model_judge)                  # generator metric
+    contextual_precision = ContextualPrecisionMetric(threshold=0.7, model=az_model_judge)   # retriever metric
+    contextual_recall = ContextualRecallMetric(threshold=0.7, model=az_model_judge)         # retriever metric
 
     metrics = [
         answer_relevancy,

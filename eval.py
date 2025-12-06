@@ -1,4 +1,5 @@
 from datasets import Dataset
+from typing import Any
 from tqdm import tqdm
 from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall, answer_correctness
 from ragas import evaluate
@@ -8,14 +9,16 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 import asyncio
+from db.database import get_db
 from embedding_pipeline import create_embeddings_async
 from settings import get_settings, Settings
 from retrieval.retrieve import answer_with_context
 from ingestion.book_loader import upload_missing_book_ids
+
 # TODO: calculate cost pr run in tokens
 # TODO: take all books and check if in index, if not then upload them
 
-def get_ragas_wrapped_llm_and_embeddings(sett:Settings):
+def get_ragas_wrapped_llm_and_embeddings(sett:Settings) -> tuple[Any, Any]:
     ragas_llm = llm_factory(model="gpt-5-mini", provide="openai", client=sett.get_llm_client())
     ragas_emb = embedding_factory(model="text-embedding-3-small", client=sett.get_emb_client())
 
@@ -35,7 +38,10 @@ async def build_eval_dataset():
     test_book_ids = set(list(df["gb_id"].unique().tolist())[:2])
 
     # TODO: update to use test sess, i.e. not prod DB and vector store
-    gb_books = await upload_missing_book_ids(book_ids=test_book_ids, sett=sett, db_sess=)
+    async with get_db() as db_sess:
+        gb_books = await upload_missing_book_ids(book_ids=test_book_ids, 
+                                                sett=sett, 
+                                                db_sess=db_sess)
 
     ## Retrival
     req_lim, tok_lim = sett.get_limiters()
