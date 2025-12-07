@@ -65,7 +65,7 @@ stages:
         DB_PORT: $(DB_PORT)
         RUN_QDRANT_TESTS: $(RUN_QDRANT_TESTS)      
 
-    - script: pytest tests/test_gutenberg_rag_eval.py --junitxml=deepeval-test-results.xml -vv
+    - script: pytest tests/test_llm.py --junitxml=deepeval-test-results.xml -vv
       displayName: Run DeepEval LLM tests (must pass)
       env:
         AZURE_SEARCH_ENDPOINT: $(AZURE_SEARCH_ENDPOINT)
