@@ -35,6 +35,7 @@ stages:
         pip install -r requirements.txt
       displayName: Install Python dependencies
 
+    # Integration tests
     - script: pytest tests/test_integration_api.py --junitxml=test-results.xml
       displayName: Run pytest
       env:
@@ -50,7 +51,8 @@ stages:
         DB_PW: $(DB_PW)
         DB_USER: $(DB_USER)
         DB_PORT: $(DB_PORT)
-        # Run Qdrant integration tests (only if enabled)
+        
+    # Run Qdrant integration tests (only if enabled)
     - script: |
         pytest tests/test_qdrant_unit_test.py --junitxml=qdrant-test-results.xml
       displayName: Run Qdrant integration tests
@@ -63,7 +65,23 @@ stages:
         DB_PORT: $(DB_PORT)
         RUN_QDRANT_TESTS: $(RUN_QDRANT_TESTS)      
 
+    - script: pytest tests/test_gutenberg_rag_eval.py --junitxml=deepeval-test-results.xml -vv
+      displayName: Run DeepEval LLM tests (must pass)
+      env:
+        AZURE_SEARCH_ENDPOINT: $(AZURE_SEARCH_ENDPOINT)
+        AZURE_SEARCH_KEY: $(AZURE_SEARCH_KEY)
+        AZ_OPENAI_EMBED_ENDPOINT: $(AZ_OPENAI_EMBED_ENDPOINT)
+        AZ_OPENAI_EMBED_KEY: $(AZ_OPENAI_EMBED_KEY)
+        AZ_OPENAI_GPT_ENDPOINT: $(AZ_OPENAI_GPT_ENDPOINT)
+        AZ_OPENAI_GPT_KEY: $(AZ_OPENAI_GPT_KEY)
+        QDRANT_SEARCH_ENDPOINT: $(QDRANT_SEARCH_ENDPOINT)
+        QDRANT_SEARCH_KEY: $(QDRANT_SEARCH_KEY)
+        DB_NAME: $(DB_NAME)
+        DB_PW: $(DB_PW)
+        DB_USER: $(DB_USER)
+        DB_PORT: $(DB_PORT)
 
+    # Publish test result including DeepEval
     - task: PublishTestResults@2
       inputs:
         testResultsFormat: 'JUnit'
