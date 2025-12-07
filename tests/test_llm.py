@@ -18,17 +18,6 @@ dataset.add_goldens_from_csv_file(
     input_col_name="question"
 )
 
-# Loop through goldens using pytest
-
-# @pytest.mark.parametrize("golden",dataset.goldens)
-# async def test_llm_app(golden: Golden):
-#     res, text_chunks = await run_gutenberg_rag(golden.input)
-#     test_case = LLMTestCase(input=golden.input, 
-#                             actual_output=res, 
-#                             retrieval_context=text_chunks)
-#     assert_test(test_case=test_case, metrics=[AnswerRelevancyMetric()])
-
-
 @pytest.mark.asyncio  # requires pytest-asyncio installed
 @pytest.mark.parametrize("golden", dataset.goldens)
 async def test_gutenberg_rag_answer_relevancy(golden: Golden):
