@@ -10,4 +10,7 @@ try_*.py
 
 envWebAppSettings.json
 eval_data/*
+!eval_data/gutenberg_gold.csv
+!eval_data/gutenberg_gold_small.csv
+
 *.ipynb

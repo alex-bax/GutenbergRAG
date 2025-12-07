@@ -14,6 +14,7 @@ dataset = EvaluationDataset()
 
 dataset.add_goldens_from_csv_file(
     # file_path is the absolute path to you .csv file
+    # file_path=str(Path("eval_data", "gutenberg_gold.csv")),
     file_path=str(Path("eval_data", "gutenberg_gold_small.csv")),
     input_col_name="question"
 )

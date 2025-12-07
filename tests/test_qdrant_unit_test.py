@@ -13,7 +13,7 @@ from models.vector_db_model import UploadChunk, EmbeddingVec
 # e.g.: RUN_QDRANT_TESTS=1 pytest tests/integration/test_qdrant_vector_store.py
 pytestmark = pytest.mark.anyio  # all tests in this module are async
 
-if not os.getenv("RUN_QDRANT_TESTS"):
+if not os.getenv("RUN_QDRANT_TESTS") and os.getenv("RUN_QDRANT_TESTS") == 1:
     pytest.skip(
         "Set RUN_QDRANT_TESTS=1 to run Qdrant integration tests",
         allow_module_level=True,
