@@ -85,7 +85,7 @@ class Settings(BaseSettings):
         
             await self._vector_store.create_missing_collection(collection_name=self.active_collection)
             
-            book_ids = DEF_BOOK_GB_IDS_SMALL if not self.is_test else set([ID_FRANKENSTEIN])        # 84 is Frankenstein
+            book_ids = DEF_BOOK_GB_IDS_SMALL if not self.is_test else set([ID_FRANKENSTEIN])        
 
             if not self.is_test:
                 async with get_db() as db_sess:

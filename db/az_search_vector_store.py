@@ -227,7 +227,10 @@ class AzSearchVectorStore(AsyncVectorStore):
         """
         return await self._search_client.close()
         
-       
+
+    async def get_all_unique_book_names(self) -> list[str]:
+        raise NotImplementedError("Implemented when needed")
+
     
     async def create_missing_collection(self, collection_name:str) -> None:
         """Collection in Azure lingo for Search Index"""

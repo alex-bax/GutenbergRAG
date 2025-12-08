@@ -117,3 +117,7 @@ class InMemoryVectorStore(AsyncVectorStore):
 
     async def close_conn(self) -> None:
         raise NotImplementedError("Not used in current tests. Implemented when needed.")
+    
+    async def get_all_unique_book_names(self) -> list[str]:
+        raise NotImplementedError("Not used in current tests. Implemented when needed.")
+        

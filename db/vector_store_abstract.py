@@ -76,6 +76,10 @@ class AsyncVectorStore(BaseModel, ABC):
     async def close_conn(self) -> None:
         ...
 
+    @abstractmethod
+    async def get_all_unique_book_names(self) -> list[str]:
+        ...
+
     # @abstractmethod
     # async def populate_small_collection(self) -> list[GBBookMeta]:
     #     """

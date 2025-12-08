@@ -17,8 +17,8 @@ from qdrant_client.models import (
     MatchText,
     Distance,
     VectorParams,
-    PointIdsList,
-    Record
+    Record,
+    FacetValueHit
 )
 
 INDEXED_PAYL_FIELDS = { "chunk_nr":"integer", 
@@ -283,6 +283,23 @@ class QdrantVectorStore(AsyncVectorStore):
         return await self._client.close()
             
                         
+    async def _get_all_unique_from_field(self, field:str) -> list[FacetValueHit]:
+
+        resp = await self._client.facet(
+                                        collection_name=self.collection_name,
+                                        key=field,
+                                        limit=10_00)
+        
+        return resp.hits
+
+    async def get_all_unique_book_names(self) -> list[str]:
+        resp_hits = await self._get_all_unique_from_field(field="book_name")
+        print(f'resp_hits {resp_hits}')
+        facet_vals = [hit.value for hit in resp_hits]
+        fvs = [str(fv) for fv in facet_vals]
+        print(fvs)
+        return fvs
+
 
 
 async def try_local() :
