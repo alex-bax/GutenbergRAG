@@ -70,7 +70,6 @@ class Settings(BaseSettings):
         from ingestion.book_loader import upload_missing_book_ids
         from db.az_search_vector_store import AzSearchVectorStore
         from db.qdrant_vector_store import QdrantVectorStore
-        
 
         if self._vector_store is None:
             if self.is_test:
@@ -95,6 +94,15 @@ class Settings(BaseSettings):
                 
 
         return self._vector_store
+
+    async def close_vector_store(self) -> None:
+        """Clean up async resources – mainly for tests."""
+        if self._vector_store is not None:
+            from db.qdrant_vector_store import QdrantVectorStore
+
+            if isinstance(self._vector_store, QdrantVectorStore):
+                await self._vector_store.close_conn()
+            self._vector_store = None
 
 
     def get_llm_client(self) -> AzureOpenAI:

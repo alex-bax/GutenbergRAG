@@ -277,6 +277,10 @@ class QdrantVectorStore(AsyncVectorStore):
                 ]
             ),
         )  
+
+    
+    async def close_conn(self) -> None:
+        return await self._client.close()
             
                         
 

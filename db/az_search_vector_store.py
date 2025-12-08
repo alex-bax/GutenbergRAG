@@ -218,6 +218,14 @@ class AzSearchVectorStore(AsyncVectorStore):
         return AzureAiSearchPage(chunks=chunks, 
                                 total_count=total_count, 
                                continuation_token=next_token)
+    
+    async def close_conn(self) -> None:
+        """
+        Closes connection to internal search client (i.e. Azure's vector store implementation)
+        
+        :param self: 
+        """
+        return await self._search_client.close()
         
        
     

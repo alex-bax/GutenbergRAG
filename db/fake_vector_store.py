@@ -91,11 +91,11 @@ class InMemoryVectorStore(AsyncVectorStore):
         *,
         book_ids: set[int],
     ) -> SearchPage:
-        raise NotImplementedError("Not used in current tests. Implement when needed.")
+        raise NotImplementedError("Not used in current tests. Implemented when needed.")
 
 
     async def get_chunk_by_nr(self, *, chunk_nr: int, book_id: int) -> SearchPage:
-        raise NotImplementedError("Not used in current tests. Implement when needed.")
+        raise NotImplementedError("Not used in current tests. Implemented when needed.")
 
 
     async def get_chunk_count_in_book(self, *, book_id: int) -> int:
@@ -112,4 +112,8 @@ class InMemoryVectorStore(AsyncVectorStore):
         skip: int,
         continuation_token: str | None = None,
     ) -> SearchPage:
-        raise NotImplementedError("Not used in current tests. Implement when needed.")
+        raise NotImplementedError("Not used in current tests. Implemented when needed.")
+
+
+    async def close_conn(self) -> None:
+        raise NotImplementedError("Not used in current tests. Implemented when needed.")

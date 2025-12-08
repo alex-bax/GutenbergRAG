@@ -8,7 +8,7 @@ from embedding_pipeline import create_embeddings_async
 from models.vector_db_model import SearchChunk
 
 async def search_chunks(*, query: str, 
-                        search_client:AsyncVectorStore, 
+                        vector_store:AsyncVectorStore, 
                         embed_client:AsyncAzureOpenAI, 
                         embed_model_deployed:str, 
                         tok_lim:Limiter,
@@ -23,7 +23,7 @@ async def search_chunks(*, query: str,
                                                 req_limiter=req_lim
                                                 )
 
-    results:list[SearchChunk] = await search_client.search_by_embedding(
+    results:list[SearchChunk] = await vector_store.search_by_embedding(
                                                 embed_query_vector=query_emb_vec[0],
                                                 filter=None,
                                                 k=k
@@ -86,7 +86,7 @@ async def answer_rag(*, query: str,
     req_lim, tok_lim = sett.get_limiters()
 
     chunk_hits = await search_chunks(query=query, 
-                                    search_client=await sett.get_vector_store(), 
+                                    vector_store=await sett.get_vector_store(), 
                                     embed_client=sett.get_async_emb_client(), 
                                     embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
                                     tok_lim=tok_lim,

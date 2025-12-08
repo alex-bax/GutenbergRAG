@@ -8,32 +8,42 @@ from deepeval.dataset import Golden
 from deepeval.test_case import LLMTestCase
 from deepeval import assert_test
 from deepeval.models import AzureOpenAIModel
-from settings import get_settings
+from settings import get_settings, Settings
+from typing import AsyncGenerator, AsyncIterator
+import pytest_asyncio
+
+# @pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
+async def settings() -> AsyncIterator[Settings]:
+    sett = get_settings()
+    # sett.is_test = True       
+    
+    try:
+        yield sett
+    finally:
+        # ensure Qdrant client (and other async resources) are closed
+        await sett.close_vector_store()
 
 dataset = EvaluationDataset()
 
 dataset.add_goldens_from_csv_file(
-    # file_path is the absolute path to you .csv file
-    # file_path=str(Path("eval_data", "gutenberg_gold.csv")),
     file_path=str(Path("eval_data", "gutenberg_gold_small.csv")),
     input_col_name="question"
 )
 
 @pytest.mark.asyncio  # requires pytest-asyncio installed
 @pytest.mark.parametrize("golden", dataset.goldens)
-async def test_gutenberg_rag_answer_relevancy(golden: Golden):
+async def test_gutenberg_rag_answer_relevancy(golden: Golden, settings:Settings):
     
-    sett = get_settings()
-    answer, contexts = await run_gutenberg_rag(golden.input, sett)
+    answer, contexts = await run_gutenberg_rag(golden.input, settings)
     az_model = AzureOpenAIModel(
                 model_name="gpt-5-mini",
                 deployment_name="gpt-5-mini",
-                azure_openai_api_key=sett.AZ_OPENAI_GPT_KEY,
+                azure_openai_api_key=settings.AZ_OPENAI_GPT_KEY,
                 openai_api_version="2025-04-01-preview",
                 azure_endpoint="https://moby-rag-ai-foundry.cognitiveservices.azure.com",
                 temperature=1.0
             )
-
 
     test_case = LLMTestCase(
         input=golden.input,
@@ -43,7 +53,6 @@ async def test_gutenberg_rag_answer_relevancy(golden: Golden):
         expected_output=golden.expected_output,
     )
 
-    # threshold makes the test fail if metric < threshold
     metric = AnswerRelevancyMetric(threshold=0.7, model=az_model)
 
     assert_test(
