@@ -12,7 +12,15 @@ ID_FRANKENSTEIN = 84
 ID_DR_JEK_MR_H = 42
 ID_MOBY = 2701
 ID_SHERLOCK = 1661
-DEF_BOOK_GB_IDS_SMALL = set([ID_SHERLOCK, ID_DR_JEK_MR_H, ID_FRANKENSTEIN, ID_MOBY])
+
+DEF_BOOK_NAMES_TO_IDS = {
+    "The Adventures of Sherlock Holmes": ID_SHERLOCK, 
+    "The Strange Case of Dr. Jekyll and Mr. Hyde": ID_DR_JEK_MR_H, 
+    "The Federalist Papers": 1404, 
+    "Moby Dick; Or, The Whale": ID_MOBY,
+    "Meditations":2680,
+    "The King in Yellow":8492
+}
 VER_PREFIX = "v1"
 
 

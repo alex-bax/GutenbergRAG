@@ -1,5 +1,4 @@
 
-from constants import DEF_BOOK_GB_IDS_SMALL
 from db.vector_store_abstract import AsyncVectorStore
 from ingestion.book_loader import upload_missing_book_ids
 from models.api_response_model import GBBookMeta

@@ -1,0 +1,57 @@
+{
+    "Q": "Which captain is obsessed with hunting the white whale?",
+    "ExpA": "Captain Ahab",
+    "A": "",
+    "Contexts": [
+        "his voice for the monster, though for some little time past it had been\nplainly beheld from the three sullen mast-heads. All was now a phrensy.\n\u2018The White Whale\u2014the White Whale!\u2019 was the cry from captain, mates, and\nharpooneers, who, undeterred by fearful rumours, were all anxious to\ncapture so famous and precious a fish; while the dogged crew eyed",
+        "finally gone in quest of, systematically hunted out, chased and killed\nby valiant whaling captains, who heaved up their anchors with that\nexpress object as much in view, as in setting out through the\nNarragansett Woods, Captain Butler of old had it in his mind to capture\nthat notorious murderous savage Annawon, the headmost warrior of the\nIndian King Philip.",
+        "His three boats stove around him, and oars and men both whirling in the\neddies; one captain, seizing the line-knife from his broken prow, had\ndashed at the whale, as an Arkansas duellist at his foe, blindly\nseeking with a six inch blade to reach the fathom-deep life of the\nwhale. That captain was Ahab. And then it was, that suddenly sweeping",
+        "whale. That captain was Ahab. And then it was, that suddenly sweeping\nhis sickle-shaped lower jaw beneath him, Moby Dick had reaped away\nAhab\u2019s leg, as a mower a blade of grass in the field. No turbaned Turk,\nno hired Venetian or Malay, could have smote him with more seeming\nmalice. Small reason was there to doubt, then, that ever since that",
+        "men. Steward! go draw the great measure of grog. But what\u2019s this long\nface about, Mr. Starbuck; wilt thou not chase the white whale? art not\ngame for Moby Dick?\u201d\n\u201cI am game for his crooked jaw, and for the jaws of Death too, Captain\nAhab, if it fairly comes in the way of the business we follow; but I\ncame here to hunt whales, not my commander\u2019s vengeance. How many",
+        "Moby Dick, and the havoc he had made. Greedily sucking in this\nintelligence, Gabriel solemnly warned the captain against attacking the\nWhite Whale, in case the monster should be seen; in his gibbering\ninsanity, pronouncing the White Whale to be no less a being than the\nShaker God incarnated; the Shakers receiving the Bible. But when, some",
+        "boats were plain as the ship\u2019s three masts to his eye; the White Whale\nchurning himself into furious speed, almost in an instant as it were,\nrushing among the boats with open jaws, and a lashing tail, offered\nappalling battle on every side; and heedless of the irons darted at him\nfrom every boat, seemed only intent on annihilating each separate plank",
+        "him, Ahab had purposely sailed upon the present voyage with the one\nonly and all-engrossing object of hunting the White Whale. Had any one\nof his old acquaintances on shore but half dreamed of what was lurking\nin him then, how soon would their aghast and righteous souls have\nwrenched the ship from such a fiendish man! They were bent on",
+        "that same white whale, he shall have this gold ounce, my boys!\u201d\n\u201cHuzza! huzza!\u201d cried the seamen, as with swinging tarpaulins they\nhailed the act of nailing the gold to the mast.\n\u201cIt\u2019s a white whale, I say,\u201d resumed Ahab, as he threw down the\ntopmaul: \u201ca white whale. Skin your eyes for him, men; look sharp for\nwhite water; if ye see but a bubble, sing out.\u201d",
+        "him in festoons of blue pilot-cloth; and one empty arm of this jacket\nstreamed behind him like the broidered arm of a hussar\u2019s surcoat.\n\u201cHast seen the White Whale?\u201d\n\u201cSee you this?\u201d and withdrawing it from the folds that had hidden it,\nhe held up a white arm of sperm whale bone, terminating in a wooden\nhead like a mallet.\n\u201cMan my boat!\u201d cried Ahab, impetuously, and tossing about the oars near"
+    ],
+    "Metrics": [
+        {
+            "M": "AnswerRelevancyMetric",
+            "Score": 1,
+            "Threshold": 0.7
+        },
+        {
+            "M": "FaithfulnessMetric",
+            "Score": 1.0,
+            "Threshold": 0.7
+        }
+    ]
+}{
+    "Q": "Ahab\u2019s replacement leg is made from what material?",
+    "ExpA": "Whalebone (ivory)",
+    "A": "Ahab\u2019s replacement leg is made of jaw-ivory (sperm whale ivory).\n\nSources:\n- 6d3ba00f-18bc-4af3-9651-527fb9cd202b \u2014 Moby Dick; Or, The Whale\n- dcbee92f-6249-4999-8e91-234e8a5b29c2 \u2014 Moby Dick; Or, The Whale",
+    "Contexts": [
+        "with earthly Ahab, yet, in this present matter of his leg, he took\nplain practical procedures;\u2014he called the carpenter.\nAnd when that functionary appeared before him, he bade him without\ndelay set about making a new leg, and directed the mates to see him\nsupplied with all the studs and joists of jaw-ivory (Sperm Whale) which\nhad thus far been accumulated on the voyage, in order that a careful",
+        "What a leg this is! It looks like a real live leg, filed down to\nnothing but the core; he\u2019ll be standing on this to-morrow; he\u2019ll be\ntaking altitudes on it. Halloa! I almost forgot the little oval slate,\nsmoothed ivory, where he figures up the latitude. So, so; chisel, file,\nand sand-paper, now!\nCHAPTER 109. Ahab and Starbuck in the Cabin.",
+        "put good work into that leg.\u201d\n\u201cBut no bones broken, sir, I hope,\u201d said Stubb with true concern.\n\u201cAye! and all splintered to pieces, Stubb!\u2014d\u2019ye see it.\u2014But even with a\nbroken bone, old Ahab is untouched; and I account no living bone of\nmine one jot more me, than this dead one that\u2019s lost. Nor white whale,\nnor man, nor fiend, can so much as graze old Ahab in his own proper and",
+        "leg had been snapped off, leaving but one short sharp splinter.\n\u201cAye, aye, Starbuck, \u2019tis sweet to lean sometimes, be the leaner who he\nwill; and would old Ahab had leaned oftener than he has.\u201d\n\u201cThe ferrule has not stood, sir,\u201d said the carpenter, now coming up; \u201cI\nput good work into that leg.\u201d\n\u201cBut no bones broken, sir, I hope,\u201d said Stubb with true concern.",
+        "fabricated, saith tradition, of the tusks of the narwhale. How could\none look at Ahab then, seated on that tripod of bones, without\nbethinking him of the royalty it symbolized? For a Khan of the plank,\nand a king of the sea, and a great lord of Leviathans was Ahab.\nSome moments passed, during which the thick vapor came from his mouth",
+        "So powerfully did the whole grim aspect of Ahab affect me, and the\nlivid brand which streaked it, that for the first few moments I hardly\nnoted that not a little of this overbearing grimness was owing to the\nbarbaric white leg upon which he partly stood. It had previously come\nto me that this ivory leg had at sea been fashioned from the polished",
+        "Now, for most folks one pair of legs lasts a lifetime, and that must be\nbecause they use them mercifully, as a tender-hearted old lady uses her\nroly-poly old coach-horses. But Ahab; oh he\u2019s a hard driver. Look,\ndriven one leg to death, and spavined the other for life, and now wears\nout bone legs by the cord. Halloa, there, you Smut! bear a hand there",
+        "insult, that kick from Ahab. \u2018Why,\u2019 thinks I, \u2018what\u2019s the row? It\u2019s not\na real leg, only a false leg.\u2019 And there\u2019s a mighty difference between\na living thump and a dead thump. That\u2019s what makes a blow from the\nhand, Flask, fifty times more savage to bear than a blow from a cane.\nThe living member\u2014that makes the living insult, my little man. And",
+        "Ahab; and the leg he had lost; and the Cape Horn fit; and the silver\ncalabash; and what Captain Peleg had said of him, when I left the ship\nthe day previous; and the prediction of the squaw Tistig; and the\nvoyage we had bound ourselves to sail; and a hundred other shadowy\nthings.\nI was resolved to satisfy myself whether this ragged Elijah was really",
+        "then, the already shaken ivory received such an additional twist and\nwrench, that though it still remained entire, and to all appearances\nlusty, yet Ahab did not deem it entirely trustworthy.\nAnd, indeed, it seemed small matter for wonder, that for all his\npervading, mad recklessness, Ahab did at times give careful heed to the\ncondition of that dead bone upon which he partly stood. For it had not"
+    ],
+    "Metrics": [
+        {
+            "M": "AnswerRelevancyMetric",
+            "Score": 1.0,
+            "Threshold": 0.7
+        },
+        {
+            "M": "FaithfulnessMetric",
+            "Score": 1.0,
+            "Threshold": 0.7
+        }
+    ]
+}

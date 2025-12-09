@@ -36,6 +36,8 @@ class SearchChunk(BaseModel):
     book_name: str|None = None
     book_id: int|None = None
     content: str|None = None
+    rank:int|None = Field(default=None, description="Rank recieved from the LLM re-ranker after initial vector search")
+    rank_reason:str|None = None
     search_score: float
 
 

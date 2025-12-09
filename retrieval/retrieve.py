@@ -6,15 +6,22 @@ from db.vector_store_abstract import AsyncVectorStore
 from models.api_response_model import QueryResponse
 from embedding_pipeline import create_embeddings_async
 from models.vector_db_model import SearchChunk
+from pydantic import Field, BaseModel
+
+class RankedChunk(BaseModel):
+    score:int = Field(ge=0, le=10)
+    score_reason:str = Field(..., description="The reasoning for choosing the score")
+    content:str
 
 async def search_chunks(*, query: str, 
                         vector_store:AsyncVectorStore, 
                         embed_client:AsyncAzureOpenAI, 
+                        llm_client:AzureOpenAI,
                         embed_model_deployed:str, 
                         tok_lim:Limiter,
                         req_lim:Limiter,
-                        k=5
-                        ) -> list[SearchChunk]: #list[dict[str, Any]]:
+                        k=10
+                        ) -> list[SearchChunk]: 
     
     query_emb_vec = await create_embeddings_async(inp_batches=[[query]], 
                                                 embed_client=embed_client, 
@@ -28,7 +35,37 @@ async def search_chunks(*, query: str,
                                                 filter=None,
                                                 k=k
                                             )
-    return results
+    ranked_results = simple_llm_reranker(q=query, chunks=results, llm_client=llm_client)
+
+    return ranked_results
+
+
+def simple_llm_reranker(q:str, chunks:list[SearchChunk], llm_client:AzureOpenAI) -> list[SearchChunk]:
+    scored_chunks:list[tuple[int, str, SearchChunk]] = []
+    for c in chunks:
+        prompt = f"""
+                    Query: {q}
+                    Document: {c.content}
+                    
+                    On a scale of 0-10, how relevant is this document to the query?
+                    Provide your score and brief reasoning.
+                """
+        resp = llm_client.responses.parse(
+            input=[
+                {"role":"system","content":"You're a helpful assistant. Your task is to evaluate the relevance of the document to the given query"},
+                {"role":"user", "content":prompt}
+            ],
+            text_format=RankedChunk
+        )
+        if resp.output_parsed:
+            ranked_c = resp.output_parsed
+            c.rank = ranked_c.score
+            c.rank_reason = ranked_c.score_reason
+            scored_chunks.append((ranked_c.score, ranked_c.score_reason, c))
+
+    scored_chunks = sorted(scored_chunks, key=lambda x:x[0])
+
+    return [tup[-1] for tup in scored_chunks]
 
 
 # TODO: make async - use AzureAsync package
@@ -85,18 +122,22 @@ async def answer_rag(*, query: str,
                 
     req_lim, tok_lim = sett.get_limiters()
 
-    chunk_hits = await search_chunks(query=query, 
+    ranked_chunks = await search_chunks(query=query, 
                                     vector_store=await sett.get_vector_store(), 
                                     embed_client=sett.get_async_emb_client(), 
                                     embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
                                     tok_lim=tok_lim,
                                     req_lim=req_lim,
-                                    k=top_n_matches)
+                                    k=top_n_matches,
+                                    llm_client=sett.get_llm_client())
+
+    top_chunks = ranked_chunks[:4]
+
 
     llm_answer, relevant_chunks = answer_with_context(query=query, 
                                                       llm_client=sett.get_llm_client(), 
                                                       llm_model_deployed=sett.AZ_OPENAI_MODEL_DEPLOYMENT, 
-                                                      chunk_hits=chunk_hits)    
+                                                      chunk_hits=top_chunks)    
     
     return QueryResponse(answer=llm_answer, citations= relevant_chunks)
 

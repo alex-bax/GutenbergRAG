@@ -295,10 +295,8 @@ class QdrantVectorStore(AsyncVectorStore):
     async def get_all_unique_book_names(self) -> list[str]:
         resp_hits = await self._get_all_unique_from_field(field="book_name")
         print(f'resp_hits {resp_hits}')
-        facet_vals = [hit.value for hit in resp_hits]
-        fvs = [str(fv) for fv in facet_vals]
-        print(fvs)
-        return fvs
+        facet_vals = [str(hit.value) for hit in resp_hits]
+        return facet_vals
 
 
 

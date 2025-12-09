@@ -7,7 +7,7 @@ from db.vector_store_abstract import AsyncVectorStore
 
 from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
-from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, DEF_BOOK_GB_IDS_SMALL, ID_FRANKENSTEIN, EmbeddingDimension
+from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, DEF_BOOK_NAMES_TO_IDS, ID_FRANKENSTEIN, EmbeddingDimension
 
 # TODO: merge constants into settings
 # TODO: separate this into multiple Settings, e.g. for DB, vector store, etc.
@@ -85,7 +85,7 @@ class Settings(BaseSettings):
         
             await self._vector_store.create_missing_collection(collection_name=self.active_collection)
             
-            book_ids = DEF_BOOK_GB_IDS_SMALL if not self.is_test else set([ID_FRANKENSTEIN])        
+            book_ids = set(DEF_BOOK_NAMES_TO_IDS.values()) if not self.is_test else set([ID_FRANKENSTEIN])        
 
             if not self.is_test:
                 async with get_db() as db_sess:

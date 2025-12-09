@@ -1,0 +1,134 @@
+
+=== DeepEval Detailed Case ===Q: Which captain is obsessed with hunting the white whale?
+Exp: Captain Ahab
+A:   Captain Ahab.
+
+Sources:
+- f3482e4a-119d-4169-aaa0-482de9769826 — Moby Dick; Or, The Whale
+- 0fd39778-ff41-4bc7-969b-d25b4ead3b65 — Moby Dick; Or, The Whale
+- 7ce458f4-3e52-4984-8601-91e0ed2eb500 — Moby Dick; Or, The Whale
+Context (10 chunks):
+  [0] his voice for the monster, though for some little time past it had been
+plainly beheld from the three sullen mast-heads. All was now a phrensy.
+‘The White Whale—the White Whale!’ was the cry from captain, mates, and
+harpooneers, who, undeterred by fearful rumours, were all anxious to
+capture so famous and precious a fish; while the dogged crew eyed
+  [1] finally gone in quest of, systematically hunted out, chased and killed
+by valiant whaling captains, who heaved up their anchors with that
+express object as much in view, as in setting out through the
+Narragansett Woods, Captain Butler of old had it in his mind to capture
+that notorious murderous savage Annawon, the headmost warrior of the
+Indian King Philip.
+  [2] His three boats stove around him, and oars and men both whirling in the
+eddies; one captain, seizing the line-knife from his broken prow, had
+dashed at the whale, as an Arkansas duellist at his foe, blindly
+seeking with a six inch blade to reach the fathom-deep life of the
+whale. That captain was Ahab. And then it was, that suddenly sweeping
+  [3] whale. That captain was Ahab. And then it was, that suddenly sweeping
+his sickle-shaped lower jaw beneath him, Moby Dick had reaped away
+Ahab’s leg, as a mower a blade of grass in the field. No turbaned Turk,
+no hired Venetian or Malay, could have smote him with more seeming
+malice. Small reason was there to doubt, then, that ever since that
+  [4] men. Steward! go draw the great measure of grog. But what’s this long
+face about, Mr. Starbuck; wilt thou not chase the white whale? art not
+game for Moby Dick?”
+“I am game for his crooked jaw, and for the jaws of Death too, Captain
+Ahab, if it fairly comes in the way of the business we follow; but I
+came here to hunt whales, not my commander’s vengeance. How many
+  [5] Moby Dick, and the havoc he had made. Greedily sucking in this
+intelligence, Gabriel solemnly warned the captain against attacking the
+White Whale, in case the monster should be seen; in his gibbering
+insanity, pronouncing the White Whale to be no less a being than the
+Shaker God incarnated; the Shakers receiving the Bible. But when, some
+  [6] boats were plain as the ship’s three masts to his eye; the White Whale
+churning himself into furious speed, almost in an instant as it were,
+rushing among the boats with open jaws, and a lashing tail, offered
+appalling battle on every side; and heedless of the irons darted at him
+from every boat, seemed only intent on annihilating each separate plank
+  [7] him, Ahab had purposely sailed upon the present voyage with the one
+only and all-engrossing object of hunting the White Whale. Had any one
+of his old acquaintances on shore but half dreamed of what was lurking
+in him then, how soon would their aghast and righteous souls have
+wrenched the ship from such a fiendish man! They were bent on
+  [8] that same white whale, he shall have this gold ounce, my boys!”
+“Huzza! huzza!” cried the seamen, as with swinging tarpaulins they
+hailed the act of nailing the gold to the mast.
+“It’s a white whale, I say,” resumed Ahab, as he threw down the
+topmaul: “a white whale. Skin your eyes for him, men; look sharp for
+white water; if ye see but a bubble, sing out.”
+  [9] him in festoons of blue pilot-cloth; and one empty arm of this jacket
+streamed behind him like the broidered arm of a hussar’s surcoat.
+“Hast seen the White Whale?”
+“See you this?” and withdrawing it from the folds that had hidden it,
+he held up a white arm of sperm whale bone, terminating in a wooden
+head like a mallet.
+“Man my boat!” cried Ahab, impetuously, and tossing about the oars near
+Metric: AnswerRelevancyMetric  Score: 1.0  Threshold: 0.7
+R:The score is 1.00 because the response was fully relevant and directly answered the question with no irrelevant information — Captain Ahab is correctly identified as the one obsessed with hunting the white whale.================================
+
+=== DeepEval Detailed Case ===Q: Which captain is obsessed with hunting the white whale?
+Exp: Captain Ahab
+A:   Captain Ahab.
+
+Sources:
+- f3482e4a-119d-4169-aaa0-482de9769826 — Moby Dick; Or, The Whale
+- 0fd39778-ff41-4bc7-969b-d25b4ead3b65 — Moby Dick; Or, The Whale
+- 7ce458f4-3e52-4984-8601-91e0ed2eb500 — Moby Dick; Or, The Whale
+Context (10 chunks):
+  [0] his voice for the monster, though for some little time past it had been
+plainly beheld from the three sullen mast-heads. All was now a phrensy.
+‘The White Whale—the White Whale!’ was the cry from captain, mates, and
+harpooneers, who, undeterred by fearful rumours, were all anxious to
+capture so famous and precious a fish; while the dogged crew eyed
+  [1] finally gone in quest of, systematically hunted out, chased and killed
+by valiant whaling captains, who heaved up their anchors with that
+express object as much in view, as in setting out through the
+Narragansett Woods, Captain Butler of old had it in his mind to capture
+that notorious murderous savage Annawon, the headmost warrior of the
+Indian King Philip.
+  [2] His three boats stove around him, and oars and men both whirling in the
+eddies; one captain, seizing the line-knife from his broken prow, had
+dashed at the whale, as an Arkansas duellist at his foe, blindly
+seeking with a six inch blade to reach the fathom-deep life of the
+whale. That captain was Ahab. And then it was, that suddenly sweeping
+  [3] whale. That captain was Ahab. And then it was, that suddenly sweeping
+his sickle-shaped lower jaw beneath him, Moby Dick had reaped away
+Ahab’s leg, as a mower a blade of grass in the field. No turbaned Turk,
+no hired Venetian or Malay, could have smote him with more seeming
+malice. Small reason was there to doubt, then, that ever since that
+  [4] men. Steward! go draw the great measure of grog. But what’s this long
+face about, Mr. Starbuck; wilt thou not chase the white whale? art not
+game for Moby Dick?”
+“I am game for his crooked jaw, and for the jaws of Death too, Captain
+Ahab, if it fairly comes in the way of the business we follow; but I
+came here to hunt whales, not my commander’s vengeance. How many
+  [5] Moby Dick, and the havoc he had made. Greedily sucking in this
+intelligence, Gabriel solemnly warned the captain against attacking the
+White Whale, in case the monster should be seen; in his gibbering
+insanity, pronouncing the White Whale to be no less a being than the
+Shaker God incarnated; the Shakers receiving the Bible. But when, some
+  [6] boats were plain as the ship’s three masts to his eye; the White Whale
+churning himself into furious speed, almost in an instant as it were,
+rushing among the boats with open jaws, and a lashing tail, offered
+appalling battle on every side; and heedless of the irons darted at him
+from every boat, seemed only intent on annihilating each separate plank
+  [7] him, Ahab had purposely sailed upon the present voyage with the one
+only and all-engrossing object of hunting the White Whale. Had any one
+of his old acquaintances on shore but half dreamed of what was lurking
+in him then, how soon would their aghast and righteous souls have
+wrenched the ship from such a fiendish man! They were bent on
+  [8] that same white whale, he shall have this gold ounce, my boys!”
+“Huzza! huzza!” cried the seamen, as with swinging tarpaulins they
+hailed the act of nailing the gold to the mast.
+“It’s a white whale, I say,” resumed Ahab, as he threw down the
+topmaul: “a white whale. Skin your eyes for him, men; look sharp for
+white water; if ye see but a bubble, sing out.”
+  [9] him in festoons of blue pilot-cloth; and one empty arm of this jacket
+streamed behind him like the broidered arm of a hussar’s surcoat.
+“Hast seen the White Whale?”
+“See you this?” and withdrawing it from the folds that had hidden it,
+he held up a white arm of sperm whale bone, terminating in a wooden
+head like a mallet.
+“Man my boat!” cried Ahab, impetuously, and tossing about the oars near
+Metric: FaithfulnessMetric  Score: 1.0  Threshold: 0.7
+R:The score is 1.00 because the contradictions list is empty, indicating no discrepancies were found and the actual output fully aligns with the retrieval context — great fidelity.================================

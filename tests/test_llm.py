@@ -1,7 +1,7 @@
+import json
 import pytest
 from pathlib import Path
 from deepeval.dataset import EvaluationDataset
-# from your_agent import your_llm_app # Replace with your LLM app
 from retrieval.retrieve import run_gutenberg_rag
 from deepeval.metrics import BaseMetric, AnswerRelevancyMetric, FaithfulnessMetric, ContextualPrecisionMetric, ContextualRelevancyMetric
 from deepeval.dataset import Golden
@@ -12,8 +12,8 @@ from settings import get_settings, Settings
 from typing import AsyncIterator
 import pytest_asyncio
 from datetime import datetime
+from constants import DEF_BOOK_NAMES_TO_IDS
 
-# @pytest.fixture(scope="session")
 @pytest_asyncio.fixture(scope="session")
 async def settings() -> AsyncIterator[Settings]:
     sett = get_settings()
@@ -26,10 +26,11 @@ async def settings() -> AsyncIterator[Settings]:
 
 dataset = EvaluationDataset()
 
-dataset_p = Path("eval_data", "gutenberg_gold_small.csv")
+dataset_p = Path("eval_data", "gb_gold.csv")
 dataset.add_goldens_from_csv_file(
     file_path=str(dataset_p),
-    input_col_name="question"
+    input_col_name="question",
+    name_key_name="book"
 )
 
 now = datetime.now().strftime("%H%M_%d%m")
@@ -43,25 +44,28 @@ def log_metric_outp(metrics:list[BaseMetric],
                     model_ans:str, 
                     contexts:list[str],
                     test_case:LLMTestCase) -> None:
-  with open(deep_eval_log_p, "a", encoding="utf-8") as f:
+    # metrics_d = []
+    d = {"Q":gold_inp_q, "ExpA":gold_exp_outp, 
+            "A":model_ans, "Contexts":contexts,
+            "Metrics":[]}
+    
+    
     for m in metrics:
-        f.write("\n=== DeepEval Detailed Case ===")
-        f.write(f"Q: {gold_inp_q}\n")
-        f.write(f"Exp: {gold_exp_outp}\n")
-        f.write(f"A:   {model_ans}\n")
-        f.write(f"Context ({len(contexts)} chunks):\n")
-        for i, c in enumerate(contexts):
-            f.write(f"  [{i}] {c}\n")
-        f.write(f"Metric: {m.__class__.__name__}  Score: {m.measure(test_case)}  Threshold: {m.threshold}\n")
-        f.write(f"R:{m.reason}")
-        f.write("================================\n")
+        d["Metrics"].append(
+            {"M":m.__class__.__name__,  "Score": m.measure(test_case),  "Threshold": m.threshold, "R":m.reason}
+        )
+    
+    with open(deep_eval_log_p.with_suffix(".json"), 'a') as f:
+        json.dump(d, f)
 
 
 @pytest.mark.asyncio  
 @pytest.mark.parametrize("golden", dataset.goldens)
 async def test_gutenberg_rag_answer_relevancy(golden: Golden, settings:Settings):
     # TODO: print all books available in vec collection
-
+    vec_store = await settings.get_vector_store()
+    books_in_collection = await vec_store.get_all_unique_book_names()
+    assert all(book_name in books_in_collection for book_name in DEF_BOOK_NAMES_TO_IDS.keys())
 
     answer, contexts = await run_gutenberg_rag(golden.input, settings)
     az_model = AzureOpenAIModel(
@@ -93,12 +97,16 @@ async def test_gutenberg_rag_answer_relevancy(golden: Golden, settings:Settings)
                     model_ans=answer,
                     contexts=contexts,
                     test_case=test_case,
-                    )
-
-    assert_test(
-        test_case=test_case,
-        metrics=metrics
-    )
+                )
+    
+    try:
+        assert_test(test_case=test_case,
+                    metrics=metrics)
+    except Exception as ex:
+        print("FAILED golden:", golden.input, golden.name)
+        print("Answer:", answer)
+        print("Contexts:", contexts)
+        raise
 
 # @deepeval.log_hyperparameters(model="gpt-5-mini", prompt_template="...")
 # def hyperparameters():
