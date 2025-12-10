@@ -13,6 +13,16 @@ class RankedChunk(BaseModel):
     score_reason:str = Field(..., description="The reasoning for choosing the score")
     content:str
 
+class ChunkCitation(BaseModel):
+    book_name: str
+    chunk_content:str
+    chunk_nr:int
+
+class AnswerChunk(BaseModel):
+    answer:str
+    used_chunks:list[ChunkCitation]
+
+
 async def search_chunks(*, query: str, 
                         vector_store:AsyncVectorStore, 
                         embed_client:AsyncAzureOpenAI, 
@@ -20,6 +30,7 @@ async def search_chunks(*, query: str,
                         embed_model_deployed:str, 
                         tok_lim:Limiter,
                         req_lim:Limiter,
+                        llm_model:str,
                         k=10
                         ) -> list[SearchChunk]: 
     
@@ -35,12 +46,12 @@ async def search_chunks(*, query: str,
                                                 filter=None,
                                                 k=k
                                             )
-    ranked_results = simple_llm_reranker(q=query, chunks=results, llm_client=llm_client)
+    ranked_results = simple_llm_reranker(q=query, chunks=results, llm_client=llm_client, llm_model=llm_model)
 
     return ranked_results
 
 
-def simple_llm_reranker(q:str, chunks:list[SearchChunk], llm_client:AzureOpenAI) -> list[SearchChunk]:
+def simple_llm_reranker(q:str, chunks:list[SearchChunk], llm_client:AzureOpenAI, llm_model:str) -> list[SearchChunk]:
     scored_chunks:list[tuple[int, str, SearchChunk]] = []
     for c in chunks:
         prompt = f"""
@@ -50,7 +61,8 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk], llm_client:AzureOpenAI)
                     On a scale of 0-10, how relevant is this document to the query?
                     Provide your score and brief reasoning.
                 """
-        resp = llm_client.responses.parse(
+        resp = llm_client.responses.parse(      # TODO here it breaks. "Deployment not found"
+            model=llm_model,
             input=[
                 {"role":"system","content":"You're a helpful assistant. Your task is to evaluate the relevance of the document to the given query"},
                 {"role":"user", "content":prompt}
@@ -63,7 +75,7 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk], llm_client:AzureOpenAI)
             c.rank_reason = ranked_c.score_reason
             scored_chunks.append((ranked_c.score, ranked_c.score_reason, c))
 
-    scored_chunks = sorted(scored_chunks, key=lambda x:x[0])
+    scored_chunks = sorted(scored_chunks, key=lambda x:x[0], reverse=True)
 
     return [tup[-1] for tup in scored_chunks]
 
@@ -80,14 +92,12 @@ def answer_with_context(*, query:str,
     assert all(c is not None for c in relev_chunk_hits)
 
     for chunk_h in relev_chunk_hits:
-        chunk_format_str = f"[ book {chunk_h.book_name} ; chunk_id {chunk_h.uuid_str} ; search score {chunk_h.search_score}] || {chunk_h.content} ||"
+        chunk_format_str = f"[ book: {chunk_h.book_name} ; chunk_nr: {chunk_h.chunk_nr} ] || {chunk_h.content} ||"
         relevant_context.append(chunk_format_str)
 
     ## TODO! work on this. the delims for contetn
-    system = """You answer using only the provided list of content chunks. 
-                Each chunk has a header denoted by '[' and ']'. The content of the chunk is denoted by: '|'
-                
-                If unsure, say you don't know. 
+    system = """You answer using ONLY the provided list of content chunks. If the content chunks aren't relevant to answer the query, you reply with 'I dont know based on the given context.'
+                Each chunk has a header denoted by '[' and ']'. The content of the chunk is denoted by: '||'
                 Include a brief 'Sources' list with chunk uuids and their book_name.
             """
     joined_context = ">>".join(relevant_context)
@@ -103,16 +113,19 @@ def answer_with_context(*, query:str,
         relev_chunk_hits = chunk_hits   
 
     elif len(relev_chunk_hits) > 0:
-        chat = llm_client.responses.create(
+        # chat = llm_client.responses.create(
+        resp = llm_client.responses.parse(
             model=llm_model_deployed,
             input=[
+                # TODO: add role?
                 {"role":"system","content":system},
                 {"role":"user","content":prompt}
-            ]
+            ],
+            text_format=AnswerChunk
         )
-        llm_answer = chat.output_text
+        llm_answer = resp.output_parsed
 
-    return llm_answer, relev_chunk_hits
+    return llm_answer.answer, llm_answer.used_chunks    # type:ignore
 
 
 async def answer_rag(*, query: str, 
@@ -129,7 +142,9 @@ async def answer_rag(*, query: str,
                                     tok_lim=tok_lim,
                                     req_lim=req_lim,
                                     k=top_n_matches,
-                                    llm_client=sett.get_llm_client())
+                                    llm_client=sett.get_llm_client(),
+                                    llm_model=sett.MODEL_USED
+                                    )
 
     top_chunks = ranked_chunks[:4]
 
@@ -139,7 +154,7 @@ async def answer_rag(*, query: str,
                                                       llm_model_deployed=sett.AZ_OPENAI_MODEL_DEPLOYMENT, 
                                                       chunk_hits=top_chunks)    
     
-    return QueryResponse(answer=llm_answer, citations= relevant_chunks)
+    return QueryResponse(answer=llm_answer, citations=top_chunks)
 
 
 
@@ -151,7 +166,7 @@ async def run_gutenberg_rag(question: str, sett:Settings) -> tuple[str, list[str
         - contexts: list[str]           (list of retrieved passages / chunks)
     """
     
-    q_resp = await answer_rag(query=question, sett=sett, top_n_matches=10)
+    q_resp = await answer_rag(query=question, sett=sett, top_n_matches=20)
     
     contexts_found = [c.content for c in q_resp.citations if c.content]
     return q_resp.answer, contexts_found

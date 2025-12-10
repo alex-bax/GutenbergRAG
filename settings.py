@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     AZ_OPENAI_MODEL_DEPLOYMENT:str
     AZ_OPENAI_API_VER: str
 
+    MODEL_USED:str
+
     # Supabase Postgres DB
     DB_NAME:str
     DB_PW:str

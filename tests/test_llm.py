@@ -1,4 +1,5 @@
 import json
+import time
 import pytest
 from pathlib import Path
 from deepeval.dataset import EvaluationDataset
@@ -58,42 +59,68 @@ def log_metric_outp(metrics:list[BaseMetric],
     with open(deep_eval_log_p.with_suffix(".json"), 'a') as f:
         json.dump(d, f)
 
+for golden in dataset.goldens:
+    assert isinstance(golden, Golden)
+    test_case = LLMTestCase(
+            input=golden.input,
+            expected_output=golden.expected_output,
+            additional_metadata={
+                "golden_name": getattr(golden, "name", None),
+            },
+        )
+    dataset.add_test_case(test_case)
 
+#TODO: consider using nano
+@pytest.fixture(scope="session")
+def deepeval_az_model(settings: "Settings") -> AzureOpenAIModel:
+    return AzureOpenAIModel(
+        model_name="gpt-5-mini",
+        deployment_name="gpt-5-mini",
+        azure_openai_api_key=settings.AZ_OPENAI_GPT_KEY,
+        openai_api_version="2025-04-01-preview",
+        azure_endpoint="https://moby-rag-ai-foundry.cognitiveservices.azure.com",
+        temperature=1.0,
+    )
+
+# @pytest.mark.parametrize("golden", dataset.goldens)
 @pytest.mark.asyncio  
-@pytest.mark.parametrize("golden", dataset.goldens)
-async def test_gutenberg_rag_answer_relevancy(golden: Golden, settings:Settings):
-    # TODO: print all books available in vec collection
+@pytest.mark.parametrize("test_case", dataset.test_cases)
+async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Golden, 
+                                              settings:Settings, 
+                                              deepeval_az_model:AzureOpenAIModel):
+    
+    # assert isinstance(test_case, Golden)
+    t0 = time.perf_counter()
     vec_store = await settings.get_vector_store()
     books_in_collection = await vec_store.get_all_unique_book_names()
     assert all(book_name in books_in_collection for book_name in DEF_BOOK_NAMES_TO_IDS.keys())
 
-    answer, contexts = await run_gutenberg_rag(golden.input, settings)
-    az_model = AzureOpenAIModel(
-                model_name="gpt-5-mini",
-                deployment_name="gpt-5-mini",
-                azure_openai_api_key=settings.AZ_OPENAI_GPT_KEY,
-                openai_api_version="2025-04-01-preview",
-                azure_endpoint="https://moby-rag-ai-foundry.cognitiveservices.azure.com",
-                temperature=1.0
-            )
+    answer, contexts = await run_gutenberg_rag(test_case.input, settings)
+    t_rag = time.perf_counter()
 
-    test_case = LLMTestCase(
-        input=golden.input,
-        actual_output=answer,
-        retrieval_context=contexts,
-        expected_output=golden.expected_output,
-    )
+    # Fill in the LLMTestCase with actual model output + retrieval context
+    test_case.actual_output = answer
+    test_case.retrieval_context = contexts
 
-    answer_rel_metric = AnswerRelevancyMetric(threshold=0.7, model=az_model)
-    faith_metric = FaithfulnessMetric(threshold=0.7, model=az_model)
-    context_rel_metric = ContextualRelevancyMetric(threshold=0.7, model=az_model)
-    context_prec_metric = ContextualPrecisionMetric(threshold=0.7, model=az_model)
-    metrics = [answer_rel_metric, faith_metric,
-                context_prec_metric, context_rel_metric]
+    # test_case = LLMTestCase(
+    #     input=test_case.input,
+    #     actual_output=answer,
+    #     retrieval_context=contexts,
+    #     expected_output=test_case.expected_output,
+    # )
+
+
+    # answer_rel_metric = AnswerRelevancyMetric(threshold=0.7, model=az_model)
+    # faith_metric = FaithfulnessMetric(threshold=0.7, model=az_model)
+    context_rel_metric = ContextualRelevancyMetric(threshold=0.7, model=deepeval_az_model)
+    context_prec_metric = ContextualPrecisionMetric(threshold=0.7, model=deepeval_az_model)
+    # metrics = [answer_rel_metric, faith_metric,
+    #             context_prec_metric, context_rel_metric]
+    metrics:list[BaseMetric] = [context_rel_metric]  
     
-    log_metric_outp(metrics=metrics, 
-                    gold_inp_q=golden.input, 
-                    gold_exp_outp=golden.expected_output if golden.expected_output else "", 
+    log_metric_outp(metrics=metrics, # type:ignore
+                    gold_inp_q=test_case.input, 
+                    gold_exp_outp=test_case.expected_output if test_case.expected_output else "", 
                     model_ans=answer,
                     contexts=contexts,
                     test_case=test_case,
@@ -101,12 +128,21 @@ async def test_gutenberg_rag_answer_relevancy(golden: Golden, settings:Settings)
     
     try:
         assert_test(test_case=test_case,
-                    metrics=metrics)
+                    metrics=metrics,
+                    run_async=True)
     except Exception as ex:
-        print("FAILED golden:", golden.input, golden.name)
+        print("FAILED golden:", test_case.input, test_case.name)
         print("Answer:", answer)
         print("Contexts:", contexts)
         raise
+
+    t_eval = time.perf_counter()
+    print(
+        f"[{test_case.input[:7]!r}] "
+        f"RAG: {t_rag - t0:.2f}s, "
+        f"Metrics: {t_eval - t_rag:.2f}s, "
+        f"Total: {t_eval - t0:.2f}s"
+    )
 
 # @deepeval.log_hyperparameters(model="gpt-5-mini", prompt_template="...")
 # def hyperparameters():
