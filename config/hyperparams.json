@@ -1,4 +1,5 @@
 {
+  "config_id":1,
   "ingestion": {
     "chunk_size": 400,
     "chunk_overlap": 100,

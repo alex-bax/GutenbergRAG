@@ -50,9 +50,6 @@ class RetrievalConfig(BaseModel):
     collection:str
     vector_db_type:Literal["vector", "hybrid_search"]
     top_k:int
-    # alpha: float = 0.5
-    # use_mmr: bool = False
-    # score_threshold
 
 class RerankConfig(BaseModel):
     enabled: bool = True
@@ -67,8 +64,7 @@ class GenerationConfig(BaseModel):
 
 
 class ConfigSettings(BaseSettings):
-    # model_config = SettingsConfigDict(
-    #     env_file=Path("config", "hyperparams.json"),  
+    config_id:int
     ingestion: ChunkConfig
     retrieval: RetrievalConfig
     rerank: RerankConfig
