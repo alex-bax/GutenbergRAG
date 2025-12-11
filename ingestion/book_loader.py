@@ -8,7 +8,7 @@ from vector_store_utils import upload_to_index_async
 from db.operations import insert_missing_book_db
 from converters import gbbookmeta_to_db_obj
 
-from config.settings import get_settings, Settings
+from config.settings import Settings
 from ingestion.preprocess_book import make_slug_book_key
 
 # TODO: make async
@@ -38,7 +38,7 @@ def get_cached_paths_by_book_id(*, book_id:int, folder_p:Path) -> list[Path]:
 
 
 def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
-    loc_gb_p = Path("eval_data", "books", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
+    loc_gb_p = Path("evals", "books", f"{make_slug_book_key(title=gb_meta.title, gutenberg_id=gb_meta.id, author=gb_meta.authors_as_str())}.txt")
     loc_gb_p.parent.mkdir(parents=True, exist_ok=True)
     
     loc_gb_meta = GBBookMetaLocal(**gb_meta.model_dump(), path_to_content=loc_gb_p)
@@ -72,7 +72,6 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
     cache_p = Path("evals", "books")
     cache_p.mkdir(parents=True, exist_ok=True)
 
-
     for b_id in missing_book_ids:
         eval_book_paths = get_cached_paths_by_book_id(book_id=b_id, folder_p=cache_p)
         
@@ -93,10 +92,8 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
                 mess += f"Loaded content from cache for book id {b_id}"
                 print(mess)
             except Exception as exc:
-                import os
-                print(f"***else: tried {str(gb_meta.path_to_content)}  {exc}")
-                print("DIR::", list(Path("eval_data", "books").parent.glob("*")))
-                print(f"DIRRR: {os.getcwd()}")
+                print(f"!!! exc: tried {str(gb_meta.path_to_content)}  {exc}")
+                
 
         print(f"*** Uploading Book id {b_id} to index")
         await upload_to_index_async(vec_store=vector_store, 
@@ -122,42 +119,9 @@ async def _fetch_gutendex_meta_from_id(*, gb_id:int) -> GBBookMeta:
     body = resp.json()#["results"]
     return GBBookMeta(**body)
 
-    
-async def gutendex_book_urls(*, n=25, languages:list[str]=["en"], text_format="text/html") -> list[dict[str, str|int|list[str]]]:
-    out = []
-    txt_url = "https://gutendex.com/books"
-    params = {"languages": ",".join(languages)}
-    
-    while len(out) < n and txt_url:
-        resp = await requests_async.get(txt_url, params=params if "books" in txt_url else None, timeout=60)
-        resp.raise_for_status()
-        data = resp.json()
-        
-        for b in data["results"]:
-            # pick a text/plain URL if present
-            formats = b.get("formats", {})
-            txt_url = None
-            
-            for k, url_v in formats.items():
-                if k.startswith(text_format):
-                    txt_url = url_v; break
-            
-            if txt_url:
-                out.append({"id": b["id"], 
-                            "title": b["title"], 
-                            "download_url": txt_url, 
-                            "authors":b["authors"]})
-                
-                if len(out) >= n: break
-
-        txt_url = data.get("next")
-        params = None  # only send params on first page
-    return out
-
-
 
 async def download_or_load_from_cache(*, book_key:str, url:str) -> str:
-    book_p = Path("books", f'{book_key}.txt')
+    book_p = Path("evals", "books", f'{book_key}.txt')
 
     if book_p.exists():
         with open(book_p, 'r', encoding="utf-8") as f:
@@ -173,10 +137,10 @@ async def download_or_load_from_cache(*, book_key:str, url:str) -> str:
     return book_txt
 
 
-async def try_book_loader():
-    books = await gutendex_book_urls(n=10, text_format="text/plain")
-    for b in books[:5]:
-        print(b["id"], b["title"], b["download_url"])
+# async def try_book_loader():
+#     books = await gutendex_book_urls(n=10, text_format="text/plain")
+#     for b in books[:5]:
+#         print(b["id"], b["title"], b["download_url"])
 
-if __name__ == "__main__":
-    asyncio.run(try_book_loader())
+# if __name__ == "__main__":
+#     asyncio.run(try_book_loader())

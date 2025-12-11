@@ -9,7 +9,7 @@ eval/*
 try_*.py
 
 envWebAppSettings.json
-eval_data/*
+evals/*
 !eval/datasets/gutenberg_gold.csv
 !eval/datasets/gutenberg_gold_small.csv
 

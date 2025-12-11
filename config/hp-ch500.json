@@ -1,5 +1,7 @@
 {
-  "config_id":1,
+  "config_id":2,
+  "collection":"gb-ch500",
+
   "ingestion": {
     "chunk_size": 500,
     "chunk_overlap": 100,
@@ -21,7 +23,6 @@
   },
   "retrieval": {
     "vector_db":"Qdrant",
-    "collection":"gutenberg-ch500",
     "vector_db_type": "vector",
     "top_k": 15
   },

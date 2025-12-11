@@ -28,7 +28,6 @@ class IngestionConfig(BaseModel):
 class RetrievalConfig(BaseModel):
     top_k: int = 8
     vector_db:Literal["Qdrant", "Azure AI Search"]
-    collection:str
     vector_db_type:Literal["vector", "hybrid_search"]
     top_k:int
 
@@ -46,6 +45,7 @@ class GenerationConfig(BaseModel):
 
 class ConfigParamSettings(BaseSettings):
     config_id:int
+    collection:str
     ingestion: IngestionConfig
     retrieval: RetrievalConfig
     rerank: RerankConfig

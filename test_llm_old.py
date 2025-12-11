@@ -111,4 +111,4 @@ async def main(csv_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main(Path("eval_data", "gutenberg_gold_small.csv")))
+    asyncio.run(main(Path("evals", "gutenberg_gold_small.csv")))

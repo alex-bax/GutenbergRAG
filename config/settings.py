@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     QDRANT_SEARCH_KEY: str
 
     VECTOR_STORE_TO_USE: Literal["Qdrant", "AzureAiSearch"] = "Qdrant"
-    COLLECTION_NAME: str = Field(default="gutenberg", description="Name of the vector store collection") 
+    # COLLECTION_NAME: str = Field(default="gutenberg", description="Name of the vector store collection") 
     EMBED_MODEL_DEPLOYMENT:str
     AZ_OPENAI_MODEL_DEPLOYMENT:str
     AZ_OPENAI_RERANKER_MODEL_DEPLOYMENT:str
@@ -55,7 +55,9 @@ class Settings(BaseSettings):
 
     @property
     def active_collection(self) -> str:
-        return "test_" + self.COLLECTION_NAME if self.is_test else self.COLLECTION_NAME
+        hp = self.get_hyperparams()
+        return "test_" + hp.collection if self.is_test else hp.collection
+        # return "test_" + self.COLLECTION_NAME if self.is_test else self.COLLECTION_NAME
 
 
     model_config = SettingsConfigDict(
