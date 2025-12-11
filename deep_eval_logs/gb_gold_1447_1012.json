@@ -1,0 +1,481 @@
+{
+    "Q": "What is the name of Ishmael\u2019s close companion aboard the Pequod?",
+    "ExpA": "Queequeg",
+    "A": "Queequeg",
+    "Contexts": [
+        "wholly with me, inasmuch as Yojo purposed befriending us; and, in order\nto do so, had already pitched upon a vessel, which, if left to myself,\nI, Ishmael, should infallibly light upon, for all the world as though\nit had turned out by chance; and in that vessel I must immediately ship\nmyself, for the present irrespective of Queequeg.",
+        "former one has been badly twisted, or elbowed in the assault; and\nmoreover, as there generally subsists between the two, a close intimacy\nand friendliness; it is therefore but meet, that in this place we set\ndown who the Pequod\u2019s harpooneers were, and to what headsman each of\nthem belonged.\nFirst of all was Queequeg, whom Starbuck, the chief mate, had selected",
+        "the grindstone. That\u2019s he; thank ye, Bildad. Now then, my young man,\nIshmael\u2019s thy name, didn\u2019t ye say? Well then, down ye go here, Ishmael,\nfor the three hundredth lay.\u201d\n\u201cCaptain Peleg,\u201d said I, \u201cI have a friend with me who wants to ship\ntoo\u2014shall I bring him down to-morrow?\u201d\n\u201cTo be sure,\u201d said Peleg. \u201cFetch him along, and we\u2019ll look at him.\u201d",
+        "The chief mate of the Pequod was Starbuck, a native of Nantucket, and a\nQuaker by descent. He was a long, earnest man, and though born on an\nicy coast, seemed well adapted to endure hot latitudes, his flesh being\nhard as twice-baked biscuit. Transported to the Indies, his live blood\nwould not spoil like bottled ale. He must have been born in some time"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.2631578947368421,
+            "Threshold": 0.7,
+            "R": "The score is 0.26 because most of the retrieval context is irrelevant (e.g. \"Yojo purposed befriending us\", \"I, Ishmael, should infallibly light upon\", \"The chief mate of the Pequod was Starbuck.\") but it does contain the key relevant lines identifying Ishmael\u2019s companion \u2014 namely \"Queequeg\", \"moreover, as there generally subsists between the two, a close intimacy and friendliness;\" and \"First of all was Queequeg, whom Starbuck, the chief mate, had selected\" \u2014 so useful information is present but sparse."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the top-ranked nodes clearly identify Queequeg: node 1 contains \"Contains the name 'Queequeg' (\"irrespective of Queequeg\") in a passage about befriending and shipping\", node 2 \"Explicitly identifies the crew member: \"First of all was Queequeg, whom Starbuck, the chief mate, had selected,\"\" and node 3 \"Indicates Ishmael \"have a friend with me who wants to ship too\u2014shall I bring him down to-morrow?\"\" \u2014 all directly support the companion\u2019s identity. The lower-ranked node 4 \"Discusses the chief mate: \"The chief mate of the Pequod was Starbuck,\" but does not mention Queequeg\" correctly appears after the relevant passages, so relevant nodes precede the irrelevant one, yielding perfect precision. Great alignment!"
+        }
+    ]
+}{
+    "Q": "Which island is Queequeg originally from?",
+    "ExpA": "Kokovoko",
+    "A": "Queequeg was originally from Rokovoko, an island far away to the West and South.",
+    "Contexts": [
+        "CHAPTER 12. Biographical.\nQueequeg was a native of Rokovoko, an island far away to the West and\nSouth. It is not down in any map; true places never are.\nWhen a new-hatched savage running wild about his native woodlands in a\ngrass clout, followed by the nibbling goats, as if he were a green\nsapling; even then, in Queequeg\u2019s ambitious soul, lurked a strong",
+        "Not a man of the crew but gave him up; and, as for Queequeg himself,\nwhat he thought of his case was forcibly shown by a curious favour he\nasked. He called one to him in the grey morning watch, when the day was\njust breaking, and taking his hand, said that while in Nantucket he had\nchanced to see certain little canoes of dark wood, like the rich",
+        "Quohog, we\u2019ll give ye the ninetieth lay, and that\u2019s more than ever was\ngiven a harpooneer yet out of Nantucket.\u201d\nSo down we went into the cabin, and to my great joy Queequeg was soon\nenrolled among the same ship\u2019s company to which I myself belonged.\nWhen all preliminaries were over and Peleg had got everything ready for\nsigning, he turned to me and said, \u201cI guess, Quohog there don\u2019t know",
+        "cutlass over his naked wrists; Queequeg was the son of a King, and\nQueequeg budged not. Struck by his desperate dauntlessness, and his\nwild desire to visit Christendom, the captain at last relented, and\ntold him he might make himself at home. But this fine young savage\u2014this\nsea Prince of Wales, never saw the Captain\u2019s cabin. They put him down"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.1111111111111111,
+            "Threshold": 0.7,
+            "R": "The score is 0.11 because nearly all retrieved lines are anecdotes/character details and not origin facts (e.g., \"When a new-hatched savage running wild about his native woodlands in a grass clout...\", \"while in Nantucket\", \"Queequeg was the son of a King\"), while only two statements actually identify his homeland: \"Queequeg was a native of Rokovoko, an island far away to the West and South.\" and \"It is not down in any map; true places never are.\"."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the top-ranked node (node 1) directly answers the question: \"Queequeg was a native of Rokovoko, an island far away to the West and South.\" The other, irrelevant nodes are correctly ranked lower \u2014 node 2 discusses Nantucket canoes: \"while in Nantucket he had chanced to see certain little canoes...\", node 3 covers ship enrollment: \"Queequeg was soon enrolled among the same ship\u2019s company...\", and node 4 describes royal status: \"Queequeg was the son of a King...\" \u2014 none state his island of origin, so they belong below the clearly relevant node. It can\u2019t be higher than 1.00, so this is a perfect ranking."
+        }
+    ]
+}{
+    "Q": "Who forges Ahab\u2019s special harpoon?",
+    "ExpA": "The Parsee (Fedallah) and crew of pagans",
+    "A": "Perth.",
+    "Contexts": [
+        "by, the scalding steam shot up into Ahab\u2019s bent face.\n\u201cWould\u2019st thou brand me, Perth?\u201d wincing for a moment with the pain;\n\u201chave I been but forging my own branding-iron, then?\u201d\n\u201cPray God, not that; yet I fear something, Captain Ahab. Is not this\nharpoon for the White Whale?\u201d\n\u201cFor the white fiend! But now for the barbs; thou must make them",
+        "concluding his contributory work for Ahab\u2019s leg, but still retained it\non deck, fast lashed to ringbolts by the foremast; being now almost\nincessantly invoked by the headsmen, and harpooneers, and bowsmen to do\nsome little job for them; altering, or repairing, or new shaping their\nvarious weapons and boat furniture. Often he would be surrounded by an",
+        "needles; but out of this bit of steel Ahab can make one of his own,\nthat will point as true as any.\u201d\nAbashed glances of servile wonder were exchanged by the sailors, as\nthis was said; and with fascinated eyes they awaited whatever magic\nmight follow. But Starbuck looked away.\nWith a blow from the top-maul Ahab knocked off the steel head of the",
+        "burning harpoon, Ahab waved it like a torch among them; swearing to\ntransfix with it the first sailor that but cast loose a rope\u2019s end.\nPetrified by his aspect, and still more shrinking from the fiery dart\nthat he held, the men fell back in dismay, and Ahab again spoke:\u2014\n\u201cAll your oaths to hunt the White Whale are as binding as mine; and"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.3333333333333333,
+            "Threshold": 0.7,
+            "R": "The score is 0.33 because while the retrieval does contain direct, relevant lines\u2014'Perth is forging Ahab\u2019s harpoon for the White Whale' and 'Ahab orders Perth to make the barbs for the harpoon: \"But now for the barbs; thou must make them\"'\u2014the majority of the snippets are unrelated to authorship (e.g. 'the scalding steam shot up into Ahab\u2019s bent face', 'concluding his contributory work for Ahab\u2019s leg', 'Ahab waved a burning harpoon like a torch among them'), so only a small portion directly answers who forges the harpoon."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 0,
+            "Threshold": 0.7,
+            "R": "The score is 0.00 because the top-ranked nodes do not identify who forged Ahab\u2019s special harpoon: node 1 only \"mentions making a harpoon ('Is not this harpoon for the White Whale?' and 'but now for the barbs; thou must make them')\" but gives no forger, node 2 discusses \"altering, or repairing, or new shaping their various weapons\" without attributing the work to the Parsee/Fedallah, node 3 focuses on Ahab and steel (\"out of this bit of steel Ahab can make one of his own\" and \"Ahab knocked off the steel head\") rather than naming a forger, and node 4 merely describes a \"burning harpoon\" with no maker named. Because none of the higher-ranked nodes contain the needed attribution, the precision is zero."
+        }
+    ]
+}{
+    "Q": "Who is Holmes\u2019 friend and narrator?",
+    "ExpA": "Dr. John Watson",
+    "A": "Holmes\u2019 friend and narrator is Dr. Watson.",
+    "Contexts": [
+        "\u201cPray take a seat,\u201d said Holmes. \u201cThis is my friend and colleague, Dr.\nWatson, who is occasionally good enough to help me in my cases. Whom\nhave I the honour to address?\u201d\n\u201cYou may address me as the Count Von Kramm, a Bohemian nobleman. I\nunderstand that this gentleman, your friend, is a man of honour and\ndiscretion, whom I may trust with a matter of the most extreme",
+        "my clothes and was ready in a few minutes to accompany my friend down\nto the sitting-room. A lady dressed in black and heavily veiled, who\nhad been sitting in the window, rose as we entered.\n\u201cGood-morning, madam,\u201d said Holmes cheerily. \u201cMy name is Sherlock\nHolmes. This is my intimate friend and associate, Dr. Watson, before\nwhom you can speak as freely as before myself. Ha! I am glad to see",
+        "I had no keener pleasure than in following Holmes in his professional\ninvestigations, and in admiring the rapid deductions, as swift as\nintuitions, and yet always founded on a logical basis with which he\nunravelled the problems which were submitted to him. I rapidly threw on\nmy clothes and was ready in a few minutes to accompany my friend down",
+        "Holmes and I had listened spellbound to this extraordinary story. My\nfriend rose now and paced up and down the room, his hands in his\npockets, and an expression of the most profound gravity upon his face.\n\u201cIs Toller still drunk?\u201d he asked.\n\u201cYes. I heard his wife tell Mrs. Rucastle that she could do nothing\nwith him.\u201d\n\u201cThat is well. And the Rucastles go out to-night?\u201d\n\u201cYes.\u201d"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.3333333333333333,
+            "Threshold": 0.7,
+            "R": "The score is 0.33 because the context does contain direct identifications \u2014 e.g., \u201cThis is my friend and colleague, Dr. Watson, who is occasionally good enough to help me in my cases.\u201d and \u201cThis is my intimate friend and associate, Dr. Watson, before whom you can speak as freely as before myself.\u201d \u2014 but much of the retrieved material is irrelevant to the question, such as \"\u201cPray take a seat,\u201d said Holmes.\", \"Whom have I the honour to address?\", and \"My name is Sherlock Holmes.\", so only a minority of passages actually name Holmes\u2019 friend and narrator."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the top-ranked nodes in the retrieval contexts correctly provide the identifying text: node 1 contains \"This is my friend and colleague, Dr.\nWatson,\" and node 2 contains \"This is my intimate friend and associate, Dr. Watson,\" so the items that name Holmes\u2019 narrator are prioritized. The lower-ranked nodes (node 3: \"I rapidly threw on\nmy clothes and was ready in a few minutes to accompany my friend down\" and node 4: \"Holmes and I had listened spellbound\" / \"My friend rose now\") do not name Watson and are rightly placed below the confirming nodes; the score cannot be higher because 1.00 is the maximum possible."
+        }
+    ]
+}{
+    "Q": "What item does Holmes examine to deduce a visitor\u2019s identity in 'The Red-Headed League'?",
+    "ExpA": "A walking stick",
+    "A": "I dont know based on the given context.",
+    "Contexts": [
+        "save his blazing red head, and the expression of extreme chagrin and\ndiscontent upon his features.\nSherlock Holmes\u2019 quick eye took in my occupation, and he shook his head\nwith a smile as he noticed my questioning glances. \u201cBeyond the obvious\nfacts that he has at some time done manual labour, that he takes snuff,\nthat he is a Freemason, that he has been in China, and that he has done",
+        "\u201cSmall, stout-built, very quick in his ways, no hair on his face,\nthough he\u2019s not short of thirty. Has a white splash of acid upon his\nforehead.\u201d\nHolmes sat up in his chair in considerable excitement. \u201cI thought as\nmuch,\u201d said he. \u201cHave you ever observed that his ears are pierced for\nearrings?\u201d\n\u201cYes, sir. He told me that a gipsy had done it for him when he was a\nlad.\u201d",
+        "Saxe-Coburg Square, and the ominous words with which he had parted from\nme. What was this nocturnal expedition, and why should I go armed?\nWhere were we going, and what were we to do? I had the hint from Holmes\nthat this smooth-faced pawnbroker\u2019s assistant was a formidable man\u2014a\nman who might play a deep game. I tried to puzzle it out, but gave it",
+        "He was a large man with rounded shoulders, a massive head, and a broad,\nintelligent face, sloping down to a pointed beard of grizzled brown. A\ntouch of red in nose and cheeks, with a slight tremor of his extended\nhand, recalled Holmes\u2019 surmise as to his habits. His rusty black\nfrock-coat was buttoned right up in front, with the collar turned up,"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.36363636363636365,
+            "Threshold": 0.7,
+            "R": "The score is 0.36 because most retrieval lines (e.g., 'The phrase expression of extreme chagrin and discontent upon his features.', 'a gipsy had done it for him when he was a lad.', 'Saxe-Coburg Square') do not mention any inspected object, while a few relevant cues ('Sherlock Holmes\u2019 quick eye took in my occupation', 'that he takes snuff', 'Have you ever observed that his ears are pierced for earrings?', 'save his blazing red head', 'His rusty black frock-coat was buttoned right up in front, with the collar turned up.') show observational details Holmes used but still do not state the specific item he examined to deduce the visitor\u2019s identity."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 0,
+            "Threshold": 0.7,
+            "R": "The score is 0.00 because the top-ranked nodes are all irrelevant to the specific item Holmes examines. The first node discusses background and habits: \"done manual labour, that he takes snuff, that he is a Freemason, that he has been in China,\" the second gives physical detail: \"Has a white splash of acid upon his forehead... his ears are pierced for earrings,\" the third mentions \"this smooth-faced pawnbroker\u2019s assistant,\" and the fourth describes build and clothing: \"large man with rounded shoulders... His rusty black frock-coat was buttoned right up in front.\" None of these mention Holmes examining a walking stick, so any nodes that actually state the examined item should be ranked above these \u2014 their absence at the top is why the precision is zero."
+        }
+    ]
+}{
+    "Q": "Which character hires Holmes to investigate the strange advertisement seeking red-headed men?",
+    "ExpA": "Jabez Wilson",
+    "A": "Jabez Wilson.\n\nSources: chunk_nr 160, 175, 252 \u2014 The Adventures of Sherlock Holmes",
+    "Contexts": [
+        "save his blazing red head, and the expression of extreme chagrin and\ndiscontent upon his features.\nSherlock Holmes\u2019 quick eye took in my occupation, and he shook his head\nwith a smile as he noticed my questioning glances. \u201cBeyond the obvious\nfacts that he has at some time done manual labour, that he takes snuff,\nthat he is a Freemason, that he has been in China, and that he has done",
+        "place where our red-headed client carried on his business. Sherlock\nHolmes stopped in front of it with his head on one side and looked it\nall over, with his eyes shining brightly between puckered lids. Then he\nwalked slowly up the street, and then down again to the corner, still\nlooking keenly at the houses. Finally he returned to the pawnbroker\u2019s,",
+        "woman\u2019s wit. He used to make merry over the cleverness of women, but I\nhave not heard him do it of late. And when he speaks of Irene Adler, or\nwhen he refers to her photograph, it is always under the honourable\ntitle of _the_ woman.\nII. THE RED-HEADED LEAGUE\n I had called upon my friend, Mr. Sherlock Holmes, one day in the\n autumn of last year and found him in deep conversation with a very",
+        "desire to see solved, I should strongly recommend you to come to my\nfriend, Mr. Sherlock Holmes, before you go to the official police.\u201d\n\u201cOh, I have heard of that fellow,\u201d answered my visitor, \u201cand I should\nbe very glad if he would take the matter up, though of course I must\nuse the official police as well. Would you give me an introduction to\nhim?\u201d"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.14285714285714285,
+            "Threshold": 0.7,
+            "R": "The score is 0.14 because the bulk of the context is irrelevant (e.g., 'save his blazing red head, and the expression of extreme chagrin and discontent upon his features.', 'he takes snuff', 'And when he speaks of Irene Adler...') while only a few isolated lines touch the ad ('place where our red-headed client carried on his business.', 'Finally he returned to the pawnbroker\u2019s,', 'desire to see solved, I should strongly recommend you to come to my friend, Mr. Sherlock Holmes, before you go to the official police.'). Those sparse hints suggest a red-headed client and a pawnbroker but do not identify which character actually hires Holmes, so overall relevance is very low."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 0,
+            "Threshold": 0.7,
+            "R": "The score is 0.00 because none of the top-ranked nodes in the retrieval contexts actually name the hirer 'Jabez Wilson'. Node 1 (rank 1) only contains phrases like \"save his blazing red head\" and \"Sherlock Holmes\u2019 quick eye took in my occupation\" but not the hirer\u2019s name; Node 2 (rank 2) mentions \"our red-headed client\" and the \"pawnbroker\u2019s\" without identifying the person; Node 3 (rank 3) shows \"II. THE RED-HEADED LEAGUE\" and \"I had called upon my friend, Mr. Sherlock Holmes,\" yet still omits the name; Node 4 (rank 4) quotes the visitor with \"my visitor\" and \"Would you give me an introduction to him?\" but gives no name. Because all top-ranked nodes lack the key identifying information, they should be ranked lower than any node that actually names the hirer, so precision is 0.00."
+        }
+    ]
+}{
+    "Q": "What clue reveals to Holmes that the League was a diversion for tunneling?",
+    "ExpA": "Clay\u2019s dirty trousers/knees",
+    "A": "Holmes noticed the assistant\u2019s trick of vanishing into the cellar \u2014 that he was spending many hours a day in the cellar \u2014 which revealed the League was a diversion for tunneling.",
+    "Contexts": [
+        "his trick of vanishing into the cellar. The cellar! There was the end\nof this tangled clue. Then I made inquiries as to this mysterious\nassistant and found that I had to deal with one of the coolest and most\ndaring criminals in London. He was doing something in the\ncellar\u2014something which took many hours a day for months on end. What\ncould it be, once more? I could think of nothing save that he was",
+        "time they will have for their escape. We are at present, Doctor\u2014as no\ndoubt you have divined\u2014in the cellar of the City branch of one of the\nprincipal London banks. Mr. Merryweather is the chairman of directors,\nand he will explain to you that there are reasons why the more daring\ncriminals of London should take a considerable interest in this cellar\nat present.\u201d",
+        "\u201cIt\u2019s all clear,\u201d he whispered. \u201cHave you the chisel and the bags?\nGreat Scott! Jump, Archie, jump, and I\u2019ll swing for it!\u201d\nSherlock Holmes had sprung out and seized the intruder by the collar.\nThe other dived down the hole, and I heard the sound of rending cloth\nas Jones clutched at his skirts. The light flashed upon the barrel of a",
+        "Saxe-Coburg Square, and the ominous words with which he had parted from\nme. What was this nocturnal expedition, and why should I go armed?\nWhere were we going, and what were we to do? I had the hint from Holmes\nthat this smooth-faced pawnbroker\u2019s assistant was a formidable man\u2014a\nman who might play a deep game. I tried to puzzle it out, but gave it"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.25,
+            "Threshold": 0.7,
+            "R": "The score is 0.25 because most retrieved lines are off\u2011target \u2014 e.g. 'made inquiries as to this mysterious assistant' and 'one of the coolest and most daring criminals in London' do not identify the specific clue \u2014 while only a few lines actually point to the tunneling revelation, notably 'Someone said, \"It\u2019s all clear,\" and asked \"Have you the chisel and the bags?\"' and 'The cellar was the end of this tangled clue,' which together indicate the chisel/bags and the cellar endpoint that reveal the League was a diversion for tunneling."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the top three nodes in the retrieval contexts directly cite the cellar/tunneling evidence \u2014 first node quotes \"vanishing into the cellar. The cellar! There was the end of this tangled clue.\" and \"He was doing something in the cellar\u2014something which took many hours a day\"; second node highlights criminals\u2019 interest in the bank \"cellar\" with \"take a considerable interest in this cellar at present\"; third node describes the physical entry with \"The other dived down the hole\" and \"the sound of rending cloth as Jones clutched at his skirts,\". The fourth node (fourth node) only notes \"smooth-faced pawnbroker\u2019s assistant\" and that Watson \"had the hint from Holmes\" and omits the physical dirty-trousers/knees clue, so it appropriately ranks lower. It can\u2019t be higher than 1.00 \u2014 the most relevant tunneling clues are already placed first, which is excellent."
+        }
+    ]
+}{
+    "Q": "Who ultimately captures Arthur Clay?",
+    "ExpA": "Sherlock Holmes and the police",
+    "A": "He was taken into custody by the detective.",
+    "Contexts": [
+        "\u201cThat is better,\u201d said John Clay serenely. He made a sweeping bow to\nthe three of us and walked quietly off in the custody of the detective.\n\u201cReally, Mr. Holmes,\u201d said Mr. Merryweather as we followed them from\nthe cellar, \u201cI do not know how the bank can thank you or repay you.\nThere is no doubt that you have detected and defeated in the most",
+        "my anger. Mary was the first to rush into my room, and, at the sight of\nthe coronet and of Arthur\u2019s face, she read the whole story and, with a\nscream, fell down senseless on the ground. I sent the housemaid for the\npolice and put the investigation into their hands at once. When the\ninspector and a constable entered the house, Arthur, who had stood",
+        "as Jones clutched at his skirts. The light flashed upon the barrel of a\nrevolver, but Holmes\u2019 hunting crop came down on the man\u2019s wrist, and\nthe pistol clinked upon the stone floor.\n\u201cIt\u2019s no use, John Clay,\u201d said Holmes blandly. \u201cYou have no chance at\nall.\u201d\n\u201cSo I see,\u201d the other answered with the utmost coolness. \u201cI fancy that\nmy pal is all right, though I see you have got his coat-tails.\u201d",
+        "There is no doubt that you have detected and defeated in the most\ncomplete manner one of the most determined attempts at bank robbery\nthat have ever come within my experience.\u201d\n\u201cI have had one or two little scores of my own to settle with Mr. John\nClay,\u201d said Holmes. \u201cI have been at some small expense over this\nmatter, which I shall expect the bank to refund, but beyond that I am"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.29411764705882354,
+            "Threshold": 0.7,
+            "R": "The score is 0.29 because the majority of retrieved lines are irrelevant to who captured Arthur Clay (e.g., '\"That is better,\" said John Clay serenely.' and 'we followed them from the cellar' do not identify the captor), while a few key lines do point to his arrest\u2014'He walked quietly off in the custody of the detective.', 'I sent the housemaid for the police and put the investigation into their hands at once.', and '\"It\u2019s no use, John Clay,\" said Holmes blandly. \"You have no chance at all.\"'\u2014making the answer only partially supported by the context."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the top-ranked retrieval context nodes all directly show Holmes or the police taking Clay: node 1 (first node) states 'walked quietly off in the custody of the detective' and 'Really, Mr. Holmes,'; node 2 (second node) records 'I sent the housemaid for the police and put the investigation into their hands at once. When the inspector and a constable entered the house'; node 3 (third node) shows 'Holmes\u2019 hunting crop came down on the man\u2019s wrist' and 'It\u2019s no use, John Clay,'; node 4 (fourth node) notes 'you have detected and defeated in the most complete manner' and 'I have had one or two little scores of my own to settle with Mr. John Clay'. Because these four highest-ranked nodes all contain explicit capture/handing-to-police details, there are no irrelevant nodes that should be ranked above them \u2014 nice, clean ranking."
+        }
+    ]
+}{
+    "Q": "What is the core Stoic idea Marcus repeats throughout Meditations?",
+    "ExpA": "Control what you can control accept what you cannot",
+    "A": "Core Stoic idea Marcus repeats: that the highest good is to \u201clive according to nature\u201d \u2014 to work consciously with God/Providence for the common good; virtue alone enables this, the wise man is self\u2011sufficient and externals are indifferent, and one must control the will and bring desires under the ruling principle.\n\nSources: 1393 (Meditations); 46 (Meditations); 55 (Meditations); 58 (Meditations).",
+    "Contexts": [
+        "Stoics, a philosophic system founded by Zeno (4th century B.C.), and\r\nsystematised by Chrysippus (3rd century B.C.). Their physical theory\r\nwas a pantheistic materialism, their summum bonum \"to live according\r\nto nature.\" Their wise man needs nothing, he is sufficient to himself;\r\nvirtue is good, vice bad, external things indifferent.",
+        "they live their lives as fellow-workers with God.\r\n\r\nSuch is the system which underlies the Meditations of Marcus Aurelius.\r\nSome knowledge of it is necessary to the right understanding of the\r\nbook, but for us the chief interest lies elsewhere. We do not come to\r\nMarcus Aurelius for a treatise on Stoicism. He is no head of a school to",
+        "but for the good of the whole. The highest good of man is consciously\r\nto work with God for the common good, and this is the sense in which\r\nthe Stoic tried to live in accord with nature. In the individual it\r\nis virtue alone which enables him to do this; as Providence rules the\r\nuniverse, so virtue in the soul must rule man.\r\n\r\nIn Logic, the Stoic system is noteworthy for their theory as to the",
+        "the power of the will; whereas health, wealth, honour, and other such\r\nare generally not so. The Stoic was called upon to control his desires\r\nand affections, and to guide his opinion; to bring his whole being\r\nunder the sway of the will or leading principle, just as the universe\r\nis guided and governed by divine Providence. This is a special"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.6842105263157895,
+            "Threshold": 0.7,
+            "R": "The score is 0.68 because the retrieval includes direct statements of Marcus's recurring Stoic theme\u2014e.g. 'Their summum bonum \"to live according to nature.\"', 'The highest good of man is consciously to work with God for the common good.' and 'they live their lives as fellow-workers with God.'\u2014but it is diluted by irrelevant material about origins and technical metaphysics (e.g. 'founded by Zeno (4th century B.C.)...', 'pantheistic materialism', 'for us the chief interest lies elsewhere.'), making it partially but not fully focused on the core idea."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 0.8055555555555555,
+            "Threshold": 0.7,
+            "R": "The score is 0.81 because most top-ranked nodes in the retrieval contexts support the Stoic core: node 1 states the Stoic goal as 'to live according to nature' and that 'external things [are] indifferent,' and nodes 3 and 4 (ranks 3 and 4) reinforce this with 'virtue in the soul must rule man' / 'Providence rules the universe' and 'The Stoic was called upon to control his desires and affections' \u2014 all aligning with 'control what you can, accept what you cannot.' It is not higher because node 2 in the retrieval contexts (rank 2) only notes 'Such is the system which underlies the Meditations of Marcus Aurelius,' and 'it does not mention controlling what you can or accepting what you cannot and so does not directly support the expected answer,' so this less relevant node appears above other supportive material and reduces precision."
+        }
+    ]
+}{
+    "Q": "Who does Marcus thank for teaching him to avoid anger and harshness?",
+    "ExpA": "His adoptive father Antoninus Pius",
+    "A": "He thanks his grandfather, the consular Annius Verus, for teaching him to be gentle and to refrain from anger and harshness.",
+    "Contexts": [
+        "was adopted by his grandfather, the consular Annius Verus, and there was\r\ndeep love between these two. On the very first page of his book Marcus\r\ngratefully declares how of his grandfather he had learned to be gentle\r\nand meek, and to refrain from all anger and passion. The Emperor Hadrian\r\ndivined the fine character of the lad, whom he used to call not Verus",
+        "and teachers. To his grandfather he owed his own gentle spirit, to\r\nhis father shamefastness and courage; he learnt of his mother to be\r\nreligious and bountiful and single-minded. Rusticus did not work in\r\nvain, if he showed his pupil that his life needed amending. Apollonius\r\ntaught him simplicity, reasonableness, gratitude, a love of true",
+        "unthankful, it hath given goodness and meekness, as an antidote.'\r\n\r\nOne so gentle towards a foe was sure to be a good friend; and indeed his\r\npages are full of generous gratitude to those who had served him. In his\r\nFirst Book he sets down to account all the debts due to his kinsfolk\r\nand teachers. To his grandfather he owed his own gentle spirit, to",
+        "practical advice; as when he suggests how Marcus should deal with his\r\nsuite. It is more difficult, he admits, to keep courtiers in harmony\r\nthan to tame lions with a lute; but if it is to be done, it must be by\r\neradicating jealousy. 'Do not let your friends,' says Fronto,'[30] 'envy\r\neach other, or think that what you give to another is filched from them.\r\n\r\n[30] Ad M Caes., iv. 1."
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.3157894736842105,
+            "Threshold": 0.7,
+            "R": "The score is 0.32 because the context does contain the direct answer\u2014e.g. 'Marcus gratefully declares he had learned from his grandfather to be gentle and meek, and to refrain from all anger and passion.' and 'Marcus was adopted by his grandfather, the consular Annius Verus.'\u2014but much of the retrieval is noise (e.g. 'there was deep love between these two.' and 'it hath given goodness and meekness, as an antidote') that does not identify who Marcus thanks, lowering overall relevancy."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 0,
+            "Threshold": 0.7,
+            "R": "The score is 0.00 because the top-ranked nodes in the retrieval contexts do not support the correct teacher and so occupy the highest positions instead of any relevant passages. Node 1 in the retrieval contexts even says \"This passage says Marcus 'had learned to be gentle and meek, and to refrain from all anger and passion' from his grandfather ... not from his adoptive father Antoninus Pius.\", node 2 states \"To his grandfather he owed his own gentle spirit\" and lists other teachers rather than Antoninus Pius, node 3 repeats that \"To his grandfather he owed his own gentle spirit,\" and node 4 is unrelated practical advice from Fronto (\"Do not let your friends,' says Fronto\"). Because these nodes attribute gentleness to his grandfather or other sources and do not identify who Marcus thanks, they should be ranked lower than any nodes that actually answer the question \u2014 hence the precision is 0.00."
+        }
+    ]
+}{
+    "Q": "How does Marcus describe the proper response to insults?",
+    "ExpA": "They harm the insulter not you remain rational",
+    "A": "Marcus says one should not abandon one\u2019s philosophy or heed silly people when insulted; instead show forbearance and not lose your temper. Treat petty insults with magnanimity \u2014 ask why a small thing should make you sorry, and if you cannot take it joyously, at least suffer patiently. Be kind even to those who hate you, and correct their error ingenuously and meekly rather than by ostentation.",
+    "Contexts": [
+        "as he doth report of himself: not to depart from thy philosophy for\r\nanything that can befall thee, nor to give ear to the discourses of\r\nsilly people, and mere naturalists.\r\n\r\nXLII. It is common to all trades and professions to mind and intend that\r\nonly, which now they are about, and the instrument whereby they work.\r\n\r\nXLIII. When at any time thou art offended with any one's impudency, put",
+        "this: all that concerns the case which you are supporting must be\r\nclearly brought forward; what concerns your own feelings, though you may\r\nhave had just provocation, should be left unsaid.' The story does credit\r\nto both. Fronto shows no loss of temper at the interference, nor shrinks\r\nfrom stating his case with frankness; and Marcus, with forbearance",
+        "Roman to his own soul. The petty annoyances of injustice or unkindness\r\nare looked on by each with the same magnanimity. 'Why doth a little\r\nthing said or done against thee make thee sorry? It is no new thing; it\r\nis not the first, nor shall it be the last, if thou live long. At best\r\nsuffer patiently, if thou canst not suffer joyously.' The Christian",
+        "speaking anything that doth truly deserve contempt. Will any hate me?\r\nlet him look to that. I for my part will be kind and loving unto all,\r\nand even unto him that hates me, whom-soever he be, will I be ready to\r\nshow his error, not by way of exprobation or ostentation of my patience,\r\nbut ingenuously and meekly: such as was that famous Phocion, if so be"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.6666666666666666,
+            "Threshold": 0.7,
+            "R": "The score is 0.67 because the context contains clear, directly relevant guidance\u2014e.g. 'When at any time thou art offended with any one's impudency, put', 'At best suffer patiently, if thou canst not suffer joyously.', and 'I will be ready to show his error, not by way of exprobation or ostentation of my patience, but ingenuously and meekly'\u2014which describe Marcus\u2019s forbearance, patience, and meek correction; but this is diluted by unrelated fragments such as 'It is common to all trades and professions to mind and intend that only, which now they are about...', 'The story does credit to both.', 'Roman to his own soul.', the incomplete 'The Christian', and 'Will any hate me? let him look to that.' that do not address how to respond to insults."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because all top-ranked nodes in the retrieval contexts directly answer the question: node 1 advises \"not to depart from thy philosophy ... nor to give ear to the discourses of silly people\" and begins \"When at any time thou art offended\u2026\" (supporting ignoring insults); node 2 notes \"Fronto shows no loss of temper ... nor shrinks from stating his case with frankness; and Marcus, with forbearance\" (supporting calm forbearance); node 3 asks \"Why doth a little thing said or done against thee make thee sorry? ... At best suffer patiently...\" (supporting composure); and node 4 declares \"I for my part will be kind and loving unto all, and even unto him that hates me ... ingenuously and meekly\" (supporting a kind, meek response). There are no irrelevant nodes interleaved, so the ranking is perfect and cannot be higher."
+        }
+    ]
+}{
+    "Q": "What does Marcus emphasize as the 'guiding principle' for decision-making?",
+    "ExpA": "The rational ruling faculty (logos)",
+    "A": "Marcus emphasizes that decisions should be guided by virtue acting with divine Providence for the common good \u2014 virtue in the soul ruling the individual, living as fellow\u2011workers with God, with moderation and public spirit as central.",
+    "Contexts": [
+        "well as founded on legal axioms. The one is, that every part of the\r\nexpression ought, if possible, to be allowed some meaning, and be made\r\nto conspire to some common end. The other is, that where the several\r\nparts cannot be made to coincide, the less important should give way\r\nto the more important part; the means should be sacrificed to the end,\r\nrather than the end to the means.",
+        "but for the good of the whole. The highest good of man is consciously\r\nto work with God for the common good, and this is the sense in which\r\nthe Stoic tried to live in accord with nature. In the individual it\r\nis virtue alone which enables him to do this; as Providence rules the\r\nuniverse, so virtue in the soul must rule man.\r\n\r\nIn Logic, the Stoic system is noteworthy for their theory as to the",
+        "is guided and governed by divine Providence. This is a special\r\napplication of the favourite Greek virtue of moderation, (\u03c3\u03c9\u03c6\u03c1\u03bf\u03c3\u03cd\u03bd\u03b7)\r\nand has also its parallel in Christian ethics. The second point is a\r\nstrong insistence on the unity of the universe, and on man's duty as\r\npart of a great whole. Public spirit was the most splendid political",
+        "they live their lives as fellow-workers with God.\r\n\r\nSuch is the system which underlies the Meditations of Marcus Aurelius.\r\nSome knowledge of it is necessary to the right understanding of the\r\nbook, but for us the chief interest lies elsewhere. We do not come to\r\nMarcus Aurelius for a treatise on Stoicism. He is no head of a school to"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.47368421052631576,
+            "Threshold": 0.7,
+            "R": "The score is 0.47 because much of the retrieval context is off-topic (e.g. 'founded on legal axioms', 'In Logic, the Stoic system is noteworthy for their theory as to the', 'We do not come to Marcus Aurelius for a treatise on Stoicism.'), yet several clear lines do address Marcus\u2019s emphasis \u2014 for example, 'The expression ought, if possible, to be allowed some meaning, and be made to conspire to some common end.', 'the less important should give way to the more important part; the means should be sacrificed to the end, rather than the end to the means.', and 'As Providence rules the universe, so virtue in the soul must rule man.' \u2014 indicating a guiding principle centered on unity, duty to the common good, and virtue/providence."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 0.5,
+            "Threshold": 0.7,
+            "R": "The score is 0.50 because node 2 (rank 2) directly supports the expected answer with the statement \"In the individual it is virtue alone which enables him to do this; as Providence rules the universe, so virtue in the soul must rule man,\" so a relevant passage appears high in the list. However, node 1 (rank 1) is placed above it and discusses legal-interpretive rules \u2014 \"every part of the expression ought... the less important should give way... the means should be sacrificed to the end,\" which is unrelated and reduces precision. Additional nodes in the contexts (node 3, rank 3: \"is guided and governed by divine Providence... the unity of the universe,\" and node 4, rank 4: although referencing Marcus Aurelius, \"does not state the guiding principle as the 'rational ruling faculty (logos)'\") are also focused on Providence or are non-specific, so several irrelevant nodes surround the sole strong match, preventing a higher score."
+        }
+    ]
+}{
+    "Q": "According to Marcus; why should one avoid seeking praise?",
+    "ExpA": "Because praise is fleeting and given by those who may not understand virtue",
+    "A": "Marcus advises avoiding the pursuit of praise because: (1) a rightly understanding person does good without seeking applause and will continue to do good for its own sake (chunk 414); (2) one should intend only that actions be good and beneficial to the public, since praise is fleeting and those once commended are soon forgotten (chunk 621); (3) life is short and both praiser and praised will soon be dust, and praise is limited and local (chunk 760); (4) praise from people who cannot even approve themselves is not worth regard (chunk 252).\n\nSources: 414 (Meditations), 621 (Meditations), 760 (Meditations), 252 (Meditations)",
+    "Contexts": [
+        "look not for applause and commendation; so neither doth that man that\r\nrightly doth understand his own nature when he hath done a good turn:\r\nbut from one doth proceed to do another, even as the vine after she hath\r\nonce borne fruit in her own proper season, is ready for another time.\r\nThou therefore must be one of them, who what they do, barely do it",
+        "good. For whatsoever I do either by myself, or with some other, the\r\nonly thing that I must intend, is, that it be good and expedient for\r\nthe public. For as for praise, consider how many who once were much\r\ncommended, are now already quite forgotten, yea they that commended\r\nthem, how even they themselves are long since dead and gone. Be not",
+        "when sick and pained? when in the act of lust, and fornication? And\r\nas for fame. This life is short. Both he that praiseth, and he that is\r\npraised; he that remembers, and he that is remembered, will soon be dust\r\nand ashes. Besides, it is but in one corner of this part of the world\r\nthat thou art praised; and yet in this corner, thou hast not the joint",
+        "the time together, he knoweth, and remembers right well, he therefore\r\nregards not such praise and approbation, as proceeding from them, who\r\ncannot like and approve themselves.\r\n\r\nV. Do nothing against thy will, nor contrary to the community, nor\r\nwithout due examination, nor with reluctancy. Affect not to set out thy\r\nthoughts with curious neat language. Be neither a great talker, nor a"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.7222222222222222,
+            "Threshold": 0.7,
+            "R": "The score is 0.72 because the retrieval contains clearly relevant guidance\u2014e.g. 'One should not look for applause and commendation.', 'A man who rightly understands his own nature does not seek praise after doing a good turn.', and 'Both he that praiseth, and he that is praised; ... will soon be dust and ashes.'\u2014but its usefulness is reduced by distracting, unrelated fragments such as 'when sick and pained? when in the act of lust, and fornication?', 'Do nothing against thy will, nor contrary to the community, nor without due examination, nor with reluctancy.', and 'Affect not to set out thy thoughts with curious neat language.'."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the top-ranked nodes all directly support Marcus\u2019 counsel to avoid seeking praise: the first node advises to \"look not for applause and commendation\" and to \"do[] it... barely do it\"; the second node notes \"For as for praise, consider how many who once were much commended, are now already quite forgotten\"; the third node observes \"Both he that praiseth, and he that is praised... will soon be dust and ashes\" and that \"it is but in one corner of this part of the world that thou art praised\"; the fourth node explains one \"regards not such praise and approbation, as proceeding from them, who cannot like and approve themselves.\" There are no irrelevant nodes ranked above these relevant nodes, so precision is maximal and cannot be higher than 1.00."
+        }
+    ]
+}{
+    "Q": "What is the mysterious book within the story collection that drives readers insane?",
+    "ExpA": "'The King in Yellow' (the fictional play/book)",
+    "A": "The mysterious book is \u201cThe King in Yellow\u201d \u2014 a fictional book/play within the collection that is said to be dangerous and to drive readers insane, inspiring horror and visions (e.g., of Carcosa).\n\nSources: 546 (The King in Yellow); 168 (The King in Yellow); 167 (The King in Yellow); 28 (The King in Yellow).",
+    "Contexts": [
+        "the book.\r\n\r\n\u201cWhat is it?\u201d I asked.\r\n\r\n\u201c_The King in Yellow._\u201d\r\n\r\nI was dumfounded. Who had placed it there? How came it in my rooms? I\r\nhad long ago decided that I should never open that book, and nothing on\r\nearth could have persuaded me to buy it. Fearful lest curiosity might\r\ntempt me to open it, I had never even looked at it in book-stores. If",
+        "only one word which I loathe more than I do lunatic and that word is\r\ncrazy. But I controlled myself and asked him why he thought _The King\r\nin Yellow_ dangerous.\r\n\r\n\u201cOh, I don\u2019t know,\u201d he said, hastily. \u201cI only remember the excitement\r\nit created and the denunciations from pulpit and Press. I believe the\r\nauthor shot himself after bringing forth this monstrosity, didn\u2019t he?\u201d",
+        "\u201cI wish they were bound in gold,\u201d I said. \u201cBut wait, yes, there is\r\nanother book, _The King in Yellow_.\u201d I looked him steadily in the eye.\r\n\r\n\u201cHave you never read it?\u201d I asked.\r\n\r\n\u201cI? No, thank God! I don\u2019t want to be driven crazy.\u201d\r\n\r\nI saw he regretted his speech as soon as he had uttered it. There is\r\nonly one word which I loathe more than I do lunatic and that word is",
+        "I suffered in every nerve, I snatched the thing out of the coals and\r\ncrept shaking to my bedroom, where I read it and reread it, and wept\r\nand laughed and trembled with a horror which at times assails me yet.\r\nThis is the thing that troubles me, for I cannot forget Carcosa where\r\nblack stars hang in the heavens; where the shadows of men\u2019s thoughts"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.6666666666666666,
+            "Threshold": 0.7,
+            "R": "The score is 0.67 because several retrieved lines directly answer the question \u2014 e.g. 'The book is 'The King in Yellow.'', 'He thought The King in Yellow was dangerous.', and 'I? No, thank God! I don\u2019t want to be driven crazy.' \u2014 but many other snippets are irrelevant to naming the book, focusing on provenance or emotion such as 'Who had placed it there? How came it in my rooms?', 'I was dumfounded.', and 'I wish they were bound in gold'."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the top-ranked nodes in the retrieval contexts all explicitly identify the cursed book and its maddening effect: node 1 quotes \u201c_The King in Yellow_\u201d and \u201cI had long ago decided that I should never open that book.\u201d; node 2 notes \u201cwhy he thought _The King in Yellow_ dangerous\u201d and mentions denunciations and the author\u2019s ruin; node 3 cites \u201cthere is another book, _The King in Yellow_.\u201d and \u201cI don\u2019t want to be driven crazy.\u201d; node 4 records \u201cI read it and reread it, and wept and laughed and trembled with a horror\u201d and references \u201cCarcosa.\u201d Because every top result is directly relevant, there are no irrelevant nodes that need to be ranked lower, so precision is perfect \u2014 and it cannot be higher than 1.00."
+        }
+    ]
+}{
+    "Q": "What effect does reading the play have on its readers?",
+    "ExpA": "Madness, despair, or hallucinations",
+    "A": "Reading the play exerts a compulsive, riveting effect: readers may try to stop or destroy the book yet find themselves irresistibly drawn back, feeling terror or an intense, poignant joy. The work spread like an \"infectious disease,\" being banned, confiscated, and denounced\u2014implying a contagious, corrupting influence on its readers.",
+    "Contexts": [
+        "on the hearth in the firelight. If I had not caught a glimpse of the\r\nopening words in the second act I should never have finished it, but\r\nas I stooped to pick it up, my eyes became riveted to the open page,\r\nand with a cry of terror, or perhaps it was of joy so poignant that\r\nI suffered in every nerve, I snatched the thing out of the coals and",
+        "me.\r\n\r\nDuring my convalescence I had bought and read for the first time, _The\r\nKing in Yellow_. I remember after finishing the first act that it\r\noccurred to me that I had better stop. I started up and flung the book\r\ninto the fireplace; the volume struck the barred grate and fell open\r\non the hearth in the firelight. If I had not caught a glimpse of the",
+        "repaid my labours. Their melancholy is soothing, and their joy\r\nelevating, to a degree I never experienced in studying the authors of\r\nany other country. When you read their writings, life appears to\r\nconsist in a warm sun and a garden of roses,\u2014in the smiles and frowns\r\nof a fair enemy, and the fire that consumes your own heart. How",
+        "read it. It is well known how the book spread like an infectious\r\ndisease, from city to city, from continent to continent, barred out\r\nhere, confiscated there, denounced by Press and pulpit, censured even\r\nby the most advanced of literary anarchists. No definite principles\r\nhad been violated in those wicked pages, no doctrine promulgated, no"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.6153846153846154,
+            "Threshold": 0.7,
+            "R": "The score is 0.62 because the context contains clear evidence of reader effects \u2014 e.g. 'with a cry of terror, or perhaps it was of joy so poignant that I suffered in every nerve', 'Their melancholy is soothing', and 'It is well known how the book spread like an infectious disease' \u2014 but that signal is diluted by many irrelevant passages about setting or mere actions, such as 'on the hearth in the firelight', 'During my convalescence I had bought and read for the first time, _The King in Yellow_', the incomplete fragment 'If I had not caught a glimpse of the', and 'No definite principles had been violated in those wicked pages', which describe circumstances or content rather than the play\u2019s effect on readers."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 0.9166666666666666,
+            "Threshold": 0.7,
+            "R": "The score is 0.92 because most high-ranked nodes clearly show harmful effects: the first node describes an extreme reaction, quoting \"with a cry of terror\" and \"I snatched the thing out of the coals,\" and the second node quotes \"I remember after finishing the first act that it occurred to me that I had better stop\" and \"I started up and flung the book into the fireplace,\" both indicating a damaging psychological effect. However the third node\u2014quoted as \"Their melancholy is soothing\" and \"life appears to consist in a warm sun and a garden of roses,\"\u2014is an irrelevant node about literary pleasure and is ranked above the fourth node, which explicitly says the play \"spread like an infectious disease\" and refers to \"those wicked pages.\" That single misplacement of an irrelevant node ahead of a relevant one explains why the score is slightly below perfect yet still high."
+        }
+    ]
+}{
+    "Q": "Which recurring symbol appears throughout the stories?",
+    "ExpA": "The Yellow Sign",
+    "A": "The recurring symbol is whiteness (the color white). Sources: [1428 - Moby Dick; Or, The Whale].",
+    "Contexts": [
+        "every token of concern, sometimes lingering so near her and so long, as\nthemselves to fall a prey.\nCHAPTER 89. Fast-Fish and Loose-Fish.\nThe allusion to the waif and waif-poles in the last chapter but one,\nnecessitates some account of the laws and regulations of the whale\nfishery, of which the waif may be deemed the grand symbol and badge.",
+        "by milk-white steeds; though even in the higher mysteries of the most\naugust religions it has been made the symbol of the divine spotlessness\nand power; by the Persian fire worshippers, the white forked flame\nbeing held the holiest on the altar; and in the Greek mythologies,\nGreat Jove himself being made incarnate in a snow-white bull; and",
+        "one kind of world, you see. Dodge again! here comes Queequeg\u2014all\ntattooing\u2014looks like the signs of the Zodiac himself. What says the\nCannibal? As I live he\u2019s comparing notes; looking at his thigh bone;\nthinks the sun is in the thigh, or in the calf, or in the bowels, I\nsuppose, as the old women talk Surgeon\u2019s Astronomy in the back country.",
+        "with a plate representing the old Indian characters chiselled on the\nfamous hieroglyphic palisades on the banks of the Upper Mississippi.\nLike those mystic rocks, too, the mystic-marked whale remains\nundecipherable. This allusion to the Indian rocks reminds me of another\nthing. Besides all the other phenomena which the exterior of the Sperm"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.5625,
+            "Threshold": 0.7,
+            "R": "The score is 0.56 because the retrieval contains some directly relevant symbolic references \u2014 e.g. 'of which the waif may be deemed the grand symbol and badge.', 'Queequeg's tattoos look like the signs of the Zodiac.', and 'Milk-white steeds are mentioned.' \u2014 but many retrieved fragments are irrelevant or incomplete for answering which single recurring symbol appears, e.g. 'The phrase \"every token of concern, sometimes lingering so near her and so long, as themselves to fall a prey.\" does not mention any recurring symbol' and 'The fragment \"Besides all the other phenomena which the exterior of the Sperm\" is incomplete and does not identify any recurring symbol.'"
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 0,
+            "Threshold": 0.7,
+            "R": "The score is 0.00 because none of the top-ranked nodes address the Yellow Sign, so no relevant nodes are ranked above these irrelevant ones. Node 1 (first node): \"The passage discusses the 'waif and waif-poles' and 'the laws and regulations of the whale fishery' but contains no mention of 'The Yellow Sign' \u2014 it is about whaling symbolism, not the Yellow Sign.\" \u2014 focused on whaling, not the target symbol. Node 2 (second node): \"This text talks about white as a symbol ('the symbol of the divine spotlessness' and 'snow-white bull'), which is unrelated to 'The Yellow Sign' and does not mention it.\" Node 3 (third node): \"The excerpt describes Queequeg's 'tattooing\u2014looks like the signs of the Zodiac' and 'the Cannibal', focusing on tattoos and astrology rather than referencing 'The Yellow Sign'.\" Node 4 (fourth node): \"Although it mentions a 'mystic-marked whale' and 'old Indian characters', the passage does not reference 'The Yellow Sign' \u2014 it only notes undecipherable marks, not that specific symbol.\" Because all four top results are irrelevant, contextual precision is zero."
+        }
+    ]
+}{
+    "Q": "Why is the story 'The Repairer of Reputations' considered unreliable narration?",
+    "ExpA": "The narrator Hildred is delusional and invents conspiracies",
+    "A": "Because the tale is presented through a single, subjective perspective that relays Mr. Wilde\u2019s insistent, self\u2011justifying claims rather than an external, corroborating account. The narrator speaks in first person (\u201cI saw... I knocked...\u201d), and Mr. Wilde himself insists on proving his correctness about being a \u201cRepairer of Reputations\u201d (\u201cI only wanted to demonstrate that I was correct. You said it was impossible...\u201d), which invites doubt. As other excerpts note, a sequence \u201cas narrated by [one person]\u201d can look different when seen by others, so the story\u2019s lone viewpoint makes its account unreliable.",
+    "Contexts": [
+        "MR. WILDE,\r\n                        REPAIRER OF REPUTATIONS.\r\n                               Third Bell.\r\n\r\nI saw old Hawberk moving about in his shop, and imagined I heard\r\nConstance\u2019s voice in the parlour; but I avoided them both and hurried\r\nup the trembling stairways to Mr. Wilde\u2019s apartment. I knocked and",
+        "from South Sea Squadron October 1st.\u201d\r\n\r\n\u201cWell,\u201d I said, \u201cthe profession of a Repairer of Reputations is\r\nlucrative.\u201d\r\n\r\nHis colourless eyes sought mine, \u201cI only wanted to demonstrate that I\r\nwas correct. You said it was impossible to succeed as a Repairer of\r\nReputations; that even if I did succeed in certain cases it would cost",
+        "not heard the opening part but also because the peculiar nature of the\nstory makes me anxious to have every possible detail from your lips. As\na rule, when I have heard some slight indication of the course of\nevents, I am able to guide myself by the thousands of other similar\ncases which occur to my memory. In the present instance I am forced to",
+        "sequence of events as narrated by this lady, and nothing stranger than\nthe result when viewed, for instance, by Mr. Lestrade of Scotland\nYard.\u201d\n\u201cYou were not yourself at fault at all, then?\u201d\n\u201cFrom the first, two facts were very obvious to me, the one that the\nlady had been quite willing to undergo the wedding ceremony, the other\nthat she had repented of it within a few minutes of returning home."
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.7058823529411765,
+            "Threshold": 0.7,
+            "R": "The score is 0.71 because the retrieval contains several direct markers of unreliable narration\u2014e.g., 'I imagined I heard Constance\u2019s voice in the parlour,' 'The narrator has not heard the opening part,' and 'The narrator claims that two facts were obvious'\u2014which point to imagination, gaps, and contested assertions. However, it also includes many irrelevant fragments that do not bear on narrator reliability\u2014e.g., 'I knocked and', 'from South Sea Squadron October 1st.', and 'the profession of a Repairer of Reputations is lucrative.'\u2014so the context is only moderately relevant."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the top two nodes in the retrieval contexts directly support unreliable narration: node 1 notes \"imagined I heard Constance\u2019s voice\" (showing he \"confuses imagination with reality\" and is delusional), and node 2 cites \"the profession of a Repairer of Reputations\" and \"I only wanted to demonstrate that I was correct\" (showing he invents conspiratorial roles). The lower-ranked nodes are appropriately placed below them: node 3 focuses on \"the peculiar nature of the story\" and the narrator\u2019s need for details rather than direct evidence of delusion, and node 4 discusses a \"lady\" repenting a wedding and mentions \"Mr. Lestrade\" which is unrelated to Hildred\u2019s delusions. Because the relevant nodes (1 and 2) are ranked above the irrelevant ones (3 and 4), the contextual precision is perfect \u2014 it can\u2019t be higher than 1.00."
+        }
+    ]
+}{
+    "Q": "Who authored the majority of the Federalist Papers?",
+    "ExpA": "Alexander Hamilton",
+    "A": "Alexander Hamilton. The Federalist Papers were written by Alexander Hamilton, John Jay, and James Madison; many essays are signed \u201cHAMILTON\u201d (e.g., Nos. 1, 79, 81, 15), indicating Hamilton authored the majority.\n\nSources: chunk_nr 0 (The Federalist Papers); chunk_nr 3663 (The Federalist Papers); chunk_nr 582 (The Federalist Papers); chunk_nr 3588 (The Federalist Papers).",
+    "Contexts": [
+        "THE FEDERALIST PAPERS ***\r\n\r\nTHE FEDERALIST PAPERS\r\n\r\nBy Alexander Hamilton, John Jay, and James Madison\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 1\r\n\r\nGeneral Introduction\r\n\r\nFor the Independent Journal. Saturday, October 27, 1787\r\n\r\n\r\nHAMILTON\r\n\r\nTo the People of the State of New York:\r\n\r\nAFTER an unequivocal experience of the inefficacy of the subsisting",
+        "Laws. Vol. I, page 186.\r\n\r\n2. Idem, page 181.\r\n\r\n3. Vide Protest of the Minority of the Convention of Pennsylvania,\r\nMartin's Speech, etc.\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 79\r\n\r\nThe Judiciary Continued\r\n\r\nFrom MCLEAN's Edition, New York. Wednesday, May 28, 1788\r\n\r\nHAMILTON\r\n\r\nTo the People of the State of New York:\r\n\r\nNEXT to permanency in office, nothing can contribute more to the",
+        "mischiefs and to obtain general advantages.\r\n\r\nPUBLIUS\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 81\r\n\r\nThe Judiciary Continued, and the Distribution of the Judicial Authority.\r\n\r\nFrom McLEAN's Edition, New York. Wednesday, May 28, 1788.\r\n\r\nHAMILTON\r\n\r\nTo the People of the State of New York:\r\n\r\nLET US now return to the partition of the judiciary authority between",
+        "and to decide.\r\n\r\nPUBLIUS\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 15\r\n\r\nThe Insufficiency of the Present Confederation to Preserve the Union\r\n\r\nFor the Independent Journal. Saturday, December 1, 1787\r\n\r\nHAMILTON\r\n\r\nTo the People of the State of New York.\r\n\r\nIN THE course of the preceding papers, I have endeavored, my fellow\r\ncitizens, to place before you, in a clear and convincing light, the"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.20833333333333334,
+            "Threshold": 0.7,
+            "R": "The score is 0.21 because most retrieved lines are bibliographic or essay text (e.g., 'For the Independent Journal...Saturday, October 27, 1787', 'From MCLEAN's Edition, New York. Wednesday, May 28, 1788.', 'To the People of the State of New York:') and therefore irrelevant to naming who wrote the majority, yet the context does include direct authorship clues such as 'The Federalist Papers were written by Alexander Hamilton, John Jay, and James Madison.', 'HAMILTON (as indicated on Federalist No. 1)', and 'FEDERALIST No. 79 was authored by Hamilton.' which partially support identifying Hamilton as the principal contributor."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the top-ranked retrieval contexts uniformly support that Hamilton wrote the majority: node 1 explicitly names 'By Alexander Hamilton, John Jay, and James Madison' and shows 'FEDERALIST No. 1' labeled 'HAMILTON'; node 2 cites ''FEDERALIST No. 79' followed by 'HAMILTON''; node 3 shows ''FEDERALIST No. 81' with the attribution 'HAMILTON''; and node 4 contains ''FEDERALIST No. 15' ... attributed to 'HAMILTON''. There are no irrelevant nodes among the top results that should be ranked lower, so precision is perfect."
+        }
+    ]
+}{
+    "Q": "What was the primary purpose of the Federalist Papers?",
+    "ExpA": "To advocate for ratification of the U.S. Constitution",
+    "A": "The primary purpose was to persuade the people (especially of New York) to support the new Constitution by explaining and defending it in a clear and convincing light.\n\nSources: chunk 0 \u2014 The Federalist Papers; chunk 34 \u2014 The Federalist Papers; chunk 15 \u2014 The Federalist Papers.",
+    "Contexts": [
+        "THE FEDERALIST PAPERS ***\r\n\r\nTHE FEDERALIST PAPERS\r\n\r\nBy Alexander Hamilton, John Jay, and James Madison\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 1\r\n\r\nGeneral Introduction\r\n\r\nFor the Independent Journal. Saturday, October 27, 1787\r\n\r\n\r\nHAMILTON\r\n\r\nTo the People of the State of New York:\r\n\r\nAFTER an unequivocal experience of the inefficacy of the subsisting",
+        "out in several of the late publications against the new Constitution.\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 2\r\n\r\nConcerning Dangers from Foreign Force and Influence\r\n\r\nFor the Independent Journal. Wednesday, October 31, 1787\r\n\r\nJAY\r\n\r\nTo the People of the State of New York:\r\n\r\nWHEN the people of America reflect that they are now called upon to",
+        "PUBLIUS \"Recherches philosophiques sur les Americains.\"\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 12\r\n\r\nThe Utility of the Union In Respect to Revenue\r\n\r\nFrom the New York Packet. Tuesday, November 27, 1787.\r\n\r\nHAMILTON\r\n\r\nTo the People of the State of New York:\r\n\r\nTHE effects of Union upon the commercial prosperity of the States have\r\nbeen sufficiently delineated. Its tendency to promote the interests of",
+        "and to decide.\r\n\r\nPUBLIUS\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 15\r\n\r\nThe Insufficiency of the Present Confederation to Preserve the Union\r\n\r\nFor the Independent Journal. Saturday, December 1, 1787\r\n\r\nHAMILTON\r\n\r\nTo the People of the State of New York.\r\n\r\nIN THE course of the preceding papers, I have endeavored, my fellow\r\ncitizens, to place before you, in a clear and convincing light, the"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.8148148148148148,
+            "Threshold": 0.7,
+            "R": "The score is 0.81 because the retrieval contains clear, relevant evidence of purpose\u2014e.g. 'THE FEDERALIST PAPERS', 'The Federalist Papers were written by Alexander Hamilton, John Jay, and James Madison.', headings like 'The Insufficiency of the Present Confederation to Preserve the Union' and the persuasive line 'IN THE course of the preceding papers, I have endeavored, my fellow citizens, to place before you, in a clear and convincing light'\u2014which point to arguing for union and the Constitution\u2014while also including non\u2011substantive items that dilute focus, such as the bibliographic line 'PUBLIUS \"Recherches philosophiques sur les Americains.\"', publication metadata 'From the New York Packet. Tuesday, November 27, 1787.' and isolated author tags like 'HAMILTON' that do not directly state the Papers' primary purpose."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because all top-ranked nodes directly support the Papers\u2019 persuasive purpose: the first node cites \"To the People of the State of New York\" and the \"inefficacy of the subsisting\" government, the second node references arguments \"against the new Constitution\" and begins \"WHEN the people of America reflect that they are now called upon to\", the third highlights \"The Utility of the Union\" and \"THE effects of Union upon the commercial prosperity of the States\", and the fourth names \"The Insufficiency of the Present Confederation to Preserve the Union\" and even promises \"I have endeavored... to place before you, in a clear and convincing light,\". Because every top-ranked node is clearly relevant, there are no irrelevant nodes to push down in the ranking, so the precision is perfect and cannot be higher."
+        }
+    ]
+}{
+    "Q": "Why does Publius argue for a large republic?",
+    "ExpA": "It better controls factions through diversity of interests",
+    "A": "Publius (Madison) argues that a large republic is preferable because it (1) provides a bigger pool of fit candidates for representatives and thus better guards against the influence of small cabals, since representatives must be limited in number and in a small republic are proportionally fewer choices; and (2) a republic (unlike a direct democracy) can be extended over a large region, allowing those benefits to operate on a greater scale.",
+    "Contexts": [
+        "and then betray the interests, of the people. The question resulting is,\r\nwhether small or extensive republics are more favorable to the election\r\nof proper guardians of the public weal; and it is clearly decided in\r\nfavor of the latter by two obvious considerations:\r\n\r\nIn the first place, it is to be remarked that, however small the",
+        "In the first place, it is to be remarked that, however small the\r\nrepublic may be, the representatives must be raised to a certain number,\r\nin order to guard against the cabals of a few; and that, however large\r\nit may be, they must be limited to a certain number, in order to\r\nguard against the confusion of a multitude. Hence, the number of",
+        "guard against the confusion of a multitude. Hence, the number of\r\nrepresentatives in the two cases not being in proportion to that of\r\nthe two constituents, and being proportionally greater in the small\r\nrepublic, it follows that, if the proportion of fit characters be not\r\nless in the large than in the small republic, the former will present a",
+        "the nature of the latter. The true distinction between these forms was\r\nalso adverted to on a former occasion. It is, that in a democracy, the\r\npeople meet and exercise the government in person; in a republic,\r\nthey assemble and administer it by their representatives and agents. A\r\ndemocracy, consequently, will be confined to a small spot. A republic\r\nmay be extended over a large region."
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the retrieval context directly answers the question (reasons for irrelevancy: []): it frames the core issue \u2014 'The question is whether small or extensive republics are more favorable to the election of proper guardians of the public weal,' \u2014 and explicitly concludes in favor of a large republic: 'It is clearly decided in favor of the latter (extensive republics) by two obvious considerations.' It also supplies the mechanisms Publius gives: 'Leaders may \"betray the interests of the people,\"' representatives guard 'against the cabals of a few' in small republics and must be limited in large ones to 'guard against the confusion of a multitude,' and 'A republic may be extended over a large region.'"
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because all top-ranked nodes directly address why Publius favors a large republic, so there are no irrelevant nodes that should be ranked lower. Node 1 frames the core question saying \"whether small or extensive republics are more favorable...; and it is clearly decided in favor of the latter,\" Node 2 shows representatives guard \"against the cabals of a few,\" Node 3 notes the \"greater proportion of 'fit characters'\" in a larger pool, and Node 4 observes \"A republic may be extended over a large region\" \u2014 together these appropriately prioritize the most relevant evidence."
+        }
+    ]
+}

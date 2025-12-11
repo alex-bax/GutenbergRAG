@@ -260,10 +260,6 @@ class QdrantVectorStore(AsyncVectorStore):
         
         return hits
 
-        # async def populate_small_collection(self) -> tuple[list[GBBookMeta], str]:
-        #     async_db_sess = get_async_db_sess()
-        #     return await upload_missing_book_ids(book_ids=DEF_BOOK_GB_IDS_SMALL, sett=self.settings, db_sess=async_db_sess)
-
 
     async def delete_books(self, book_ids: set[int]) -> None:
         await self._client.delete(
@@ -285,8 +281,7 @@ class QdrantVectorStore(AsyncVectorStore):
                         
     async def _get_all_unique_from_field(self, field:str) -> list[FacetValueHit]:
 
-        resp = await self._client.facet(
-                                        collection_name=self.collection_name,
+        resp = await self._client.facet(collection_name=self.collection_name,
                                         key=field,
                                         limit=10_00)
         

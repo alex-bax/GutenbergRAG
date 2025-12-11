@@ -1,0 +1,25 @@
+{
+    "Q": "What is the name of Ishmael\u2019s close companion aboard the Pequod?",
+    "ExpA": "Queequeg",
+    "A": "Ishmael\u2019s close companion aboard the Pequod is Queequeg.\n\nSources: [929] Moby Dick; Or, The Whale; [575] Moby Dick; Or, The Whale",
+    "Contexts": [
+        "former one has been badly twisted, or elbowed in the assault; and\nmoreover, as there generally subsists between the two, a close intimacy\nand friendliness; it is therefore but meet, that in this place we set\ndown who the Pequod\u2019s harpooneers were, and to what headsman each of\nthem belonged.\nFirst of all was Queequeg, whom Starbuck, the chief mate, had selected",
+        "wholly with me, inasmuch as Yojo purposed befriending us; and, in order\nto do so, had already pitched upon a vessel, which, if left to myself,\nI, Ishmael, should infallibly light upon, for all the world as though\nit had turned out by chance; and in that vessel I must immediately ship\nmyself, for the present irrespective of Queequeg.",
+        "the grindstone. That\u2019s he; thank ye, Bildad. Now then, my young man,\nIshmael\u2019s thy name, didn\u2019t ye say? Well then, down ye go here, Ishmael,\nfor the three hundredth lay.\u201d\n\u201cCaptain Peleg,\u201d said I, \u201cI have a friend with me who wants to ship\ntoo\u2014shall I bring him down to-morrow?\u201d\n\u201cTo be sure,\u201d said Peleg. \u201cFetch him along, and we\u2019ll look at him.\u201d",
+        "through the cabin sky-light, sitting silly and dumfoundered before\nawful Ahab.\nNow, Ahab and his three mates formed what may be called the first table\nin the Pequod\u2019s cabin. After their departure, taking place in inverted\norder to their arrival, the canvas cloth was cleared, or rather was\nrestored to some hurried order by the pallid steward. And then the"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.1875,
+            "Threshold": 0.7,
+            "R": "The score is 0.19 because most retrieved lines are unrelated (e.g. \"former one has been badly twisted, or elbowed in the assault;\", \"I have a friend with me who wants to ship too\u2014shall I bring him down to-morrow?\", \"Ishmael\u2019s thy name, didn\u2019t ye say?\", \"Ahab and his three mates formed what may be called the first table...\") while only a few lines directly identify Ishmael\u2019s companion (e.g. \"First of all was Queequeg, whom Starbuck, the chief mate, had selected\", \"and moreover, as there generally subsists between the two, a close intimacy and friendliness;\"). In short, the answer (Queequeg) appears but is buried in mostly irrelevant fragments, so the low 0.19 score is appropriate."
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because the top-ranked nodes (node 1\u20133) unambiguously identify Queequeg as Ishmael\u2019s companion: node 1 states \"It explicitly names the companion: \"First of all was Queequeg, whom Starbuck, the chief mate, had selected\" (referring to the Pequod\u2019s harpooneers).\"; node 2 states \"It mentions Queequeg in relation to Ishmael: \"I, Ishmael, should infallibly light upon... for the present irrespective of Queequeg,\" indicating Queequeg is part of Ishmael\u2019s situation.\"; and node 3 states \"It shows Ishmael travelling with a friend: \"I have a friend with me who wants to ship too\u2014shall I bring him down to-morrow?\" which supports identifying Ishmael\u2019s companion.\" The lower-ranked node (node 4) should be after these because it \"discusses Ahab and his mates in the Pequod\u2019s cabin (\"Ahab and his three mates formed... the first table in the Pequod\u2019s cabin\") and does not mention Queequeg or Ishmael\u2019s companion.\" This is a maximal score \u2014 relevant nodes are correctly ranked above the irrelevant one."
+        }
+    ]
+}

@@ -1,7 +1,0 @@
-{
-    "testFile": ".\\tests\\test_llm.py",
-    "testCases": [],
-    "conversationalTestCases": [],
-    "metricsScores": [],
-    "runDuration": 0.0
-}

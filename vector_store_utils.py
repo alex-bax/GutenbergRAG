@@ -17,7 +17,7 @@ from models.vector_db_model import SearchChunk, SearchPage, UploadChunk
 from db.vector_store_abstract import AsyncVectorStore
 
 
-def _split_by_size(data: list, chunk_size: int) -> list[list[UploadChunk]]:
+def _split_by_size(data: list, chunk_size: int) -> list[list]:
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
 
 

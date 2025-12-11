@@ -7,14 +7,14 @@ from retrieval.retrieve import run_gutenberg_rag
 from deepeval.metrics import BaseMetric, AnswerRelevancyMetric, FaithfulnessMetric, ContextualPrecisionMetric, ContextualRelevancyMetric
 from deepeval.dataset import Golden
 from deepeval.test_case import LLMTestCase
-from deepeval import assert_test
+from deepeval import assert_test, evaluate
 from deepeval.models import AzureOpenAIModel
+from deepeval.evaluate import DisplayConfig
 from settings import get_settings, Settings
 from typing import AsyncIterator
 import pytest_asyncio
 from datetime import datetime
 from constants import DEF_BOOK_NAMES_TO_IDS
-
 @pytest_asyncio.fixture(scope="session")
 async def settings() -> AsyncIterator[Settings]:
     sett = get_settings()
@@ -27,7 +27,8 @@ async def settings() -> AsyncIterator[Settings]:
 
 dataset = EvaluationDataset()
 
-dataset_p = Path("eval_data", "gb_gold.csv")
+# dataset_p = Path("eval_data", "gb_gold.csv")
+dataset_p = Path("eval_data", "gb_gold_med.csv")
 dataset.add_goldens_from_csv_file(
     file_path=str(dataset_p),
     input_col_name="question",
@@ -82,14 +83,13 @@ def deepeval_az_model(settings: "Settings") -> AzureOpenAIModel:
         temperature=1.0,
     )
 
-# @pytest.mark.parametrize("golden", dataset.goldens)
+
 @pytest.mark.asyncio  
 @pytest.mark.parametrize("test_case", dataset.test_cases)
 async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Golden, 
                                               settings:Settings, 
                                               deepeval_az_model:AzureOpenAIModel):
     
-    # assert isinstance(test_case, Golden)
     t0 = time.perf_counter()
     vec_store = await settings.get_vector_store()
     books_in_collection = await vec_store.get_all_unique_book_names()
@@ -97,18 +97,11 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
 
     answer, contexts = await run_gutenberg_rag(test_case.input, settings)
     t_rag = time.perf_counter()
+    print(f"->->->-> RAG TIME:{t_rag - t0}")
 
-    # Fill in the LLMTestCase with actual model output + retrieval context
     test_case.actual_output = answer
     test_case.retrieval_context = contexts
-
-    # test_case = LLMTestCase(
-    #     input=test_case.input,
-    #     actual_output=answer,
-    #     retrieval_context=contexts,
-    #     expected_output=test_case.expected_output,
-    # )
-
+    
 
     # answer_rel_metric = AnswerRelevancyMetric(threshold=0.7, model=az_model)
     # faith_metric = FaithfulnessMetric(threshold=0.7, model=az_model)
@@ -116,7 +109,7 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
     context_prec_metric = ContextualPrecisionMetric(threshold=0.7, model=deepeval_az_model)
     # metrics = [answer_rel_metric, faith_metric,
     #             context_prec_metric, context_rel_metric]
-    metrics:list[BaseMetric] = [context_rel_metric]  
+    metrics:list[BaseMetric] = [context_rel_metric, context_prec_metric]  
     
     log_metric_outp(metrics=metrics, # type:ignore
                     gold_inp_q=test_case.input, 
@@ -125,16 +118,33 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
                     contexts=contexts,
                     test_case=test_case,
                 )
-    
     try:
         assert_test(test_case=test_case,
                     metrics=metrics,
-                    run_async=True)
+                    run_async=True,
+                    )
+        # result = evaluate(
+        #     [test_case],
+        #     metrics,
+        #     display_config=DisplayConfig(
+        #         print_results=True,   # print per-metric scores
+        #         verbose_mode=True
+        #     )
+        # )
+        # for tr in result.test_results:
+        #     if tr.metrics_data:
+        #         for mr in tr.metrics_data:
+        #             if mr.score:
+        #                 assert mr.score >= mr.threshold
     except Exception as ex:
         print("FAILED golden:", test_case.input, test_case.name)
         print("Answer:", answer)
         print("Contexts:", contexts)
-        raise
+        # raise
+        print(
+            f"[{test_case.input[:7]!r}] "
+            f"RAG: {t_rag - t0:.2f}s, "
+        )
 
     t_eval = time.perf_counter()
     print(

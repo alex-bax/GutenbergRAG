@@ -1,3 +1,4 @@
+import time
 from openai import AzureOpenAI, AsyncAzureOpenAI
 from settings import Settings, get_settings
 from pyrate_limiter import Limiter
@@ -7,11 +8,16 @@ from models.api_response_model import QueryResponse
 from embedding_pipeline import create_embeddings_async
 from models.vector_db_model import SearchChunk
 from pydantic import Field, BaseModel
+from vector_store_utils import _split_by_size
 
 class RankedChunk(BaseModel):
     score:int = Field(ge=0, le=10)
     score_reason:str = Field(..., description="The reasoning for choosing the score")
     content:str
+    uuid_str:str
+
+class RankedChunks(BaseModel):
+    ranked_chunks:list[RankedChunk]
 
 class ChunkCitation(BaseModel):
     book_name: str
@@ -30,10 +36,10 @@ async def search_chunks(*, query: str,
                         embed_model_deployed:str, 
                         tok_lim:Limiter,
                         req_lim:Limiter,
-                        llm_model:str,
-                        k=10
+                        llm_reranker:str,
+                        k:int
                         ) -> list[SearchChunk]: 
-    
+    print(f'TOP K : {k}')
     query_emb_vec = await create_embeddings_async(inp_batches=[[query]], 
                                                 embed_client=embed_client, 
                                                 model_deployed=embed_model_deployed,
@@ -46,44 +52,64 @@ async def search_chunks(*, query: str,
                                                 filter=None,
                                                 k=k
                                             )
-    ranked_results = simple_llm_reranker(q=query, chunks=results, llm_client=llm_client, llm_model=llm_model)
+    ranked_results = simple_llm_reranker(q=query, chunks=results, llm_client=llm_client, llm_model=llm_reranker)
 
     return ranked_results
 
-
-def simple_llm_reranker(q:str, chunks:list[SearchChunk], llm_client:AzureOpenAI, llm_model:str) -> list[SearchChunk]:
+#TODO!! make it take 2-3 chunks pr call instead of 1
+def simple_llm_reranker(q:str, chunks:list[SearchChunk], 
+                        llm_client:AzureOpenAI, 
+                        llm_model:str) -> list[SearchChunk]:
+    
     scored_chunks:list[tuple[int, str, SearchChunk]] = []
-    for c in chunks:
+    t_start_rerank = time.perf_counter()
+    t_loops:list[float] = []
+    uuid_to_chunk = {c.uuid_str:c for c in chunks}
+
+    n_chunks = _split_by_size(chunks, chunk_size=5)
+    for i, chs in enumerate(n_chunks):
+        # contents_joined = "\n---- END Document ---- ".join([f"\n---- START Document uuid:{c.uuid_str} ----\n"+c.content for c in chs])
+        contents_joined = " ".join([f"--- START Document uuid:{c.uuid_str} ---\n"+c.content+f"\n--- END Document {c.uuid_str}---\n" for c in chs])
+        print(contents_joined)
         prompt = f"""
+                    You are given {len(chs)} documents. For each document you MUST:
+                    - Assign a relevance score on a scale from 0 to 10 (10 = highly relevant, 0 = irrelevant), determining how relevant this document is to the query
+
                     Query: {q}
-                    Document: {c.content}
-                    
-                    On a scale of 0-10, how relevant is this document to the query?
-                    Provide your score and brief reasoning.
+                    Documents: {contents_joined}
                 """
-        resp = llm_client.responses.parse(      # TODO here it breaks. "Deployment not found"
+        print(prompt)
+        t_loop_st = time.perf_counter()
+        resp = llm_client.responses.parse(      
             model=llm_model,
             input=[
-                {"role":"system","content":"You're a helpful assistant. Your task is to evaluate the relevance of the document to the given query"},
+                {"role":"system","content":"You're a helpful assistant. Your task is to evaluate the relevance of EACH document to the given query"},
                 {"role":"user", "content":prompt}
             ],
-            text_format=RankedChunk
+            text_format=RankedChunks
         )
-        if resp.output_parsed:
-            ranked_c = resp.output_parsed
-            c.rank = ranked_c.score
-            c.rank_reason = ranked_c.score_reason
-            scored_chunks.append((ranked_c.score, ranked_c.score_reason, c))
+        t_loop_end = time.perf_counter()
+        t_elaps = t_loop_end - t_loop_st
+        t_loops.append(t_elaps)
+
+        if resp.output_parsed and resp.output_parsed.ranked_chunks:
+            ranked_cs = resp.output_parsed.ranked_chunks
+            for rc in ranked_cs:
+                scored_chunks.append((rc.score, rc.score_reason, uuid_to_chunk[rc.uuid_str]))
+        else:
+            raise Exception("Missing attrb in reranker")
 
     scored_chunks = sorted(scored_chunks, key=lambda x:x[0], reverse=True)
-
+    t_end_rerank = time.perf_counter()
+    print(f"||| {llm_model} Total time (sec) ReRanking: {(t_end_rerank - t_start_rerank):.2f} s")
+    print(f'||| ALL loops #{len(t_loops)} (sec): {[f"{s:.2f} s" for s in t_loops]}')
     return [tup[-1] for tup in scored_chunks]
 
 
 # TODO: make async - use AzureAsync package
 def answer_with_context(*, query:str, 
                         llm_client:AzureOpenAI, 
-                        llm_model_deployed:str, 
+                        llm_model_deployed:str,
                         chunk_hits:list[SearchChunk]) -> tuple[str, list[SearchChunk]]:
    
     relevant_context = []
@@ -132,8 +158,9 @@ async def answer_rag(*, query: str,
                     sett:Settings,
                     top_n_matches:int,
                     ) -> QueryResponse:
-                
+        
     req_lim, tok_lim = sett.get_limiters()
+    t_start_search = time.perf_counter()
 
     ranked_chunks = await search_chunks(query=query, 
                                     vector_store=await sett.get_vector_store(), 
@@ -143,17 +170,22 @@ async def answer_rag(*, query: str,
                                     req_lim=req_lim,
                                     k=top_n_matches,
                                     llm_client=sett.get_llm_client(),
-                                    llm_model=sett.MODEL_USED
+                                    llm_reranker=sett.AZ_OPENAI_RERANKER_MODEL_DEPLOYMENT
                                     )
+    t_end_search  = time.perf_counter()
+    print(f"**Time (sec) Search: {(t_end_search - t_start_search):.2f} s")
 
-    top_chunks = ranked_chunks[:4]
+    top_chunks = ranked_chunks[:4]      #TODO
 
 
+    t_start_retr = time.perf_counter()
     llm_answer, relevant_chunks = answer_with_context(query=query, 
                                                       llm_client=sett.get_llm_client(), 
                                                       llm_model_deployed=sett.AZ_OPENAI_MODEL_DEPLOYMENT, 
-                                                      chunk_hits=top_chunks)    
-    
+                                                      chunk_hits=top_chunks,
+                                                    )    
+    t_end_retr = time.perf_counter()
+    print(f"**Time (sec) Retrieval: {(t_end_retr - t_start_retr):.2f} s")
     return QueryResponse(answer=llm_answer, citations=top_chunks)
 
 
@@ -166,7 +198,7 @@ async def run_gutenberg_rag(question: str, sett:Settings) -> tuple[str, list[str
         - contexts: list[str]           (list of retrieved passages / chunks)
     """
     
-    q_resp = await answer_rag(query=question, sett=sett, top_n_matches=20)
+    q_resp = await answer_rag(query=question, sett=sett, top_n_matches=15)
     
     contexts_found = [c.content for c in q_resp.citations if c.content]
     return q_resp.answer, contexts_found

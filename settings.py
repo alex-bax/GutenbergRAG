@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     COLLECTION_NAME: str = Field(default="gutenberg", description="Name of the vector store collection") 
     EMBED_MODEL_DEPLOYMENT:str
     AZ_OPENAI_MODEL_DEPLOYMENT:str
+    AZ_OPENAI_RERANKER_MODEL_DEPLOYMENT:str
     AZ_OPENAI_API_VER: str
 
     MODEL_USED:str

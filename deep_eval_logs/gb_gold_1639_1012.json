@@ -1,0 +1,25 @@
+{
+    "Q": "What was the primary purpose of the Federalist Papers?",
+    "ExpA": "To advocate for ratification of the U.S. Constitution",
+    "A": "The primary purpose was to persuade the people (especially of New York) to support ratification of the new U.S. Constitution by explaining and defending it\u2014showing the inefficacy of the existing Confederation and arguing for a strong, firm Union as a safeguard against domestic faction, insurrection, and foreign influence.",
+    "Contexts": [
+        "THE FEDERALIST PAPERS ***\r\n\r\nTHE FEDERALIST PAPERS\r\n\r\nBy Alexander Hamilton, John Jay, and James Madison\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 1\r\n\r\nGeneral Introduction\r\n\r\nFor the Independent Journal. Saturday, October 27, 1787\r\n\r\n\r\nHAMILTON\r\n\r\nTo the People of the State of New York:\r\n\r\nAFTER an unequivocal experience of the inefficacy of the subsisting",
+        "and to decide.\r\n\r\nPUBLIUS\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 15\r\n\r\nThe Insufficiency of the Present Confederation to Preserve the Union\r\n\r\nFor the Independent Journal. Saturday, December 1, 1787\r\n\r\nHAMILTON\r\n\r\nTo the People of the State of New York.\r\n\r\nIN THE course of the preceding papers, I have endeavored, my fellow\r\ncitizens, to place before you, in a clear and convincing light, the",
+        "FEDERALIST No. 9\r\n\r\nThe Union as a Safeguard Against Domestic Faction and Insurrection\r\n\r\nFor the Independent Journal. Wednesday, November 21, 1787\r\n\r\nHAMILTON\r\n\r\nTo the People of the State of New York:\r\n\r\nA FIRM Union will be of the utmost moment to the peace and liberty of\r\nthe States, as a barrier against domestic faction and insurrection. It",
+        "out in several of the late publications against the new Constitution.\r\n\r\n\r\n\r\n\r\nFEDERALIST No. 2\r\n\r\nConcerning Dangers from Foreign Force and Influence\r\n\r\nFor the Independent Journal. Wednesday, October 31, 1787\r\n\r\nJAY\r\n\r\nTo the People of the State of New York:\r\n\r\nWHEN the people of America reflect that they are now called upon to"
+    ],
+    "Metrics": [
+        {
+            "M": "ContextualRelevancyMetric",
+            "Score": 0.68,
+            "Threshold": 0.7,
+            "R": "The score is 0.68 because the retrieval contains clearly relevant content\u2014e.g. \"The Federalist Papers were written by Alexander Hamilton, John Jay, and James Madison,\" \"The Insufficiency of the Present Confederation to Preserve the Union,\" \"A FIRM Union will be of the utmost moment to the peace and liberty of the States,\" and \"There were several late publications against the new Constitution\"\u2014which directly point to the Papers\u2019 purpose (to defend the new Constitution and argue for a stronger union.); however, relevance is diluted by metadata and identifiers that do not answer the question, such as \"For the Independent Journal. Saturday, October 27, 1787,\" \"FEDERALIST No. 9,\" and the single-word tag \"JAY,\" which the reasons correctly note as \"not directly relevant.\""
+        },
+        {
+            "M": "ContextualPrecisionMetric",
+            "Score": 1.0,
+            "Threshold": 0.7,
+            "R": "The score is 1.00 because all top-ranked nodes in the retrieval contexts are directly on point: node 1 quotes \"THE FEDERALIST PAPERS ... By Alexander Hamilton, John Jay, and James Madison\" and \"AFTER an unequivocal experience of the inefficacy of the subsisting,\" showing the Papers argue for a new system (ratification); node 2 cites \"FEDERALIST No. 15 The Insufficiency of the Present Confederation to Preserve the Union,\" arguing the Confederation is inadequate; node 3 includes \"FEDERALIST No. 9 The Union as a Safeguard Against Domestic Faction and Insurrection\" and \"A FIRM Union will be of the utmost moment...\" explaining the need for a stronger Union; and node 4 references arguments \"against the new Constitution\" and \"WHEN the people of America reflect that they are now called upon to,\" indicating the Papers addressed the public to advocate ratification. Because there are no irrelevant nodes ranked above these relevant ones, precision is perfect \u2014 and it can\u2019t exceed 1.00."
+        }
+    ]
+}
