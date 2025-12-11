@@ -2,7 +2,7 @@
 from db.vector_store_abstract import AsyncVectorStore
 from ingestion.book_loader import upload_missing_book_ids
 from models.api_response_model import GBBookMeta
-from settings import Settings
+from config.settings import Settings
 from models.vector_db_model import SearchChunk, SearchPage, AzureAiSearchPage
 from azure.search.documents.aio import SearchClient, AsyncSearchItemPaged
 from azure.core.async_paging import AsyncPageIterator

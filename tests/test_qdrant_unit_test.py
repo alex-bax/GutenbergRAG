@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 import numpy as np
 import pytest
 import random
-from settings import Settings, get_settings  
+from config.settings import Settings, get_settings  
 from db.qdrant_vector_store import QdrantVectorStore
 from db.vector_store_abstract import AsyncVectorStore
 from models.vector_db_model import UploadChunk, EmbeddingVec

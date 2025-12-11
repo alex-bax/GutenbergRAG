@@ -11,10 +11,10 @@ from azure.search.documents import SearchClient
 from preprocess_book import make_slug_book_key
 from search_handler import create_missing_search_index, upload_to_index_async
 from retrieve import answer_api
-from settings import get_settings
+from config.settings import get_settings
 from ingestion.book_loader import gutendex_book_urls
 
-from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN
+from config.hyperparams import TOKEN_PR_MIN, REQUESTS_PR_MIN
 
 # TODO: add hyper params to settings
 # TODO: split entire app into ingestion / retrieval

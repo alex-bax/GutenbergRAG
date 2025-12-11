@@ -8,7 +8,7 @@ from vector_store_utils import upload_to_index_async
 from db.operations import insert_missing_book_db
 from converters import gbbookmeta_to_db_obj
 
-from settings import get_settings, Settings
+from config.settings import get_settings, Settings
 from ingestion.preprocess_book import make_slug_book_key
 
 # TODO: make async

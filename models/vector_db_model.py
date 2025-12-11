@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, model_validator
 from typing import Literal
-from constants import EmbeddingDimension
+from config.hyperparams import EmbeddingDimension
 
 class EmbeddingVec(BaseModel):
     vector: list[float] = Field(..., description="The embedding vector")

@@ -7,7 +7,7 @@ from db.vector_store_abstract import AsyncVectorStore
 
 from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
-from constants import TOKEN_PR_MIN, REQUESTS_PR_MIN, DEF_BOOK_NAMES_TO_IDS, ID_FRANKENSTEIN, EmbeddingDimension
+from config.hyperparams import TOKEN_PR_MIN, REQUESTS_PR_MIN, DEF_BOOK_NAMES_TO_IDS, ID_FRANKENSTEIN, EmbeddingDimension
 
 # TODO: merge constants into settings
 # TODO: separate this into multiple Settings, e.g. for DB, vector store, etc.

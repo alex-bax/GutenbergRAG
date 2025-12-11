@@ -5,11 +5,11 @@ from azure.search.documents import SearchClient,SearchItemPaged
 from pyrate_limiter import Limiter
 from openai import AsyncAzureOpenAI
 
-from constants import CHUNK_SIZE
+from config.hyperparams import CHUNK_SIZE
 
 from ingestion.preprocess_book import clean_headers 
 from ingestion.chunking import fixed_size_chunking
-from settings import get_settings
+from config.settings import get_settings
 from embedding_pipeline import batch_texts_by_tokens, create_embeddings_async
 
 from models.api_response_model import GBBookMeta

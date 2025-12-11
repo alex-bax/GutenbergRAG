@@ -1,8 +1,8 @@
 import time
 from openai import AzureOpenAI, AsyncAzureOpenAI
-from settings import Settings, get_settings
+from config.settings import Settings, get_settings
 from pyrate_limiter import Limiter
-from constants import MIN_SEARCH_SCORE
+from config.hyperparams import MIN_SEARCH_SCORE
 from db.vector_store_abstract import AsyncVectorStore
 from models.api_response_model import QueryResponse
 from embedding_pipeline import create_embeddings_async

@@ -1,6 +1,6 @@
 from typing import AsyncGenerator
-from constants import ID_DR_JEK_MR_H, ID_FRANKENSTEIN, VER_PREFIX
-from settings import Settings, get_settings
+from config.hyperparams import ID_DR_JEK_MR_H, ID_FRANKENSTEIN, VER_PREFIX
+from config.settings import Settings, get_settings
 import pytest
 from fastapi import status
 from httpx import AsyncClient, ASGITransport

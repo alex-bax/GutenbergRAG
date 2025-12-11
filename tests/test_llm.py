@@ -10,11 +10,11 @@ from deepeval.test_case import LLMTestCase
 from deepeval import assert_test, evaluate
 from deepeval.models import AzureOpenAIModel
 from deepeval.evaluate import DisplayConfig
-from settings import get_settings, Settings
+from config.settings import get_settings, Settings
 from typing import AsyncIterator
 import pytest_asyncio
 from datetime import datetime
-from constants import DEF_BOOK_NAMES_TO_IDS
+from config.hyperparams import DEF_BOOK_NAMES_TO_IDS
 @pytest_asyncio.fixture(scope="session")
 async def settings() -> AsyncIterator[Settings]:
     sett = get_settings()
@@ -36,9 +36,9 @@ dataset.add_goldens_from_csv_file(
 )
 
 now = datetime.now().strftime("%H%M_%d%m")
-deep_eval_log_p = Path("deep_eval_logs")
-deep_eval_log_p.mkdir(exist_ok=True)
-deep_eval_log_p = deep_eval_log_p /  f'{dataset_p.stem}_{now}.txt'
+eval_log_p = Path("eval_logs")
+eval_log_p.mkdir(exist_ok=True)
+eval_log_p = eval_log_p /  f'{dataset_p.stem}_{now}.txt'
 
 def log_metric_outp(metrics:list[BaseMetric], 
                     gold_inp_q:str, 
@@ -57,7 +57,7 @@ def log_metric_outp(metrics:list[BaseMetric],
             {"M":m.__class__.__name__,  "Score": m.measure(test_case),  "Threshold": m.threshold, "R":m.reason}
         )
     
-    with open(deep_eval_log_p.with_suffix(".json"), 'a') as f:
+    with open(eval_log_p.with_suffix(".json"), 'a') as f:
         json.dump(d, f)
 
 for golden in dataset.goldens:
@@ -97,7 +97,7 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
 
     answer, contexts = await run_gutenberg_rag(test_case.input, settings)
     t_rag = time.perf_counter()
-    print(f"->->->-> RAG TIME:{t_rag - t0}")
+    print(f"->->->-> TOTAL RAG TIME:{t_rag - t0}")
 
     test_case.actual_output = answer
     test_case.retrieval_context = contexts

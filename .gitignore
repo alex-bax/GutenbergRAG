@@ -13,4 +13,6 @@ eval_data/*
 !eval_data/gutenberg_gold.csv
 !eval_data/gutenberg_gold_small.csv
 
+eval_logs/*
+
 *.ipynb

@@ -18,7 +18,7 @@ from fastapi_pagination import Page, add_pagination, paginate
 
 from converters import gbbookmeta_to_db_obj, db_obj_to_response
 from ingestion.book_loader import fetch_book_content_from_id, upload_missing_book_ids
-from settings import get_settings, Settings
+from config.settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
 
 

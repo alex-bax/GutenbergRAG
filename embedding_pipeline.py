@@ -6,7 +6,7 @@ from openai._exceptions import RateLimitError
 from tiktoken import Encoding
 
 from models.vector_db_model import EmbeddingVec
-from constants import EmbeddingDimension, MAX_TOKENS, OVERLAP
+from config.hyperparams import EmbeddingDimension, MAX_TOKENS, OVERLAP
 from openai import RateLimitError
 from pyrate_limiter import Duration, Rate, Limiter, BucketFullException
 from tqdm import tqdm

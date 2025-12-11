@@ -2,7 +2,7 @@ import asyncio
 from typing import Any, Callable
 from pydantic import PrivateAttr
 
-from settings import Settings 
+from config.settings import Settings 
 from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk, SearchPage, QDrantSearchPage
 
 from .vector_store_abstract import AsyncVectorStore
@@ -296,7 +296,7 @@ class QdrantVectorStore(AsyncVectorStore):
 
 
 async def try_local() :
-    from settings import get_settings
+    from config.settings import get_settings
     client = QdrantVectorStore(settings=get_settings(), 
                                collection_name="gutenberg")
     # await client.initialize()
