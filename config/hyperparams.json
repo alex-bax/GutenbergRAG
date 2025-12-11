@@ -5,14 +5,18 @@
     "chunk_overlap": 100,
     "chunk_strategy": "fixed",
     "embed_model":"text-embedding-3-small",
+    "tokens_pr_min":501000,
+    "requests_pr_min":3000,
     "embed_dim":1536,
+    "max_tokens_pr_req":8000,
     "default_ids_used":{
             "The Adventures of Sherlock Holmes": 1661, 
             "The Strange Case of Dr. Jekyll and Mr. Hyde": 42, 
             "The Federalist Papers": 1404, 
             "Moby Dick; Or, The Whale": 2701,
             "Meditations":2680,
-            "The King in Yellow":8492
+            "The King in Yellow":8492,
+            "Frankenstein; Or, The Modern Prometheus":84
         }
   },
   "retrieval": {
@@ -29,6 +33,6 @@
   },
   "generation": {
     "model": "gpt-5-mini",
-    "max_context_chunks": 4
+    "num_context_chunks": 4
   }
 }

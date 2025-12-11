@@ -9,12 +9,11 @@ from deepeval.dataset import Golden
 from deepeval.test_case import LLMTestCase
 from deepeval import assert_test, evaluate
 from deepeval.models import AzureOpenAIModel
-from deepeval.evaluate import DisplayConfig
 from config.settings import get_settings, Settings
 from typing import AsyncIterator
 import pytest_asyncio
 from datetime import datetime
-from config.hyperparams import DEF_BOOK_NAMES_TO_IDS
+from config.params import get_config
 @pytest_asyncio.fixture(scope="session")
 async def settings() -> AsyncIterator[Settings]:
     sett = get_settings()
@@ -93,7 +92,9 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
     t0 = time.perf_counter()
     vec_store = await settings.get_vector_store()
     books_in_collection = await vec_store.get_all_unique_book_names()
-    assert all(book_name in books_in_collection for book_name in DEF_BOOK_NAMES_TO_IDS.keys())
+    
+    hp_ing = settings.get_hyperparams().ingestion
+    assert all(book_name in books_in_collection for book_name in hp_ing.default_ids_used.keys())
 
     answer, contexts = await run_gutenberg_rag(test_case.input, settings)
     t_rag = time.perf_counter()
@@ -123,19 +124,7 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
                     metrics=metrics,
                     run_async=True,
                     )
-        # result = evaluate(
-        #     [test_case],
-        #     metrics,
-        #     display_config=DisplayConfig(
-        #         print_results=True,   # print per-metric scores
-        #         verbose_mode=True
-        #     )
-        # )
-        # for tr in result.test_results:
-        #     if tr.metrics_data:
-        #         for mr in tr.metrics_data:
-        #             if mr.score:
-        #                 assert mr.score >= mr.threshold
+    
     except Exception as ex:
         print("FAILED golden:", test_case.input, test_case.name)
         print("Answer:", answer)

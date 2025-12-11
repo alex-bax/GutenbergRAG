@@ -1,4 +1,5 @@
 from functools import lru_cache
+from config.params import get_config, ConfigParamSettings
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import PrivateAttr, Field
 from typing import Literal
@@ -7,7 +8,7 @@ from db.vector_store_abstract import AsyncVectorStore
 
 from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
-from config.hyperparams import TOKEN_PR_MIN, REQUESTS_PR_MIN, DEF_BOOK_NAMES_TO_IDS, ID_FRANKENSTEIN, EmbeddingDimension
+# from config.hyperparams import TOKEN_PR_MIN, requests_pr_min, DEF_BOOK_NAMES_TO_IDS, ID_FRANKENSTEIN, ConfigSettings, EmbeddingDimension
 
 # TODO: merge constants into settings
 # TODO: separate this into multiple Settings, e.g. for DB, vector store, etc.
@@ -34,7 +35,7 @@ class Settings(BaseSettings):
     AZ_OPENAI_RERANKER_MODEL_DEPLOYMENT:str
     AZ_OPENAI_API_VER: str
 
-    MODEL_USED:str
+    # MODEL_USED:str
 
     # Supabase Postgres DB
     DB_NAME:str
@@ -42,7 +43,7 @@ class Settings(BaseSettings):
     DB_USER:str
     DB_PORT:int
 
-    EMBEDDING_DIM:Literal[EmbeddingDimension.SMALL] = EmbeddingDimension.SMALL
+    # EMBEDDING_DIM:Literal[EmbeddingDimension.SMALL] = EmbeddingDimension.SMALL
     
     is_test:bool = False
     RUN_QDRANT_TESTS:bool
@@ -55,6 +56,7 @@ class Settings(BaseSettings):
 
     _req_limiter: Limiter | None = PrivateAttr(default=None)
     _tok_limiter: Limiter | None = PrivateAttr(default=None)
+    _hyperparams:ConfigParamSettings | None = PrivateAttr(default=None)
 
     @property
     def active_collection(self) -> str:
@@ -88,7 +90,8 @@ class Settings(BaseSettings):
         
             await self._vector_store.create_missing_collection(collection_name=self.active_collection)
             
-            book_ids = set(DEF_BOOK_NAMES_TO_IDS.values()) if not self.is_test else set([ID_FRANKENSTEIN])        
+            hyperparams = self._hyperparams if self._hyperparams else self.get_hyperparams()
+            book_ids = set(hyperparams.ingestion.default_ids_used.values()) if not self.is_test else set([hyperparams.ingestion.default_ids_used["Frankenstein; Or, The Modern Prometheus"]])        
 
             if not self.is_test:
                 async with get_db() as db_sess:
@@ -106,6 +109,12 @@ class Settings(BaseSettings):
             if isinstance(self._vector_store, QdrantVectorStore):
                 await self._vector_store.close_conn()
             self._vector_store = None
+
+
+    def get_hyperparams(self) -> ConfigParamSettings:
+        if self._hyperparams is None:
+            self._hyperparams = get_config()
+        return self._hyperparams
 
 
     def get_llm_client(self) -> AzureOpenAI:
@@ -136,13 +145,14 @@ class Settings(BaseSettings):
         """Creates the limiters used for embedding if None. 
         :returns: [req_limiter, tok_limiter] 
          """
+        assert self._hyperparams
         if self._req_limiter is None:
-            REQ_RATE = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
+            REQ_RATE = Rate(self._hyperparams.ingestion.requests_pr_min, Duration.MINUTE)              # 3,000 requests per minute
             req_bucket = BucketAsyncWrapper(InMemoryBucket([REQ_RATE]))
             self._req_limiter = Limiter(req_bucket)
 
         if self._tok_limiter is None:
-            TOK_RATE = Rate(TOKEN_PR_MIN, Duration.MINUTE)                 # 501,000 tokens per minute
+            TOK_RATE = Rate(self._hyperparams.ingestion.tokens_pr_min, Duration.MINUTE)                 # 501,000 tokens per minute
             tok_bucket = BucketAsyncWrapper(InMemoryBucket([TOK_RATE]))
             self._tok_limiter = Limiter(tok_bucket)
 
@@ -151,7 +161,9 @@ class Settings(BaseSettings):
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
 def get_settings(is_test=False) -> Settings:
-    return Settings(is_test=is_test)       # type:ignore
+    sett = Settings(is_test=is_test)       # type:ignore
+    sett.get_hyperparams()
+    return sett
 
 
 

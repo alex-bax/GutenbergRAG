@@ -5,8 +5,6 @@ from azure.search.documents import SearchClient,SearchItemPaged
 from pyrate_limiter import Limiter
 from openai import AsyncAzureOpenAI
 
-from config.hyperparams import CHUNK_SIZE
-
 from ingestion.preprocess_book import clean_headers 
 from ingestion.chunking import fixed_size_chunking
 from config.settings import get_settings
@@ -38,8 +36,9 @@ async def upload_to_index_async(*, vec_store:AsyncVectorStore,
     docs:list[UploadChunk] = []
     vector_items_added = []
 
-    chunks = fixed_size_chunking(text=book_str, chunk_size=CHUNK_SIZE)
-    batches = batch_texts_by_tokens(texts=chunks)
+    hp = sett.get_hyperparams().ingestion
+    chunks = fixed_size_chunking(text=book_str, chunk_size=hp.chunk_size)
+    batches = batch_texts_by_tokens(texts=chunks, max_tokens_per_request=hp.max_tokens_pr_req)
 
     embeddings = await create_embeddings_async(embed_client=embed_client, 
                                             model_deployed=sett.EMBED_MODEL_DEPLOYMENT,
@@ -63,7 +62,7 @@ async def upload_to_index_async(*, vec_store:AsyncVectorStore,
         docs.append(chapter_item)#.to_dict())
         vector_items_added.append(chapter_item)
 
-    docs_splitted = _split_by_size(data=docs, chunk_size=CHUNK_SIZE)
+    docs_splitted = _split_by_size(data=docs, chunk_size=hp.chunk_size)
     for doc_chunks in docs_splitted:
         await vec_store.upsert_chunks(chunks=doc_chunks)
 

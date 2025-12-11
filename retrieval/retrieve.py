@@ -2,7 +2,7 @@ import time
 from openai import AzureOpenAI, AsyncAzureOpenAI
 from config.settings import Settings, get_settings
 from pyrate_limiter import Limiter
-from config.hyperparams import MIN_SEARCH_SCORE
+# from config.hyperparams import MIN_SEARCH_SCORE
 from db.vector_store_abstract import AsyncVectorStore
 from models.api_response_model import QueryResponse
 from embedding_pipeline import create_embeddings_async
@@ -114,7 +114,7 @@ def answer_with_context(*, query:str,
    
     relevant_context = []
 
-    relev_chunk_hits = [c for c in chunk_hits if c.search_score >= MIN_SEARCH_SCORE]
+    relev_chunk_hits = chunk_hits #[c for c in chunk_hits if c.search_score >= MIN_SEARCH_SCORE]        # TODO: remove?
     assert all(c is not None for c in relev_chunk_hits)
 
     for chunk_h in relev_chunk_hits:

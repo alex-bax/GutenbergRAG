@@ -32,7 +32,8 @@ def make_upload_chunks(book_id: int, chunk_content:str, sett:Settings, use_rand_
     Helper to create some dummy UploadChunk instances.
     Uses random chunk_nr.
     """
-    embed_vec = np.random.random(sett.EMBEDDING_DIM).tolist() if use_rand_embed else [0.1] * sett.EMBEDDING_DIM
+    hp_ing = sett.get_hyperparams().ingestion
+    embed_vec = np.random.random(hp_ing.embed_dim).tolist() if use_rand_embed else [0.1] * hp_ing.embed_dim
     chunk = UploadChunk(
             uuid_str=str(uuid.uuid4()),
             book_id=book_id,
@@ -40,7 +41,7 @@ def make_upload_chunks(book_id: int, chunk_content:str, sett:Settings, use_rand_
             chunk_nr=random.randint(0, 10000),
             content=chunk_content,
             content_vector=EmbeddingVec(vector=embed_vec,
-                                        dim=sett.EMBEDDING_DIM)  
+                                        dim=hp_ing.embed_dim)  
         )
     return chunk
 

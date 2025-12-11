@@ -11,7 +11,7 @@ import pandas as pd
 import asyncio
 from db.database import get_db
 from embedding_pipeline import create_embeddings_async
-from settings import get_settings, Settings
+from config.settings import get_settings, Settings
 from retrieval.retrieve import answer_with_context
 from ingestion.book_loader import upload_missing_book_ids
 

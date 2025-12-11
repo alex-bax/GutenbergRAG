@@ -14,13 +14,13 @@ from retrieve import answer_api
 from config.settings import get_settings
 from ingestion.book_loader import gutendex_book_urls
 
-from config.hyperparams import TOKEN_PR_MIN, REQUESTS_PR_MIN
+from config.params import TOKEN_PR_MIN, requests_pr_min
 
 # TODO: add hyper params to settings
 # TODO: split entire app into ingestion / retrieval
 
 # def _make_limiters() -> list[Limiter]:
-#     REQ_RATE = Rate(REQUESTS_PR_MIN, Duration.MINUTE)              # 3,000 requests per minute
+#     REQ_RATE = Rate(requests_pr_min, Duration.MINUTE)              # 3,000 requests per minute
 #     TOK_RATE = Rate(TOKEN_PR_MIN, Duration.MINUTE)                 # 501,000 tokens per minute
 
 #     req_bucket = BucketAsyncWrapper(InMemoryBucket([REQ_RATE]))

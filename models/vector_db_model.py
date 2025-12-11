@@ -1,10 +1,9 @@
 from pydantic import BaseModel, Field, model_validator
-from typing import Literal
-from config.hyperparams import EmbeddingDimension
+from config.params import EmbeddingDimension
 
 class EmbeddingVec(BaseModel):
     vector: list[float] = Field(..., description="The embedding vector")
-    dim: Literal[EmbeddingDimension.SMALL, EmbeddingDimension.LARGE] = Field(..., description="Dimension of the embedding vector")
+    dim: EmbeddingDimension = Field(..., description="Dimension of the embedding vector")
 
     @model_validator(mode="after")      # Run after field validators
     def validate_vector_dimension(self):
