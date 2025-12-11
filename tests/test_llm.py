@@ -1,8 +1,8 @@
-import json
-import time
-import pytest
+import json, time, pytest
 from pathlib import Path
 from deepeval.dataset import EvaluationDataset
+from config.params import ConfigParamSettings
+from evals.timer_helper import Timer
 from retrieval.retrieve import run_gutenberg_rag
 from deepeval.metrics import BaseMetric, AnswerRelevancyMetric, FaithfulnessMetric, ContextualPrecisionMetric, ContextualRelevancyMetric
 from deepeval.dataset import Golden
@@ -13,10 +13,11 @@ from config.settings import get_settings, Settings
 from typing import AsyncIterator
 import pytest_asyncio
 from datetime import datetime
-from config.params import get_config
+
+
 @pytest_asyncio.fixture(scope="session")
 async def settings() -> AsyncIterator[Settings]:
-    sett = get_settings()
+    sett = get_settings(hyperparam_p=Path("config", "hp-ch500.json"))
     
     try:
         yield sett
@@ -25,39 +26,19 @@ async def settings() -> AsyncIterator[Settings]:
         await sett.close_vector_store()
 
 dataset = EvaluationDataset()
+dataset_p = Path("evals", "datasets", "gb_gold-dummy.csv")
 
-# dataset_p = Path("eval_data", "gb_gold.csv")
-dataset_p = Path("eval_data", "gb_gold_med.csv")
 dataset.add_goldens_from_csv_file(
     file_path=str(dataset_p),
     input_col_name="question",
     name_key_name="book"
 )
 
-now = datetime.now().strftime("%H%M_%d%m")
-eval_log_p = Path("eval_logs")
-eval_log_p.mkdir(exist_ok=True)
-eval_log_p = eval_log_p /  f'{dataset_p.stem}_{now}.txt'
-
-def log_metric_outp(metrics:list[BaseMetric], 
-                    gold_inp_q:str, 
-                    gold_exp_outp:str, 
-                    model_ans:str, 
-                    contexts:list[str],
-                    test_case:LLMTestCase) -> None:
-    # metrics_d = []
-    d = {"Q":gold_inp_q, "ExpA":gold_exp_outp, 
-            "A":model_ans, "Contexts":contexts,
-            "Metrics":[]}
-    
-    
-    for m in metrics:
-        d["Metrics"].append(
-            {"M":m.__class__.__name__,  "Score": m.measure(test_case),  "Threshold": m.threshold, "R":m.reason}
-        )
-    
-    with open(eval_log_p.with_suffix(".json"), 'a') as f:
-        json.dump(d, f)
+now = datetime.now().strftime("%H%M_%d%m-%Y")
+data_file_stem = f'{dataset_p.stem}_{now}'
+eval_log_dir = Path("evals", now)
+eval_log_dir.mkdir(exist_ok=True)
+eval_log_p = eval_log_dir / f'{data_file_stem}.txt'
 
 for golden in dataset.goldens:
     assert isinstance(golden, Golden)
@@ -70,12 +51,40 @@ for golden in dataset.goldens:
         )
     dataset.add_test_case(test_case)
 
-#TODO: consider using nano
+
+def log_hyperparams(config:ConfigParamSettings) -> None:
+    p = Path("evals", now, f'hp_{data_file_stem}.json')
+    p.parent.mkdir(exist_ok=True, parents=True)
+    with open(p, 'w', encoding="utf-8") as f:
+        json.dump(config.model_dump(), f, indent=4)
+        
+
+def log_metric_outp(metrics:list[BaseMetric], 
+                    gold_inp_q:str, 
+                    gold_exp_outp:str, 
+                    model_ans:str, 
+                    contexts:list[str],
+                    test_case:LLMTestCase) -> None:
+    d = {"Q":gold_inp_q, "ExpA":gold_exp_outp, 
+            "A":model_ans, "Contexts":contexts,
+            "Metrics":[]}
+    
+    for m in metrics:
+        d["Metrics"].append(
+            {"M":m.__class__.__name__,  
+             "Score": m.measure(test_case),  
+             "Threshold": m.threshold, "R":m.reason}
+        )
+    
+    with open(eval_log_p.with_suffix(".json"), 'a') as f:
+        json.dump(d, f, indent=4)
+
+
 @pytest.fixture(scope="session")
 def deepeval_az_model(settings: "Settings") -> AzureOpenAIModel:
     return AzureOpenAIModel(
-        model_name="gpt-5-mini",
-        deployment_name="gpt-5-mini",
+        model_name="gpt-5-nano",#"gpt-5-mini",
+        deployment_name="gpt-5-nano",#"gpt-5-mini",
         azure_openai_api_key=settings.AZ_OPENAI_GPT_KEY,
         openai_api_version="2025-04-01-preview",
         azure_endpoint="https://moby-rag-ai-foundry.cognitiveservices.azure.com",
@@ -89,29 +98,25 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
                                               settings:Settings, 
                                               deepeval_az_model:AzureOpenAIModel):
     
-    t0 = time.perf_counter()
-    vec_store = await settings.get_vector_store()
-    books_in_collection = await vec_store.get_all_unique_book_names()
-    
-    hp_ing = settings.get_hyperparams().ingestion
-    assert all(book_name in books_in_collection for book_name in hp_ing.default_ids_used.keys())
+    t = Timer(out_path=Path(eval_log_dir, "timings.json"), enabled=True)
+    with t.start_timer(key="init_vector_store"):
+        vec_store = await settings.get_vector_store()
+        books_in_collection = await vec_store.get_all_unique_book_names()
+        hp_ing = settings.get_hyperparams().ingestion
+        assert all(book_name in books_in_collection for book_name in hp_ing.default_ids_used.keys())
 
-    answer, contexts = await run_gutenberg_rag(test_case.input, settings)
-    t_rag = time.perf_counter()
-    print(f"->->->-> TOTAL RAG TIME:{t_rag - t0}")
-
+    answer, contexts = await run_gutenberg_rag(test_case.input, settings, timer=t)
     test_case.actual_output = answer
     test_case.retrieval_context = contexts
-    
 
-    # answer_rel_metric = AnswerRelevancyMetric(threshold=0.7, model=az_model)
-    # faith_metric = FaithfulnessMetric(threshold=0.7, model=az_model)
+
     context_rel_metric = ContextualRelevancyMetric(threshold=0.7, model=deepeval_az_model)
     context_prec_metric = ContextualPrecisionMetric(threshold=0.7, model=deepeval_az_model)
     # metrics = [answer_rel_metric, faith_metric,
     #             context_prec_metric, context_rel_metric]
-    metrics:list[BaseMetric] = [context_rel_metric, context_prec_metric]  
+    metrics:list[BaseMetric] = [context_rel_metric]#, context_prec_metric]  
     
+    log_hyperparams(config=settings.get_hyperparams())
     log_metric_outp(metrics=metrics, # type:ignore
                     gold_inp_q=test_case.input, 
                     gold_exp_outp=test_case.expected_output if test_case.expected_output else "", 
@@ -119,6 +124,7 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
                     contexts=contexts,
                     test_case=test_case,
                 )
+    
     try:
         assert_test(test_case=test_case,
                     metrics=metrics,
@@ -129,21 +135,6 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
         print("FAILED golden:", test_case.input, test_case.name)
         print("Answer:", answer)
         print("Contexts:", contexts)
-        # raise
-        print(
-            f"[{test_case.input[:7]!r}] "
-            f"RAG: {t_rag - t0:.2f}s, "
-        )
 
-    t_eval = time.perf_counter()
-    print(
-        f"[{test_case.input[:7]!r}] "
-        f"RAG: {t_rag - t0:.2f}s, "
-        f"Metrics: {t_eval - t_rag:.2f}s, "
-        f"Total: {t_eval - t0:.2f}s"
-    )
-
-# @deepeval.log_hyperparameters(model="gpt-5-mini", prompt_template="...")
-# def hyperparameters():
-#     return {"model": "gpt-5-mini", "system prompt": "..."}
+    t.save()
 

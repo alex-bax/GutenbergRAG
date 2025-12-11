@@ -3,16 +3,16 @@ __pycache__/
 *.env
 *.csv
 
-books
-
+eval/*
+!eval/*.py
 # All files used for trying code is try_*
 try_*.py
 
 envWebAppSettings.json
 eval_data/*
-!eval_data/gutenberg_gold.csv
-!eval_data/gutenberg_gold_small.csv
+!eval/datasets/gutenberg_gold.csv
+!eval/datasets/gutenberg_gold_small.csv
 
-eval_logs/*
+evals/*
 
 *.ipynb

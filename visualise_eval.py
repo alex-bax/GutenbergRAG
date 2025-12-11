@@ -20,7 +20,7 @@ def load_metrics_scores(json_path: str | Path):
 
 def save_plot(metric_name:str, run_name:str) -> None:
     safe_name = metric_name.replace(" ", "_")
-    outp_p = Path("eval_plots", run_name)
+    outp_p = Path("eval_data", "plots", run_name)
     outp_p.mkdir(parents=True, exist_ok=True)
     output_file = outp_p / Path(f"{safe_name}.png")
     plt.savefig(output_file, dpi=200)

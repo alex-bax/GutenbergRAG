@@ -69,7 +69,7 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
     req_lim, token_lim = sett.get_limiters()
     print(f'--- Missing book ids: {missing_book_ids}')
     mess = ""
-    cache_p = Path("eval_data", "books")
+    cache_p = Path("evals", "books")
     cache_p.mkdir(parents=True, exist_ok=True)
 
 

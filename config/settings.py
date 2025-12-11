@@ -1,3 +1,4 @@
+from pathlib import Path
 from functools import lru_cache
 from config.params import get_config, ConfigParamSettings
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,9 +10,6 @@ from db.vector_store_abstract import AsyncVectorStore
 from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
 # from config.hyperparams import TOKEN_PR_MIN, requests_pr_min, DEF_BOOK_NAMES_TO_IDS, ID_FRANKENSTEIN, ConfigSettings, EmbeddingDimension
-
-# TODO: merge constants into settings
-# TODO: separate this into multiple Settings, e.g. for DB, vector store, etc.
 
 # Initializes fields via .env file
 
@@ -35,17 +33,14 @@ class Settings(BaseSettings):
     AZ_OPENAI_RERANKER_MODEL_DEPLOYMENT:str
     AZ_OPENAI_API_VER: str
 
-    # MODEL_USED:str
-
     # Supabase Postgres DB
     DB_NAME:str
     DB_PW:str
     DB_USER:str
     DB_PORT:int
 
-    # EMBEDDING_DIM:Literal[EmbeddingDimension.SMALL] = EmbeddingDimension.SMALL
-    
     is_test:bool = False
+    hyperparam_path:Path
     RUN_QDRANT_TESTS:bool
 
    # Not to be validated as model fields
@@ -90,8 +85,9 @@ class Settings(BaseSettings):
         
             await self._vector_store.create_missing_collection(collection_name=self.active_collection)
             
-            hyperparams = self._hyperparams if self._hyperparams else self.get_hyperparams()
-            book_ids = set(hyperparams.ingestion.default_ids_used.values()) if not self.is_test else set([hyperparams.ingestion.default_ids_used["Frankenstein; Or, The Modern Prometheus"]])        
+            assert self._hyperparams and self._hyperparams.ingestion, "Instantiate settings via get_settings()"
+            hyperparams = self._hyperparams.ingestion 
+            book_ids = set(hyperparams.default_ids_used.values()) if not self.is_test else set([hyperparams.default_ids_used["Frankenstein; Or, The Modern Prometheus"]])        
 
             if not self.is_test:
                 async with get_db() as db_sess:
@@ -113,7 +109,7 @@ class Settings(BaseSettings):
 
     def get_hyperparams(self) -> ConfigParamSettings:
         if self._hyperparams is None:
-            self._hyperparams = get_config()
+            self._hyperparams = get_config(path=self.hyperparam_path)
         return self._hyperparams
 
 
@@ -160,8 +156,9 @@ class Settings(BaseSettings):
 
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
-def get_settings(is_test=False) -> Settings:
-    sett = Settings(is_test=is_test)       # type:ignore
+def get_settings(is_test=False, hyperparam_p=Path("config","hp-ch400.json")) -> Settings:
+    sett = Settings(is_test=is_test, 
+                    hyperparam_path=hyperparam_p)       # type:ignore
     sett.get_hyperparams()
     return sett
 

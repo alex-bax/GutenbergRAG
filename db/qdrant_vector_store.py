@@ -1,10 +1,9 @@
 import asyncio
-from typing import Any, Callable
+from typing import Any
 from pydantic import PrivateAttr
 
 from config.settings import Settings 
 from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk, SearchPage, QDrantSearchPage
-
 from .vector_store_abstract import AsyncVectorStore
 
 from qdrant_client import AsyncQdrantClient
@@ -204,11 +203,12 @@ class QdrantVectorStore(AsyncVectorStore):
 
 
     async def create_missing_collection(self, collection_name: str) -> None:
+        hp = self.settings.get_hyperparams().ingestion
         if not await self._client.collection_exists(collection_name=collection_name):
             await self._client.create_collection(
                     collection_name=collection_name,
                     vectors_config=VectorParams(
-                                        size=self.settings.EMBEDDING_DIM,
+                                        size=hp.embed_dim,
                                         distance=self.distance,
                                     ),
                 )

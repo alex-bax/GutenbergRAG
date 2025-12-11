@@ -1,3 +1,0 @@
-gb_id,book,author,question,expected_output,chapter_section,gold_passage_hint,difficulty,type
-2701,Moby-Dick,Herman Melville,Which captain is obsessed with hunting the white whale?,Captain Ahab,"Ch. 28 (Ahab), throughout mid-late book",Ahab’s obsession is described upon his first appearance and soliloquies.,easy,who
-2701,Moby-Dick,Herman Melville,Ahab’s replacement leg is made from what material?,Whalebone (ivory),Ch. 28–29,Described when Ahab is introduced on deck.,medium,what
