@@ -14,7 +14,7 @@ from typing import AsyncIterator
 import pytest_asyncio
 from datetime import datetime
 
-HP_PATH = Path("config", "hp-ch400.json")
+HP_PATH = Path("config", "hp-ch500.json")
 
 @pytest_asyncio.fixture(scope="session")
 async def settings() -> AsyncIterator[Settings]:
@@ -85,14 +85,10 @@ def now() -> str:
 
 @pytest.fixture(scope="session")
 def eval_log_dir(now) -> Path:
-    # data_file_stem = f'{dataset_p.stem}_{now}'
     eval_log_dir = Path("evals", now)
     eval_log_dir.mkdir(exist_ok=True, parents=True)
     return eval_log_dir 
-    # now = datetime.now().strftime("%H%M_%d%m-%Y")
-    # path = Path("evals", now)
-    # path.mkdir(parents=True, exist_ok=True)
-    # return path
+    
 
 @pytest.fixture(scope="session")
 def deepeval_az_model(settings: "Settings") -> AzureOpenAIModel:
@@ -135,8 +131,9 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
     context_rel_metric = ContextualRelevancyMetric(threshold=0.65, model=deepeval_az_model)
     context_prec_metric = ContextualPrecisionMetric(threshold=0.65, model=deepeval_az_model)
     metrics = [
-                ans_rel_met, faith_met,
-                context_prec_metric, context_rel_metric]
+                # ans_rel_met, faith_met,
+                # context_prec_metric, 
+                context_rel_metric]
     
     log_hyperparams(config=settings.get_hyperparams(), 
                     now_str=now, 

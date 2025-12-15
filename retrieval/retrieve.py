@@ -72,6 +72,7 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk],
     
     with timer.start_timer("reranking_total"):
         scored_chunks:list[tuple[int, str, SearchChunk]] = []
+        assert all(c.uuid_str for c in chunks)
         uuid_to_chunk = {c.uuid_str:c for c in chunks}
 
         n_chunks = _split_by_size(chunks, chunk_size=split_every_k)
@@ -99,8 +100,11 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk],
             
             if resp.output_parsed and resp.output_parsed.ranked_chunks:
                 ranked_cs = resp.output_parsed.ranked_chunks
-                for rc in ranked_cs:
-                    scored_chunks.append((rc.score, rc.score_reason, uuid_to_chunk[rc.uuid_str]))
+                try:
+                    for rc in ranked_cs:
+                        scored_chunks.append((rc.score, rc.score_reason, uuid_to_chunk[rc.uuid_str]))
+                except Exception as ex:
+                    print(f'EX: {ex}\n{rc} \n{scored_chunks}\n{uuid_to_chunk}')
             else:
                 print(f"Missing attrb in reranker {resp}")
 
@@ -178,7 +182,7 @@ async def answer_rag(*, query: str,
                                         llm_reranker=hp.rerank.model,
                                         split_every_k=hp.rerank.batch_size,
                                         timer=timer
-                                        )
+                                    )
         top_chunks = ranked_chunks[:hp.generation.num_context_chunks]      #TODO
 
     with timer.start_timer("answer_with_contexts"):

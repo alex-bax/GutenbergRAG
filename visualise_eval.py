@@ -18,9 +18,9 @@ def load_metrics_scores(json_path: str | Path):
     return metrics_scores
 
 
-def save_plot(metric_name:str, run_name:str) -> None:
+def save_plot(metric_name:str, run_name:str, sub_folder:str="plots") -> None:
     safe_name = metric_name.replace(" ", "_")
-    outp_p = Path("evals", "plots", run_name)
+    outp_p = Path("evals", sub_folder, run_name)
     outp_p.mkdir(parents=True, exist_ok=True)
     output_file = outp_p / Path(f"{safe_name}.png")
     plt.savefig(output_file, dpi=200)
@@ -96,17 +96,19 @@ def plot_bar_charts(folder_name:str,
 
         fig.tight_layout()
         now = datetime.now().strftime("%d-%m-%Y_%H%M")
-        save_plot(metric_name, run_name=f"{folder_name}_{now}")
+        save_plot(metric_name, 
+                  run_name=f"{folder_name}_{now}", 
+                  sub_folder=folder_name)
 
 
 def main():
-    sub_dir = "1013_1212-2025"
-    json_path = Path("evals", sub_dir, "latest_test_run.json")  # change if needed
+    sub_dir = "1512-2025_1634"
+    json_path = Path("evals", sub_dir, ".latest_test_run.json")  # change if needed
     metrics_scores = load_metrics_scores(json_path)
     plot_bar_charts(metrics_scores=metrics_scores, 
                     folder_name=sub_dir,
-                    hyperparams={"Hyperparameter config":"hp-ch400", 
-                                "rerank_model":"gpt-5-nano"})
+                    hyperparams={"Hyperparameter config":"hp-ch500", 
+                                })
 
 
 if __name__ == "__main__":
