@@ -7,10 +7,12 @@ __pycache__/
 try_*.py
 
 envWebAppSettings.json
+
 evals/*
-!evals/timer_helper.py
+!evals/
+!evals/datasets/
 !evals/datasets/gb_ci_pipeline.csv
 !evals/datasets/gb_gold_med.csv
 !evals/datasets/gb_gold.csv
-
+!evals/timer_helper.py
 *.ipynb
