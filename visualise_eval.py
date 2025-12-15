@@ -98,7 +98,7 @@ def plot_bar_charts(metrics_scores:list[dict], hyperparams: dict):
 
 
 def main():
-    json_path = Path(".deepeval",".latest_test_run.json")  # change if needed
+    json_path = Path("evals", "datasets", ".latest_test_run.json")  # change if needed
     metrics_scores = load_metrics_scores(json_path)
     plot_bar_charts(metrics_scores, hyperparams={"Chunk size":400, 
                                                  "rerank_model":"gpt-5-nano"})

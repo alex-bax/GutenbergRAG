@@ -61,7 +61,6 @@ async def search_chunks(*, query: str,
 
     return ranked_results
 
-#TODO!! make it take 2-3 chunks pr call instead of 1
 def simple_llm_reranker(q:str, chunks:list[SearchChunk], 
                         llm_client:AzureOpenAI, 
                         llm_model:str,
@@ -70,14 +69,13 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk],
     
     with timer.start_timer("reranking_total"):
         scored_chunks:list[tuple[int, str, SearchChunk]] = []
-        # t_loops:list[float] = []
         uuid_to_chunk = {c.uuid_str:c for c in chunks}
 
         n_chunks = _split_by_size(chunks, chunk_size=5)
         for i, chs in enumerate(n_chunks):
             # contents_joined = "\n---- END Document ---- ".join([f"\n---- START Document uuid:{c.uuid_str} ----\n"+c.content for c in chs])
             contents_joined = " ".join([f"--- START Document uuid:{c.uuid_str} ---\n"+c.content+f"\n--- END Document {c.uuid_str}---\n" for c in chs])
-            print(contents_joined)
+            # print(contents_joined)
             prompt = f"""
                         You are given {len(chs)} documents. For each document you MUST:
                         - Assign a relevance score on a scale from 0 to 10 (10 = highly relevant, 0 = irrelevant), determining how relevant this document is to the query
@@ -85,7 +83,7 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk],
                         Query: {q}
                         Documents: {contents_joined}
                     """
-            print(prompt)
+            # print(prompt)
             with timer.start_timer(f"reranking_{i}"):
                 resp = llm_client.responses.parse(      
                     model=llm_model,
@@ -105,9 +103,7 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk],
             
 
     scored_chunks = sorted(scored_chunks, key=lambda x:x[0], reverse=True)
-    # t_end_rerank = time.perf_counter()
-    # print(f"||| {llm_model} Total time (sec) ReRanking: {(t_end_rerank - t_start_rerank):.2f} s")
-    # print(f'||| ALL loops #{len(t_loops)} (sec): {[f"{s:.2f} s" for s in t_loops]}')
+    
     return [tup[-1] for tup in scored_chunks]
 
 

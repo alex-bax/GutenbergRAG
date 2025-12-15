@@ -17,7 +17,7 @@ from datetime import datetime
 
 @pytest_asyncio.fixture(scope="session")
 async def settings() -> AsyncIterator[Settings]:
-    sett = get_settings(hyperparam_p=Path("config", "hp-ch500.json"))
+    sett = get_settings(hyperparam_p=Path("config", "hp-ch400.json"))
     
     try:
         yield sett
@@ -26,7 +26,7 @@ async def settings() -> AsyncIterator[Settings]:
         await sett.close_vector_store()
 
 dataset = EvaluationDataset()
-dataset_p = Path("evals", "datasets", "gb_gold-dummy.csv")
+dataset_p = Path("evals", "datasets", "gb_gold_med.csv")
 
 dataset.add_goldens_from_csv_file(
     file_path=str(dataset_p),
@@ -91,6 +91,10 @@ def deepeval_az_model(settings: "Settings") -> AzureOpenAIModel:
         temperature=1.0,
     )
 
+# @pytest.fixture(scope="session")
+# def timer() -> Timer:
+#     return Timer(enabled=True)
+
 
 @pytest.mark.asyncio  
 @pytest.mark.parametrize("test_case", dataset.test_cases)
@@ -109,12 +113,13 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
     test_case.actual_output = answer
     test_case.retrieval_context = contexts
 
-
-    context_rel_metric = ContextualRelevancyMetric(threshold=0.7, model=deepeval_az_model)
-    context_prec_metric = ContextualPrecisionMetric(threshold=0.7, model=deepeval_az_model)
-    # metrics = [answer_rel_metric, faith_metric,
-    #             context_prec_metric, context_rel_metric]
-    metrics:list[BaseMetric] = [context_rel_metric]#, context_prec_metric]  
+    ans_rel_met = AnswerRelevancyMetric(threshold=0.7, model=deepeval_az_model)
+    faith_met = FaithfulnessMetric(threshold=0.7, model=deepeval_az_model)
+    context_rel_metric = ContextualRelevancyMetric(threshold=0.675, model=deepeval_az_model)
+    context_prec_metric = ContextualPrecisionMetric(threshold=0.675, model=deepeval_az_model)
+    metrics = [ans_rel_met, faith_met,
+                context_prec_metric, context_rel_metric]
+    # metrics:list[BaseMetric] = [context_rel_metric]#, context_prec_metric]  
     
     log_hyperparams(config=settings.get_hyperparams())
     log_metric_outp(metrics=metrics, # type:ignore
