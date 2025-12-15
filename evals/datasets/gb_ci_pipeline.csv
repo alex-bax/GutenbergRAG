@@ -1,0 +1,2 @@
+gb_id,book,author,question,expected_output,chapter_section,gold_passage_hint,difficulty,type
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,Which musical instrument does Holmes play?,The violin,Recurring; referenced in multiple stories,Holmes plays to think or relax at Baker Street.,easy,what
