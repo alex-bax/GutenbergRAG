@@ -1,7 +1,3 @@
-# Docker
-# Build and push an image to Azure Container Registry
-# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
-
 trigger:
 - main
 
@@ -16,16 +12,95 @@ variables:
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'      # e.g. 9, 10, 11, etc.
 
-
   azureSubscription: 'GutenbergRAGAppReg-ServiceConn'
   webAppName: 'gbRAGFastAPI'
 
+# Stage 1: TEST
 stages:
+- stage: Test
+  displayName: Run pytest suite
+  jobs:
+  - job: Test
+    displayName: Run tests
+    pool:
+      name: 'SelfHosted'
+    steps:
+    # Optional: consider specific Python version if needed
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.12'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: Install Python dependencies
+
+    # Integration tests
+    - script: pytest tests/test_integration_api.py --junitxml=test-results.xml
+      displayName: Run pytest
+      env:
+        AZURE_SEARCH_ENDPOINT: $(AZURE_SEARCH_ENDPOINT)
+        AZURE_SEARCH_KEY: $(AZURE_SEARCH_KEY)
+        AZ_OPENAI_EMBED_ENDPOINT: $(AZ_OPENAI_EMBED_ENDPOINT)
+        AZ_OPENAI_EMBED_KEY: $(AZ_OPENAI_EMBED_KEY)
+        AZ_OPENAI_GPT_ENDPOINT: $(AZ_OPENAI_GPT_ENDPOINT)
+        AZ_OPENAI_GPT_KEY: $(AZ_OPENAI_GPT_KEY)
+        QDRANT_SEARCH_ENDPOINT: $(QDRANT_SEARCH_ENDPOINT)
+        QDRANT_SEARCH_KEY: $(QDRANT_SEARCH_KEY)
+        DB_NAME: $(DB_NAME)
+        DB_PW: $(DB_PW)
+        DB_USER: $(DB_USER)
+        DB_PORT: $(DB_PORT)
+        
+    # Run Qdrant integration tests (only if enabled)
+    - script: |
+        pytest tests/test_qdrant_unit_test.py --junitxml=qdrant-test-results.xml
+      displayName: Run Qdrant integration tests
+      env:
+        QDRANT_SEARCH_ENDPOINT: $(QDRANT_SEARCH_ENDPOINT)
+        QDRANT_SEARCH_KEY: $(QDRANT_SEARCH_KEY)
+        DB_NAME: $(DB_NAME)
+        DB_PW: $(DB_PW)
+        DB_USER: $(DB_USER)
+        DB_PORT: $(DB_PORT)
+        RUN_QDRANT_TESTS: $(RUN_QDRANT_TESTS)      
+
+    #- script: pytest tests/test_llm.py --junitxml=deepeval-test-results.xml -vv
+    - script: deepeval test run tests/test_llm.py
+      displayName: Run DeepEval LLM tests 
+      continueOnError: true       # not block rest of pipeline - temporary
+      env:
+        AZURE_SEARCH_ENDPOINT: $(AZURE_SEARCH_ENDPOINT)
+        AZURE_SEARCH_KEY: $(AZURE_SEARCH_KEY)
+        AZ_OPENAI_EMBED_ENDPOINT: $(AZ_OPENAI_EMBED_ENDPOINT)
+        AZ_OPENAI_EMBED_KEY: $(AZ_OPENAI_EMBED_KEY)
+        AZ_OPENAI_GPT_ENDPOINT: $(AZ_OPENAI_GPT_ENDPOINT)
+        AZ_OPENAI_GPT_KEY: $(AZ_OPENAI_GPT_KEY)
+        QDRANT_SEARCH_ENDPOINT: $(QDRANT_SEARCH_ENDPOINT)
+        QDRANT_SEARCH_KEY: $(QDRANT_SEARCH_KEY)
+        DB_NAME: $(DB_NAME)
+        DB_PW: $(DB_PW)
+        DB_USER: $(DB_USER)
+        DB_PORT: $(DB_PORT)
+
+    # Publish test result including DeepEval
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: |
+          test-results.xml
+          qdrant-test-results.xml
+        failTaskOnFailedTests: true
+
+
+# Stage 2: BUILD (only if tests passed)
 - stage: Build
-  displayName: Build and push stage
+  displayName: Build and push image
+  dependsOn: Test
+  condition: succeeded()      # don't build if tests fail
   jobs:
   - job: Build
-    displayName: Build
+    displayName: Build and push
     pool:
       name: 'SelfHosted'
     steps:
@@ -39,10 +114,18 @@ stages:
         tags: |
           $(tag)
           latest
+
+
+# Stage 3: DEPLOY (only if build passed)
+- stage: Deploy
+  displayName: Deploy container to Web App
+  dependsOn: Build
+  condition: succeeded()      # only deploy if build succeeded
+  jobs:
   - job: Deploy
-    displayName: Deploy container to Web App
+    displayName: Deploy to Azure Web App
     pool:
-        name: 'SelfHosted'
+      name: 'SelfHosted'
     steps:
     - task: AzureWebAppContainer@1
       inputs:

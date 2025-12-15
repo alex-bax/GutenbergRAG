@@ -21,7 +21,8 @@ class AsyncVectorStore(BaseModel, ABC):
 
     @abstractmethod
     async def get_missing_ids_in_store(self, *, book_ids:set[int]) -> set[int]:
-        """Return a set of book_ids NOT present from given param"""
+        """Return a set of book_ids NOT present in the vector store from given param.
+        """
         ...
 
 
@@ -40,6 +41,7 @@ class AsyncVectorStore(BaseModel, ABC):
     @abstractmethod
     async def get_paginated_chunks_by_book_ids(self, *, book_ids:set[int]) -> SearchPage:
         """Return one SearchPage with chunks matching the book_ids given.
+        
         """
         ...
     
@@ -70,6 +72,13 @@ class AsyncVectorStore(BaseModel, ABC):
         ...
 
 
+    @abstractmethod
+    async def close_conn(self) -> None:
+        ...
+
+    @abstractmethod
+    async def get_all_unique_book_names(self) -> list[str]:
+        ...
 
     # @abstractmethod
     # async def populate_small_collection(self) -> list[GBBookMeta]:

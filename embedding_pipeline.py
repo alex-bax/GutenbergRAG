@@ -6,7 +6,7 @@ from openai._exceptions import RateLimitError
 from tiktoken import Encoding
 
 from models.vector_db_model import EmbeddingVec
-from constants import EmbeddingDimension, MAX_TOKENS, OVERLAP
+from config.params import EmbeddingDimension
 from openai import RateLimitError
 from pyrate_limiter import Duration, Rate, Limiter, BucketFullException
 from tqdm import tqdm
@@ -31,7 +31,7 @@ def _count_tokens(text: str, enc:Encoding) -> int:
 
 
 def batch_texts_by_tokens(*, texts: list[str],
-                            max_tokens_per_request: int=MAX_TOKENS) -> list[list[str]]:
+                            max_tokens_per_request: int) -> list[list[str]]:
     """
     Greedily packs texts into batches so that the sum of tokens per batch
     stays under max_tokens_per_request.

@@ -1,10 +1,9 @@
 from pydantic import BaseModel, Field, model_validator
-from typing import Literal
-from constants import EmbeddingDimension
+from config.params import EmbeddingDimension
 
 class EmbeddingVec(BaseModel):
     vector: list[float] = Field(..., description="The embedding vector")
-    dim: Literal[EmbeddingDimension.SMALL, EmbeddingDimension.LARGE] = Field(..., description="Dimension of the embedding vector")
+    dim: EmbeddingDimension = Field(..., description="Dimension of the embedding vector")
 
     @model_validator(mode="after")      # Run after field validators
     def validate_vector_dimension(self):
@@ -14,6 +13,7 @@ class EmbeddingVec(BaseModel):
             raise ValueError(f"Vector dimension {len(self.vector)} does not match specified dimension {expected_dim}")
         
         return self
+
 
 class UploadChunk(BaseModel):
     uuid_str:str = Field(...)
@@ -35,6 +35,8 @@ class SearchChunk(BaseModel):
     book_name: str|None = None
     book_id: int|None = None
     content: str|None = None
+    rank:int|None = Field(default=None, description="Rank recieved from the LLM re-ranker after initial vector search")
+    rank_reason:str|None = None
     search_score: float
 
 
@@ -47,7 +49,6 @@ class QDrantSearchPage(SearchPage):
     top: int = Field(..., title="Top", description="Starting from the 'skip', take the next 'top' no. items from the search result")
 class AzureAiSearchPage(SearchPage):
     continuation_token:str|None = Field(..., description="Determines where to continue search from last time.")
-
 
 
 

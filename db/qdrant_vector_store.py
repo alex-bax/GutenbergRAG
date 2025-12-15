@@ -1,10 +1,9 @@
 import asyncio
-from typing import Any, Callable
+from typing import Any
 from pydantic import PrivateAttr
 
-from settings import Settings 
+from config.settings import Settings 
 from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk, SearchPage, QDrantSearchPage
-
 from .vector_store_abstract import AsyncVectorStore
 
 from qdrant_client import AsyncQdrantClient
@@ -17,8 +16,8 @@ from qdrant_client.models import (
     MatchText,
     Distance,
     VectorParams,
-    PointIdsList,
-    Record
+    Record,
+    FacetValueHit
 )
 
 INDEXED_PAYL_FIELDS = { "chunk_nr":"integer", 
@@ -204,11 +203,12 @@ class QdrantVectorStore(AsyncVectorStore):
 
 
     async def create_missing_collection(self, collection_name: str) -> None:
+        hp = self.settings.get_hyperparams().ingestion
         if not await self._client.collection_exists(collection_name=collection_name):
             await self._client.create_collection(
                     collection_name=collection_name,
                     vectors_config=VectorParams(
-                                        size=self.settings.EMBEDDING_DIM,
+                                        size=hp.embed_dim,
                                         distance=self.distance,
                                     ),
                 )
@@ -260,10 +260,6 @@ class QdrantVectorStore(AsyncVectorStore):
         
         return hits
 
-        # async def populate_small_collection(self) -> tuple[list[GBBookMeta], str]:
-        #     async_db_sess = get_async_db_sess()
-        #     return await upload_missing_book_ids(book_ids=DEF_BOOK_GB_IDS_SMALL, sett=self.settings, db_sess=async_db_sess)
-
 
     async def delete_books(self, book_ids: set[int]) -> None:
         await self._client.delete(
@@ -277,14 +273,29 @@ class QdrantVectorStore(AsyncVectorStore):
                 ]
             ),
         )  
+
+    
+    async def close_conn(self) -> None:
+        return await self._client.close()
             
                         
-            
+    async def _get_all_unique_from_field(self, field:str) -> list[FacetValueHit]:
+
+        resp = await self._client.facet(collection_name=self.collection_name,
+                                        key=field,
+                                        limit=10_00)
+        
+        return resp.hits
+
+    async def get_all_unique_book_names(self) -> list[str]:
+        resp_hits = await self._get_all_unique_from_field(field="book_name")
+        facet_vals = [str(hit.value) for hit in resp_hits]
+        return facet_vals
 
 
 
 async def try_local() :
-    from settings import get_settings
+    from config.settings import get_settings
     client = QdrantVectorStore(settings=get_settings(), 
                                collection_name="gutenberg")
     # await client.initialize()

@@ -2,8 +2,8 @@ from __future__ import annotations
 import csv, asyncio
 from pathlib import Path
 from azure_judge import AzureJudgeModel
-from settings import get_settings
-from retrieval.retrieve import answer_rag
+from config.settings import get_settings
+from retrieval.retrieve import run_gutenberg_rag
 
 from deepeval import evaluate
 from deepeval.test_case import LLMTestCase
@@ -22,18 +22,7 @@ TEST_PARAMS = {
 
 
 # RAG PIPELINE HOOK
-async def run_gutenberg_rag(question: str) -> tuple[str, list[str]]:
-    """
-    Entire RAG retrival hook
-    Returns:
-        - answer: str                   (model's final answer)
-        - contexts: list[str]           (list of retrieved passages / chunks)
-    """
-    sett = get_settings()
-    q_resp = await answer_rag(query=question, sett=sett, top_n_matches=TEST_PARAMS["top_n"])
-    
-    contexts_found = [c.content for c in q_resp.citations if c.content]
-    return q_resp.answer, contexts_found
+
 
 def load_golden_dataset(csv_path: Path) -> list[dict]:
     """
@@ -102,10 +91,10 @@ async def main(csv_path: Path) -> None:
      # Optional: quick sanity check to confirm DeepEval sees model
     print("Eval model:", az_model_judge.get_model_name())
 
-    answer_relevancy = AnswerRelevancyMetric(threshold=0.7, model=az_model_judge)       # generator metric
-    faithfulness = FaithfulnessMetric(threshold=0.7, model=az_model_judge)              # generator metric
-    contextual_precision = ContextualPrecisionMetric(threshold=0.7, model=az_model_judge)  # retriever metric
-    contextual_recall = ContextualRecallMetric(threshold=0.7, model=az_model_judge)        # retriever metric
+    answer_relevancy = AnswerRelevancyMetric(threshold=0.7, model=az_model_judge)           # generator metric
+    faithfulness = FaithfulnessMetric(threshold=0.7, model=az_model_judge)                  # generator metric
+    contextual_precision = ContextualPrecisionMetric(threshold=0.7, model=az_model_judge)   # retriever metric
+    contextual_recall = ContextualRecallMetric(threshold=0.7, model=az_model_judge)         # retriever metric
 
     metrics = [
         answer_relevancy,
@@ -122,4 +111,4 @@ async def main(csv_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main(Path("eval_data", "gutenberg_gold_small.csv")))
+    asyncio.run(main(Path("evals", "gutenberg_gold_small.csv")))

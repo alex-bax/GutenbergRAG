@@ -1,9 +1,8 @@
 
-from constants import DEF_BOOK_GB_IDS_SMALL
 from db.vector_store_abstract import AsyncVectorStore
 from ingestion.book_loader import upload_missing_book_ids
 from models.api_response_model import GBBookMeta
-from settings import Settings
+from config.settings import Settings
 from models.vector_db_model import SearchChunk, SearchPage, AzureAiSearchPage
 from azure.search.documents.aio import SearchClient, AsyncSearchItemPaged
 from azure.core.async_paging import AsyncPageIterator
@@ -218,8 +217,19 @@ class AzSearchVectorStore(AsyncVectorStore):
         return AzureAiSearchPage(chunks=chunks, 
                                 total_count=total_count, 
                                continuation_token=next_token)
+    
+    async def close_conn(self) -> None:
+        """
+        Closes connection to internal search client (i.e. Azure's vector store implementation)
         
-       
+        :param self: 
+        """
+        return await self._search_client.close()
+        
+
+    async def get_all_unique_book_names(self) -> list[str]:
+        raise NotImplementedError("Implemented when needed")
+
     
     async def create_missing_collection(self, collection_name:str) -> None:
         """Collection in Azure lingo for Search Index"""

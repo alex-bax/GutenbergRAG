@@ -1,24 +1,24 @@
 from contextlib import asynccontextmanager
 import uvicorn, requests
 from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
-from openai import AzureOpenAI, AsyncAzureOpenAI
+from openai import AsyncAzureOpenAI
 from typing import Annotated
 import psycopg2
-
+from evals.timer_helper import Timer
 from db.database import engine, get_async_db_sess, Base
 from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.operations import select_all_books_db, select_books_db_by_id, delete_book_db, insert_book_db, select_books_like_db, select_documents_paginated_db, BookNotFoundException
+from db.operations import select_all_books_db, select_books_db_by_id, delete_book_db,  select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
 
-from models.api_response_model import ApiResponse, BookMetaDataResponse, BookMetaApiResponse, GBBookMeta, GBMetaApiResponse, QueryResponse, QueryResponseApiResponse, SearchApiResponse
+from models.api_response_model import ApiResponse, BookMetaDataResponse, BookMetaApiResponse, GBBookMeta, GBMetaApiResponse, QueryResponseApiResponse, SearchApiResponse
 # from models.api_response_model import SearchPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
 
 from converters import gbbookmeta_to_db_obj, db_obj_to_response
 from ingestion.book_loader import fetch_book_content_from_id, upload_missing_book_ids
-from settings import get_settings, Settings
+from config.settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
 
 
@@ -208,12 +208,13 @@ async def show_gutenberg_books_paginated(page_number:Annotated[int, Query(descri
 @prefix_router.get("/query/", status_code=status.HTTP_202_ACCEPTED, response_model=QueryResponseApiResponse)
 async def answer_query(query:Annotated[str, Query()],
                         settings:Annotated[Settings, Depends(get_settings)],
-                        top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=50)]=7,
+                        top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=40)]=10,
                         only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
 
     llm_resp = await answer_rag(query=query, 
                                 sett=settings,
-                                top_n_matches=top_n_matches)
+                                top_n_matches=top_n_matches,
+                                timer=Timer(enabled=False))
 
     return QueryResponseApiResponse(data=llm_resp)
 
