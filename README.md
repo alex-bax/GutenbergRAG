@@ -1,11 +1,11 @@
 ## 📖 Gutenberg RAG 
 
 A Retrieval-Augmented Generation system built on Project Gutenberg books.
-[Access it here] (https://gbragfastapi-accyhah2evcnfxev.westeurope-01.azurewebsites.net/docs)
+[Access it here](https://gbragfastapi-accyhah2evcnfxev.westeurope-01.azurewebsites.net/docs)
 *NB - Work in progress*
 
 **Overview**
-Gutenberg RAG is an end-to-end RAG pipeline that ingests, embeds, indexes, and queries public-domain books from [Project Gutenberg] (https://www.gutenberg.org/). 
+Gutenberg RAG is an end-to-end RAG pipeline that ingests, embeds, indexes, and queries public-domain books from [Project Gutenberg](https://www.gutenberg.org/). 
 It’s designed to be production-ready and showcase modern vector search, text chunking, evaluation, and monitoring techniques.
 
 
