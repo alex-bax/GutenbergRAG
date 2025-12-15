@@ -7,6 +7,7 @@ __pycache__/
 try_*.py
 
 envWebAppSettings.json
+
 evals/*
 !evals/timer_helper.py
 !evals/datasets/gb_ci_pipeline.csv
