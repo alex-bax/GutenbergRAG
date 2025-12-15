@@ -33,12 +33,7 @@ class Timer:
             return
 
         self.out_path.parent.mkdir(exist_ok=True, parents=True)
-        # if self.out_path.exists():
-        #     existing = json.loads(self.out_path.read_text())
-        # else:
-        #     existing = []
-
-        # existing.append(run)
+        
         with open(self.out_path, "w", encoding="utf-8") as f:
             json.dump(self.timings, f, indent=4)
             

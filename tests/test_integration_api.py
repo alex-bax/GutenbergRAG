@@ -1,6 +1,6 @@
 from typing import AsyncGenerator
-from constants import ID_DR_JEK_MR_H, ID_FRANKENSTEIN, VER_PREFIX
-from settings import Settings, get_settings
+from config.params import VER_PREFIX
+from config.settings import Settings, get_settings
 import pytest
 from fastapi import status
 from httpx import AsyncClient, ASGITransport
@@ -14,6 +14,8 @@ from db.operations import insert_book_db, DBBookMetaData
 from main import app
 
 ### The test DB is rolled back after each test fixture
+FRANKENSTEIN = "Frankenstein; Or, The Modern Prometheus"
+DR_JEK_HIDE = "The Strange Case of Dr. Jekyll and Mr. Hyde"
 
 # To run async tests
 pytestmark = pytest.mark.anyio
@@ -73,6 +75,7 @@ async def session(
 @pytest.fixture()
 def test_settings() -> Settings:
     return get_settings(is_test=True)
+
 
 # Use this fixture to get HTTPX's client to test API.
 # All changes that occur in a test function are rolled back
@@ -150,9 +153,9 @@ async def test_get_book_not_found_returns_404(client: AsyncClient):
 # NB Only testing code correctness, not the LLM quality of the reponses, check eval instead
 
 async def test_upload_1_to_index(client: AsyncClient, test_settings: Settings):
-    print(test_settings.is_test)
+    hp = test_settings.get_hyperparams().ingestion
     async with client as ac:
-        body = [ID_DR_JEK_MR_H]
+        body = [hp.default_ids_used["The Strange Case of Dr. Jekyll and Mr. Hyde"]]
         vec_store = await test_settings.get_vector_store()
         missing_ids_before = await vec_store.get_missing_ids_in_store(book_ids=set(body))
         assert body[0] in missing_ids_before
@@ -169,16 +172,21 @@ async def test_upload_1_to_index(client: AsyncClient, test_settings: Settings):
 # TODO: test this from api
 # search_books
 
-async def test_upload_same_twice_to_index_returns_422(client: AsyncClient):
+async def test_upload_same_twice_to_index_returns_422(client: AsyncClient, test_settings: Settings):
+    hp = test_settings.get_hyperparams().ingestion
+    
     async with client as ac:
-        body = [ID_DR_JEK_MR_H, ID_DR_JEK_MR_H]
+        body = [hp.default_ids_used[DR_JEK_HIDE], 
+                hp.default_ids_used[DR_JEK_HIDE]]
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
         assert resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_upload_delete_book_index(client:AsyncClient, test_settings: Settings):
+    hp = test_settings.get_hyperparams().ingestion
+    
     async with client as ac:
-        body = [ID_FRANKENSTEIN]
+        body = [hp.default_ids_used[FRANKENSTEIN]]
         vec_store = await test_settings.get_vector_store()
         chunk_count_before = await vec_store.get_chunk_count_in_book(book_id=body[0])
 
@@ -195,16 +203,20 @@ async def test_upload_delete_book_index(client:AsyncClient, test_settings: Setti
         assert chunk_count_before == chunk_count_after
 
 
-async def test_delete_book_index_not_found_returns_422(client:AsyncClient):
+async def test_delete_book_index_not_found_returns_422(client:AsyncClient, test_settings: Settings):
+    hp = test_settings.get_hyperparams().ingestion
+    
     async with client as ac:
-        resp = await ac.delete(f"/{VER_PREFIX}/index/{ID_FRANKENSTEIN}")
+        resp = await ac.delete(f"/{VER_PREFIX}/index/{hp.default_ids_used[FRANKENSTEIN]}")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 # TODO - if possible try make parameterised for multiple top N chunks
-async def test_answer_query_top_1_match(client: AsyncClient):
+async def test_answer_query_top_1_match(client: AsyncClient, test_settings:Settings):
+    hp = test_settings.get_hyperparams().ingestion
+
     async with client as ac:
-        body = [ID_DR_JEK_MR_H]
+        body = [hp.default_ids_used[DR_JEK_HIDE]]
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
         assert resp.status_code == status.HTTP_201_CREATED
         gb_meta_model = GBMetaApiResponse(**resp.json())
@@ -225,9 +237,11 @@ async def test_answer_query_top_1_match(client: AsyncClient):
         assert len(query_resp.data.citations) > 0
 
 
-async def test_show_gutenberg_book(client: AsyncClient):
+async def test_show_gutenberg_book(client: AsyncClient, test_settings:Settings):
+    hp = test_settings.get_hyperparams().ingestion
+    
     async with client as ac:
-        test_id = ID_FRANKENSTEIN
+        test_id = hp.default_ids_used[FRANKENSTEIN]
         resp = await ac.get(f"/{VER_PREFIX}/books/gutenberg/{test_id}")
         assert resp.status_code == status.HTTP_200_OK
 

@@ -11,7 +11,7 @@ import pandas as pd
 import asyncio
 from db.database import get_db
 from embedding_pipeline import create_embeddings_async
-from settings import get_settings, Settings
+from config.settings import get_settings, Settings
 from retrieval.retrieve import answer_with_context
 from ingestion.book_loader import upload_missing_book_ids
 
@@ -26,7 +26,7 @@ def get_ragas_wrapped_llm_and_embeddings(sett:Settings) -> tuple[Any, Any]:
 
 
 async def build_eval_dataset():
-    eval_dataset_p = Path("eval_data", "gutenberg_gold_small.csv")
+    eval_dataset_p = Path("evals", "gutenberg_gold_small.csv")
     df = pd.read_csv(eval_dataset_p)
 
     sett = get_settings()
@@ -84,7 +84,7 @@ async def build_eval_dataset():
         })
 
     ds = Dataset.from_list(records)
-    ds.to_csv(Path("eval_data", "results", f"eval_{datetime.now().strftime("%H%M-%d%m")}.csv"))
+    ds.to_csv(Path("evals", "results", f"eval_{datetime.now().strftime("%H%M-%d%m")}.csv"))
 
     return ds
 
@@ -107,7 +107,7 @@ def run_ragas_eval(ds: Dataset):
     )
 
     # Save full results (including per-row metric columns)
-    res_out_dir = Path("eval_data", "results")
+    res_out_dir = Path("evals", "results")
     res_out_dir.mkdir(parents=True, exist_ok=True)
     df_metrics = result.to_pandas() # type: ignore
 

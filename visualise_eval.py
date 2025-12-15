@@ -20,7 +20,7 @@ def load_metrics_scores(json_path: str | Path):
 
 def save_plot(metric_name:str, run_name:str) -> None:
     safe_name = metric_name.replace(" ", "_")
-    outp_p = Path("eval_plots", run_name)
+    outp_p = Path("evals", "plots", run_name)
     outp_p.mkdir(parents=True, exist_ok=True)
     output_file = outp_p / Path(f"{safe_name}.png")
     plt.savefig(output_file, dpi=200)
@@ -38,7 +38,9 @@ def format_hyperparams(hyperparams: dict | None) -> str:
     return "\n".join(lines)
 
 
-def plot_bar_charts(metrics_scores:list[dict], hyperparams: dict):
+def plot_bar_charts(folder_name:str, 
+                    metrics_scores:list[dict], 
+                    hyperparams: dict):
     threshold = 0.7
     hp_text = format_hyperparams(hyperparams)
 
@@ -94,14 +96,17 @@ def plot_bar_charts(metrics_scores:list[dict], hyperparams: dict):
 
         fig.tight_layout()
         now = datetime.now().strftime("%d-%m-%Y_%H%M")
-        save_plot(metric_name, run_name=now)
+        save_plot(metric_name, run_name=f"{folder_name}_{now}")
 
 
 def main():
-    json_path = Path(".deepeval",".latest_test_run.json")  # change if needed
+    sub_dir = "1013_1212-2025"
+    json_path = Path("evals", sub_dir, "latest_test_run.json")  # change if needed
     metrics_scores = load_metrics_scores(json_path)
-    plot_bar_charts(metrics_scores, hyperparams={"Chunk size":400, 
-                                                 "rerank_model":"gpt-5-nano"})
+    plot_bar_charts(metrics_scores=metrics_scores, 
+                    folder_name=sub_dir,
+                    hyperparams={"Hyperparameter config":"hp-ch400", 
+                                "rerank_model":"gpt-5-nano"})
 
 
 if __name__ == "__main__":

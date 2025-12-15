@@ -1,10 +1,9 @@
 import asyncio
-from typing import Any, Callable
+from typing import Any
 from pydantic import PrivateAttr
 
-from settings import Settings 
+from config.settings import Settings 
 from models.vector_db_model import UploadChunk, EmbeddingVec, SearchChunk, SearchPage, QDrantSearchPage
-
 from .vector_store_abstract import AsyncVectorStore
 
 from qdrant_client import AsyncQdrantClient
@@ -204,11 +203,12 @@ class QdrantVectorStore(AsyncVectorStore):
 
 
     async def create_missing_collection(self, collection_name: str) -> None:
+        hp = self.settings.get_hyperparams().ingestion
         if not await self._client.collection_exists(collection_name=collection_name):
             await self._client.create_collection(
                     collection_name=collection_name,
                     vectors_config=VectorParams(
-                                        size=self.settings.EMBEDDING_DIM,
+                                        size=hp.embed_dim,
                                         distance=self.distance,
                                     ),
                 )
@@ -289,14 +289,13 @@ class QdrantVectorStore(AsyncVectorStore):
 
     async def get_all_unique_book_names(self) -> list[str]:
         resp_hits = await self._get_all_unique_from_field(field="book_name")
-        print(f'resp_hits {resp_hits}')
         facet_vals = [str(hit.value) for hit in resp_hits]
         return facet_vals
 
 
 
 async def try_local() :
-    from settings import get_settings
+    from config.settings import get_settings
     client = QdrantVectorStore(settings=get_settings(), 
                                collection_name="gutenberg")
     # await client.initialize()

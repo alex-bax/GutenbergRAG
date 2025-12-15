@@ -2,7 +2,7 @@ from __future__ import annotations
 import csv, asyncio
 from pathlib import Path
 from azure_judge import AzureJudgeModel
-from settings import get_settings
+from config.settings import get_settings
 from retrieval.retrieve import run_gutenberg_rag
 
 from deepeval import evaluate
@@ -111,4 +111,4 @@ async def main(csv_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main(Path("eval_data", "gutenberg_gold_small.csv")))
+    asyncio.run(main(Path("evals", "gutenberg_gold_small.csv")))
