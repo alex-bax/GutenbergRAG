@@ -1,0 +1,9 @@
+{
+    "init_vector_store": 0.1588,
+    "reranking_0": 29.8272,
+    "reranking_1": 20.3573,
+    "reranking_2": 21.6925,
+    "reranking_total": 71.8771,
+    "search": 72.2119,
+    "answer_with_contexts": 26.3178
+}
