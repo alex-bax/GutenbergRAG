@@ -3,16 +3,14 @@ __pycache__/
 *.env
 *.csv
 
-eval/*
-!eval/*.py
 # All files used for trying code is try_*
 try_*.py
 
 envWebAppSettings.json
 evals/*
-!eval/datasets/gutenberg_gold.csv
-!eval/datasets/gutenberg_gold_small.csv
-
-evals/*
+!evals/timer_helper.py
+!evals/datasets/gb_ci_pipeline.csv
+!evals/datasets/gb_gold_med.csv
+!evals/datasets/gb_gold.csv
 
 *.ipynb
