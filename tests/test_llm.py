@@ -1,4 +1,4 @@
-import json, time, pytest
+import json, pytest, sys, io
 from pathlib import Path
 from deepeval.dataset import EvaluationDataset
 from config.params import ConfigParamSettings
@@ -15,6 +15,9 @@ import pytest_asyncio
 from datetime import datetime
 
 HP_PATH = Path("config", "hp-ch400.json")
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
 @pytest_asyncio.fixture(scope="session")
 async def settings() -> AsyncIterator[Settings]:
