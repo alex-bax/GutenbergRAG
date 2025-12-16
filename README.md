@@ -28,7 +28,7 @@ It’s designed to be production-ready and showcase modern vector search, advanc
 
 ### Ingestion 
 For populating with the default booklist or user selected books \
-<img src="./imgs/GBRag-ingest.png" alt="Diagram" height="555" width="475">
+<img src="./imgs/GBRAG-ingest.png" alt="Diagram" height="555" width="475">
 
 ### Retrieval 
 ...
