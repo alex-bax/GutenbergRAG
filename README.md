@@ -5,6 +5,8 @@ Try out the [API here](https://gbragfastapi-accyhah2evcnfxev.westeurope-01.azure
 
 It’s designed to be production-ready and showcase modern vector search, advanced chunking strategies, proper evaluation, structured experiments and monitoring techniques.
 
+### README CHANGE 
+
 ## Features
 ### RAG
 * Semantic search with embeddings using Qdrant
