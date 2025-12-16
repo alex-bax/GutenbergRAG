@@ -86,7 +86,6 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk],
                         Query: {q}
                         Documents: {contents_joined}
                     """
-            print(prompt)
 
             with timer.start_timer(f"reranking_{i}"):
                 resp = llm_client.responses.parse(      

@@ -1,0 +1,13 @@
+gb_id,book,author,question,expected_output,chapter_section,gold_passage_hint,difficulty,type
+2701,Moby Dick,Herman Melville,"Who is the captain obsessed with hunting the white whale?","Captain Ahab","Chapter 28","Ahab’s introduction on deck",easy,fact
+2701,Moby Dick,Herman Melville,"What is the name of Ishmael’s close companion aboard the Pequod?","Queequeg","Ch. 10-13","Ishmael and Queequeg becoming friends",easy,fact
+2701,Moby Dick,Herman Melville,"Which island is Queequeg originally from?","Kokovoko","Chapter 12","Queequeg explaining his origins",medium,fact
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,"Who is Holmes’ friend and narrator?","Dr. John Watson","Various","Watson narrates the stories",easy,fact
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,"What item does Holmes examine to deduce a visitor’s identity in 'The Red-Headed League'?","A walking stick / cane","The Red-Headed League","Holmes analyzing the stick",medium,fact
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,"Which character hires Holmes to investigate the strange advertisement seeking red-headed men?","Jabez Wilson","The Red-Headed League","Wilson describes the League",easy,fact
+8492,The King in Yellow,Robert W. Chambers,"What is the mysterious book within the story collection that drives readers insane?","'The King in Yellow' (the fictional play/book)","Various stories","Descriptions of the forbidden play",medium,fact
+8492,The King in Yellow,Robert W. Chambers,"What effect does reading the play have on its readers?","Madness, despair, or hallucinations","The Repairer of Reputations","Characters describing the 'second act'",hard,reasoning
+8492,The King in Yellow,Robert W. Chambers,"Which recurring symbol appears throughout the stories?","The Yellow Sign","Various stories","References to the Yellow Sign",medium,fact
+1404,The Federalist Papers,Hamilton Madison & Jay,"Who authored the majority of the Federalist Papers?","Alexander Hamilton","General knowledge from various papers","Hamilton’s signed essays",easy,fact
+1404,The Federalist Papers,Hamilton Madison & Jay,"What was the primary purpose of the Federalist Papers?","To advocate for ratification of the U.S. Constitution","General / Paper 1","Purpose of the essays in Paper No. 1",easy,fact
+1404,The Federalist Papers,Hamilton Madison & Jay,"What danger does Paper No. 10 warn against?","The dangers of factions","Federalist No. 10","Madison’s discussion of factions",medium,fact

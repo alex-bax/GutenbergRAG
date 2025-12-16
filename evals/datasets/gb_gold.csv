@@ -1,0 +1,26 @@
+gb_id,book,author,question,expected_output,chapter_section,gold_passage_hint,difficulty,type
+2701,Moby Dick,Herman Melville,"Who is the captain obsessed with hunting the white whale?","Captain Ahab","Chapter 28","Ahab’s introduction on deck",easy,fact
+2701,Moby Dick,Herman Melville,"What is the name of Ishmael’s close companion aboard the Pequod?","Queequeg","Ch. 10-13","Ishmael and Queequeg becoming friends",easy,fact
+2701,Moby Dick,Herman Melville,"Which island is Queequeg originally from?","Kokovoko","Chapter 12","Queequeg explaining his origins",medium,fact
+2701,Moby Dick,Herman Melville,"Who forges Ahab’s special harpoon?","The Parsee (Fedallah) and crew of pagans","Chapter 113","Ahab’s harpoon baptism scene",hard,paraphrase
+2701,Moby Dick,Herman Melville,"Why does Ahab refuse to change course when warned by other ships?","His monomaniacal obsession with killing the white whale","Multiple chapters, e.g. 71","Ahab rejecting warnings from the Samuel Enderby",medium,reasoning
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,"Who is Holmes’ friend and narrator?","Dr. John Watson","Various","Watson narrates the stories",easy,fact
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,"What item does Holmes examine to deduce a visitor’s identity in 'The Red-Headed League'?","A walking stick","The Red-Headed League","Holmes analyzing the stick",medium,fact
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,"Which character hires Holmes to investigate the strange advertisement seeking red-headed men?","Jabez Wilson","The Red-Headed League","Wilson describes the League",easy,fact
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,"What clue reveals to Holmes that the League was a diversion for tunneling?","Clay’s dirty trousers/knees","The Red-Headed League","Holmes noticing Clay’s stained clothing",hard,reasoning
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,"Who ultimately captures Arthur Clay?","Sherlock Holmes and the police","The Red-Headed League conclusion","Clay is arrested at the vault",easy,fact
+2680,Meditations,Marcus Aurelius,"What is the core Stoic idea Marcus repeats throughout Meditations?","Control what you can control accept what you cannot","Multiple","Marcus on internal vs external judgments",medium,paraphrase
+2680,Meditations,Marcus Aurelius,"Who does Marcus thank for teaching him to avoid anger and harshness?","His adoptive father Antoninus Pius","Book 1","Gratitude section in Book 1",medium,fact
+2680,Meditations,Marcus Aurelius,"How does Marcus describe the proper response to insults?","They harm the insulter not you remain rational","Book 6","Attitude toward others’ insults",hard,reasoning
+2680,Meditations,Marcus Aurelius,"What does Marcus emphasize as the 'guiding principle' for decision-making?","The rational ruling faculty (logos)","Book 2","Rational mind as guide",hard,paraphrase
+2680,Meditations,Marcus Aurelius,"According to Marcus; why should one avoid seeking praise?","Because praise is fleeting and given by those who may not understand virtue","Book 6 or 7","Thoughts on fame and praise",hard,reasoning
+8492,The King in Yellow,Robert W. Chambers,"What is the mysterious book within the story collection that drives readers insane?","'The King in Yellow' (the fictional play/book)","Various stories","Descriptions of the forbidden play",medium,fact
+8492,The King in Yellow,Robert W. Chambers,"What effect does reading the play have on its readers?","Madness, despair, or hallucinations","The Repairer of Reputations","Characters describing the 'second act'",hard,reasoning
+8492,The King in Yellow,Robert W. Chambers,"Which recurring symbol appears throughout the stories?","The Yellow Sign","Various stories","References to the Yellow Sign",medium,fact
+8492,The King in Yellow,Robert W. Chambers,"Why is the story 'The Repairer of Reputations' considered unreliable narration?","The narrator Hildred is delusional and invents conspiracies","Repairer of Reputations","Hildred’s obsession with a fabricated plan",hard,reasoning
+8492,The King in Yellow,Robert W. Chambers,"Which city serves as the common atmospheric backdrop?","A strange, alternate New York","Various","19th-century New York with surreal elements",medium,paraphrase
+1404,The Federalist Papers,Hamilton Madison & Jay,"Who authored the majority of the Federalist Papers?","Alexander Hamilton","General knowledge from various papers","Hamilton’s signed essays",easy,fact
+1404,The Federalist Papers,Hamilton Madison & Jay,"What was the primary purpose of the Federalist Papers?","To advocate for ratification of the U.S. Constitution","General / Paper 1","Purpose of the essays in Paper No. 1",easy,fact
+1404,The Federalist Papers,Hamilton Madison & Jay,"What danger does Paper No. 10 warn against?","The dangers of factions","Federalist No. 10","Madison’s discussion of factions",medium,fact
+1404,The Federalist Papers,Hamilton Madison & Jay,"Why does Publius argue for a large republic?","It better controls factions through diversity of interests","Federalist No. 10","Madison explaining benefits of large republics",hard,reasoning
+1404,The Federalist Papers,Hamilton Madison & Jay,"Which pseudonym did the authors use?","Publius","General","Original publication pseudonym",easy,fact
