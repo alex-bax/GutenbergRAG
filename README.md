@@ -28,14 +28,16 @@ It’s designed to be production-ready and showcase modern vector search, advanc
 
 ### Ingestion 
 For populating with the default booklist or user selected books \
-<img src="./imgs/GBRag-ingestion.png" alt="Diagram" style="max-width: 500px; width: 100%;">
+<img src="./imgs/GBRag-ingestion.png" alt="Diagram" style="max-width: 350px; width: 100%;">
 
+### Retrieval 
+...
 
 #### API / Software 
 * Interfaces for easily swapping vector databases, currently supporting Qdrant and Azure AI Search
-* API uses paging either book metadata or vector store, allowing for memory safe browsing
-* Settings, secrets and hyperparameters are handled securely and neatly organised via a Pydantinc singleton
-* Built-in ratelimiter for ingestion pipeline, when running large uploads on the embedding model
+* API uses paging for either book metadata or vector store, allowing for memory safe browsing
+* Settings, secrets and hyperparameters are handled securely and neatly organised via a Pydantinc Settings singleton
+* Built-in ratelimiter for ingestion pipeline, ensuring safely running large uploads on the embedding model
 * Pydantic data classes for strong typing and intellisense
 
 #### Production and deployment
@@ -57,8 +59,8 @@ For further details, the entire see `Dockerfile` and the CI/CD pipelines specifi
 <img src="./imgs/screenshots/GB-cicd-steps.png" alt="Diagram" style="max-width: 750px; width: 100%;">
 <img src="./imgs/screenshots/GB-cicd.png" alt="Diagram" style="max-width: 750px; width: 100%;">
 
-### Approach *(Work in progress)*
-- To ensure that the answer only uses the retrieved context and not relying on its own training --> Strict designed prompt 
+### Approach
+...
  
 
 ## Planned features
