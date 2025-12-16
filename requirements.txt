@@ -40,3 +40,9 @@ uvicorn[standard]
 langchain-text-splitters
 langchain-core
 qdrant-client
+
+# chunking
+llama-index-core 
+llama-index-embeddings-azure-openai
+llama-index-embeddings-openai 
+llama-index

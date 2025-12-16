@@ -76,7 +76,7 @@ class Settings(BaseSettings):
         if self._vector_store is None:
             if self.is_test:
                 self._vector_store = InMemoryVectorStore()
-            elif self.VECTOR_STORE_TO_USE == "Qdrant":
+            if self.VECTOR_STORE_TO_USE == "Qdrant":
                 qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.active_collection)
                 self._vector_store = qdrant_v_store
             elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":
@@ -158,7 +158,7 @@ class Settings(BaseSettings):
 
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
-def get_settings(is_test=False, hyperparam_p=Path("config","hp-ch400.json")) -> Settings:
+def get_settings(is_test=False, hyperparam_p=Path("config","hp-sem-ch.json")) -> Settings:
     sett = Settings(is_test=is_test, 
                     hyperparam_path=hyperparam_p)       # type:ignore
     sett.get_hyperparams()

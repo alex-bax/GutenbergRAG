@@ -27,11 +27,12 @@ It’s designed to be production-ready and showcase modern vector search, advanc
 - LLM: GPT-5-mini with Azure OpenAI 
 
 ### Ingestion 
-For populating with the default booklist or user selected books \
-<img src="./imgs/GBRag-ingest.png" alt="Diagram" height="555" width="475">
+For populating with the default booklist or books specified in user request \
+<img src="./imgs/GBRAG-Ingestion.png" alt="Diagram" height="585" width="475">
 
 ### Retrieval 
-...
+<img src="./imgs/GBRAG-Retrieval.png" alt="Diagram" height="575" width="585">
+
 
 #### API / Software 
 * Interfaces for easily swapping vector databases, currently supporting Qdrant and Azure AI Search
