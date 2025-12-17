@@ -5,7 +5,9 @@ Try out the [API here](https://gbragfastapi-accyhah2evcnfxev.westeurope-01.azure
 
 It’s designed to be production-ready and showcase modern vector search, advanced chunking strategies, proper evaluation, structured experiments and monitoring techniques.
 
-## 🌟 Features
+### README CHANGE 
+
+## Features
 ### RAG
 * Semantic search with embeddings using Qdrant
 * Semantic chunking, splitting chunks based on their meaning, instead of e.g. fixed lengths
@@ -27,6 +29,9 @@ It’s designed to be production-ready and showcase modern vector search, advanc
 - Vector DB interface and implementation: **Qdrant** / **Azure AI Search**
 - LLM: GPT-5-mini with Azure OpenAI, using a custom made lenient guardrail filter on Azure Foundry 
 
+### Ingestion 
+For populating with the default booklist or user selected books \
+<img src="./imgs/GBRAG-ingest.png" alt="Diagram" height="555" width="475">
 
 ### API / Software 
 * Interfaces for easily swapping vector databases, currently supporting Qdrant and Azure AI Search
