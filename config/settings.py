@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     QDRANT_SEARCH_KEY: str
 
     VECTOR_STORE_TO_USE: Literal["Qdrant", "AzureAiSearch"] = "Qdrant"
-    # COLLECTION_NAME: str = Field(default="gutenberg", description="Name of the vector store collection") 
+    
     EMBED_MODEL_DEPLOYMENT:str
     AZ_OPENAI_MODEL_DEPLOYMENT:str
     
@@ -158,7 +158,8 @@ class Settings(BaseSettings):
 
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
-def get_settings(is_test=False, hyperparam_p=Path("config","hp-sem-ch.json")) -> Settings:
+def get_settings(is_test=False, 
+                 hyperparam_p=Path("config","hp-sem-ch.json")) -> Settings:
     sett = Settings(is_test=is_test, 
                     hyperparam_path=hyperparam_p)       # type:ignore
     sett.get_hyperparams()

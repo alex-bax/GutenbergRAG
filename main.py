@@ -4,6 +4,7 @@ from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Pat
 from openai import AsyncAzureOpenAI
 from typing import Annotated
 import psycopg2
+from app_factory import create_app
 from evals.timer_helper import Timer
 from db.database import engine, _get_async_db_sess, Base
 from db.vector_store_abstract import AsyncVectorStore
@@ -20,11 +21,6 @@ from config.settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
 
 
-# async def init_models():
-#     async with engine.begin() as conn:
-#         await conn.run_sync(schema.Base.metadata.create_all)        # creates the DB tables
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Running startup, creating tables...")
@@ -36,7 +32,8 @@ async def lifespan(app: FastAPI):
     await engine.dispose()  # shutdown
 
 
-app = FastAPI(title="MobyRAG", lifespan=lifespan)
+app = create_app(get_settings())
+# app = FastAPI(title="MobyRAG", lifespan=lifespan)
 prefix_router = APIRouter(prefix="/v1")
 
 
