@@ -4,19 +4,73 @@ from azure.search.documents import SearchClient,SearchItemPaged
 
 from pyrate_limiter import Limiter
 from openai import AsyncAzureOpenAI
-
+from pathlib import Path
 from ingestion.preprocess_book import clean_headers 
 from ingestion.chunking import fixed_size_chunking
 from config.settings import get_settings
 from embedding_pipeline import batch_texts_by_tokens, create_embeddings_async
-
 from models.api_response_model import GBBookMeta
-from models.vector_db_model import SearchChunk, SearchPage, UploadChunk
+from models.vector_db_model import EmbeddingVec, UploadChunk
 from db.vector_store_abstract import AsyncVectorStore
+from config.params import EmbeddingDimension
 
+from llama_index.core.node_parser import SemanticSplitterNodeParser
+from llama_index.core import Document
+from rate_limited_llama_embedder import RateLimitedAzureEmbedding
 
 def _split_by_size(data: list, chunk_size: int) -> list[list]:
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
+
+# OLD fixed size chunking
+# async def upload_to_index_async(*, vec_store:AsyncVectorStore, 
+#                                 embed_client:AsyncAzureOpenAI, 
+#                                 token_limiter:Limiter,
+#                                 request_limiter:Limiter,
+#                                 raw_book_content: str,
+#                                 book_meta: GBBookMeta,
+#                             ) -> list[UploadChunk]:
+#     sett = get_settings()
+
+#     book_str = clean_headers(raw_book=raw_book_content) 
+#     if len(book_str) == 0:      
+#         print(f'** INFO No book content str extracted --- skipping {book_meta.title}')
+#         return []
+
+#     docs:list[UploadChunk] = []
+#     vector_items_added = []
+
+#     hp = sett.get_hyperparams().ingestion
+#     chunks = fixed_size_chunking(text=book_str, chunk_size=hp.chunk_size)
+#     batches = batch_texts_by_tokens(texts=chunks, max_tokens_per_request=hp.max_tokens_pr_req)
+
+#     embeddings = await create_embeddings_async(embed_client=embed_client, 
+#                                             model_deployed=sett.EMBED_MODEL_DEPLOYMENT,
+#                                             inp_batches=batches,
+#                                             tok_limiter=token_limiter,
+#                                             req_limiter=request_limiter
+#                                             )
+        
+#     assert len(chunks) == len(embeddings)
+
+#     for i, (chunk, emb_vec) in enumerate(zip(chunks, embeddings)):
+#         chapter_item = UploadChunk(
+#                             uuid_str= str(uuid.uuid4()),
+#                             book_name= book_meta.title,
+#                             book_id = book_meta.id,
+#                             chunk_nr= i,
+#                             content= chunk,
+#                             content_vector= emb_vec
+#                         )
+        
+#         docs.append(chapter_item)#.to_dict())
+#         vector_items_added.append(chapter_item)
+
+#     docs_splitted = _split_by_size(data=docs, chunk_size=hp.chunk_size)
+#     for doc_chunks in docs_splitted:
+#         await vec_store.upsert_chunks(chunks=doc_chunks)
+
+#     return vector_items_added
+
 
 
 async def upload_to_index_async(*, vec_store:AsyncVectorStore, 
@@ -34,54 +88,80 @@ async def upload_to_index_async(*, vec_store:AsyncVectorStore,
         return []
 
     docs:list[UploadChunk] = []
-    vector_items_added = []
+    vector_items_added:list[UploadChunk] = []
+    
+    hp = sett.get_hyperparams()
 
-    hp = sett.get_hyperparams().ingestion
-    chunks = fixed_size_chunking(text=book_str, chunk_size=hp.chunk_size)
-    batches = batch_texts_by_tokens(texts=chunks, max_tokens_per_request=hp.max_tokens_pr_req)
+    embed_model = RateLimitedAzureEmbedding(
+                        embed_client=embed_client,
+                        deployment_name="text-embedding-3-small",
+                        tok_limiter=token_limiter,
+                        req_limiter=request_limiter,
+                        batch_size=hp.ingestion.max_tokens_pr_req,
+                        embed_dim_value=hp.ingestion.embed_dim,
+                    )
 
-    embeddings = await create_embeddings_async(embed_client=embed_client, 
-                                            model_deployed=sett.EMBED_MODEL_DEPLOYMENT,
-                                            inp_batches=batches,
-                                            tok_limiter=token_limiter,
-                                            req_limiter=request_limiter
-                                            )
-        
-    assert len(chunks) == len(embeddings)
+    splitter = SemanticSplitterNodeParser(
+                    embed_model=embed_model,
+                    buffer_size=1,
+                    breakpoint_percentile_threshold=95,
+                )
 
+    doc = Document(text=book_str, metadata=book_meta.model_dump())
+    # nodes = splitter.get_nodes_from_documents([doc])
+    nodes = await asyncio.to_thread(splitter.get_nodes_from_documents, [doc])
+
+    chunks: list[str] = [n.get_content() for n in nodes]
+    embeddings = await embed_model._aget_text_embeddings(chunks)
+    
     for i, (chunk, emb_vec) in enumerate(zip(chunks, embeddings)):
         chapter_item = UploadChunk(
-                            uuid_str= str(uuid.uuid4()),
-                            book_name= book_meta.title,
-                            book_id = book_meta.id,
-                            chunk_nr= i,
-                            content= chunk,
-                            content_vector= emb_vec
+                            uuid_str=str(uuid.uuid4()),
+                            book_name=book_meta.title,
+                            book_id=book_meta.id,
+                            chunk_nr=i,
+                            content=chunk,
+                            content_vector=EmbeddingVec(vector=emb_vec, dim=EmbeddingDimension.SMALL),
                         )
-        
-        docs.append(chapter_item)#.to_dict())
-        vector_items_added.append(chapter_item)
-
-    docs_splitted = _split_by_size(data=docs, chunk_size=hp.chunk_size)
-    for doc_chunks in docs_splitted:
-        await vec_store.upsert_chunks(chunks=doc_chunks)
+        docs.append(chapter_item)
+ 
+    print([len(d.content) for d in docs])
+    await vec_store.upsert_chunks(chunks=docs)
 
     return vector_items_added
 
 
-async def _local_try():
-    sett = get_settings()
-    req_lim, token_lim = sett.get_limiters()
 
-    embeddings = await create_embeddings_async(embed_client=sett.get_async_emb_client(), 
-                                            model_deployed=sett.EMBED_MODEL_DEPLOYMENT,
-                                            inp_batches=[["hej", "med", "dig"]],
-                                            tok_limiter=token_lim,
-                                            req_limiter=req_lim
-                                            )
+async def _try():
+    from ingestion.book_loader import _load_gb_meta_local
+
+    # skip default vec population with is_test=True
+    sett = get_settings(hyperparam_p=Path("config", "hp-sem-ch.json"))
+    req_lim, token_lim = sett.get_limiters()
+   
+    p = Path("evals", "books", "alices-adventures-in-wonderland_carroll-lewis_11.json")
+    cached_gb_meta = _load_gb_meta_local(path=p)
+    with open(cached_gb_meta.path_to_content, "r", encoding="utf-8") as f:
+        book_content = f.read()
+    
+    s = await upload_to_index_async(
+                    vec_store=await sett.get_vector_store(),
+                    embed_client=sett.get_async_emb_client(),
+                    token_limiter=token_lim,
+                    request_limiter=req_lim,
+                    raw_book_content=book_content,
+                    book_meta=cached_gb_meta
+                )
+    print(s)
+    # embeddings = await create_embeddings_async(embed_client=sett.get_async_emb_client(), 
+    #                                         model_deployed=sett.EMBED_MODEL_DEPLOYMENT,
+    #                                         inp_batches=[["hej", "med", "dig"]],
+    #                                         tok_limiter=token_lim,
+    #                                         req_limiter=req_lim
+    #                                         )
 
 
 if __name__ == "__main__":      # Don't run when imported via import statement
-    asyncio.run(_local_try())
+    asyncio.run(_try())
 
     

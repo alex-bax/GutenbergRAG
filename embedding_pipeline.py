@@ -14,11 +14,10 @@ from tqdm import tqdm
 from openai import AsyncAzureOpenAI
 
 
-# TODO: make this async also
 @backoff.on_exception(wait_gen=backoff.expo, exception=RateLimitError, max_time=120, max_tries=6)
 async def _create_embeddings(*, embed_client:AsyncAzureOpenAI, 
-                       model_deployed:str, 
-                       batches:list[str]) -> list[EmbeddingVec]:
+                                model_deployed:str, 
+                                batches:list[str]) -> list[EmbeddingVec]:
     resp = await embed_client.embeddings.create(
                                             input=batches,
                                             model=model_deployed,
@@ -82,7 +81,6 @@ async def create_embeddings_async(*, embed_client:AsyncAzureOpenAI,
                             req_limiter=req_limiter, 
                             tokens_needed=tokens_needed) 
 
-        # TODO - change to use async
         embs = await _create_embeddings(embed_client=embed_client, 
                                   model_deployed=model_deployed, 
                                   batches=batch)

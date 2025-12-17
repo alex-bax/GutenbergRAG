@@ -15,4 +15,6 @@ evals/*
 !evals/datasets/gb_gold_med.csv
 !evals/datasets/gb_gold.csv
 !evals/timer_helper.py
+# Complete results and plots:
+!evals/results/*            
 *.ipynb

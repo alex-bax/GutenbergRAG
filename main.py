@@ -4,15 +4,14 @@ from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Pat
 from openai import AsyncAzureOpenAI
 from typing import Annotated
 import psycopg2
+from app_factory import create_app
 from evals.timer_helper import Timer
-from db.database import engine, get_async_db_sess, Base
+from db.database import engine, _get_async_db_sess, Base
 from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.operations import select_all_books_db, select_books_db_by_id, delete_book_db,  select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
-
 from models.api_response_model import ApiResponse, BookMetaDataResponse, BookMetaApiResponse, GBBookMeta, GBMetaApiResponse, QueryResponseApiResponse, SearchApiResponse
-# from models.api_response_model import SearchPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination import Page, add_pagination, paginate
 
@@ -22,26 +21,22 @@ from config.settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
 
 
-# async def init_models():
-#     async with engine.begin() as conn:
-#         await conn.run_sync(schema.Base.metadata.create_all)        # creates the DB tables
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Running startup, creating tables...")
     async with engine.begin() as conn:      # startup
         await conn.run_sync(Base.metadata.create_all)
 
-    yield  # Now the app starts serving
+    yield  # now app starts serving
 
     await engine.dispose()  # shutdown
 
 
-app = FastAPI(title="MobyRAG", lifespan=lifespan)
+app = create_app(get_settings())
+# app = FastAPI(title="MobyRAG", lifespan=lifespan)
 prefix_router = APIRouter(prefix="/v1")
 
-# TODO make config obj
+
 async def get_vector_store() -> AsyncVectorStore:
     return await get_settings().get_vector_store()
 
@@ -51,7 +46,7 @@ def get_async_emb_client() -> AsyncAzureOpenAI:
 
 
 @prefix_router.get("/books/search", response_model=BookMetaApiResponse, status_code=status.HTTP_200_OK)
-async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)], 
+async def search_books(db:Annotated[AsyncSession, Depends(_get_async_db_sess)], 
                        title: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
                        authors: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
                        lang:Annotated[str|None, Query(min_length=2, max_length=2, examples=["en", "da", "nl"])] = None ):
@@ -66,7 +61,7 @@ async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)],
 
 
 @prefix_router.get("/books/{book_id}", response_model=BookMetaApiResponse, status_code=status.HTTP_200_OK)
-async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
+async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(_get_async_db_sess)]):
     db_books = None
     
     db_books = await select_books_db_by_id(set([book_id]), db)
@@ -82,14 +77,14 @@ async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_
 
 
 @prefix_router.get("/books/", response_model=BookMetaApiResponse)
-async def get_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
+async def get_books(db:Annotated[AsyncSession, Depends(_get_async_db_sess)]):
     books = await select_all_books_db(db)
     return BookMetaApiResponse(data=[db_obj_to_response(b) for b in books])
 
 
 # TODO: test this - how is the result paginated
 @prefix_router.get("/books/paginated")
-async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_sess)]) -> Page[BookMetaDataResponse]:
+async def get_books_paginated(db:Annotated[AsyncSession, Depends(_get_async_db_sess)]) -> Page[BookMetaDataResponse]:
     db_books = await select_documents_paginated_db(db)
     books = paginate([BookMetaDataResponse(**b.__dict__) for b in db_books.items])
     return books
@@ -98,7 +93,7 @@ async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_se
 @prefix_router.get("/index/{gutenberg_id}", response_model=SearchApiResponse, status_code=status.HTTP_200_OK)
 async def get_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
                                 settings:Annotated[Settings, Depends(get_settings)],
-                                db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
+                                ):
     vec_store = await settings.get_vector_store()
     book_search_page = await vec_store.get_paginated_chunks_by_book_ids(book_ids=set([gutenberg_id]))
 
@@ -127,7 +122,7 @@ async def search_index_by_texts(skip:Annotated[int, Query(description="Number of
 # no body needed, only gutenberg id since we're uploading from Gutenberg 
 @prefix_router.post("/index", status_code=status.HTTP_201_CREATED, response_model=GBMetaApiResponse)
 async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(description="Unique Gutenberg IDs to upload", min_length=1, max_length=30)],
-                                db_sess:Annotated[AsyncSession, Depends(get_async_db_sess)],
+                                # db_sess:Annotated[AsyncSession, Depends(_get_async_db_sess)],
                                 settings:Annotated[Settings, Depends(get_settings)]):
     info = ""
 
@@ -137,7 +132,9 @@ async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(descripti
             detail="gutenberg_ids must be unique",
         )
 
-    gb_books_uploaded, info = await upload_missing_book_ids(book_ids=set(gutenberg_ids), sett=settings, db_sess=db_sess)
+    gb_books_uploaded, info = await upload_missing_book_ids(book_ids=set(gutenberg_ids), 
+                                                            sett=settings, 
+                                                            )
 
     if len(gb_books_uploaded) == 0:
         info += f"\nBook ids:{gutenberg_ids} already in index {settings.active_collection}"
@@ -150,7 +147,7 @@ async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(descripti
 @prefix_router.delete("/index/{gutenberg_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
                                 settings:Annotated[Settings, Depends(get_settings)],
-                                db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
+                                db:Annotated[AsyncSession, Depends(_get_async_db_sess)]):
     
     vec_store = await settings.get_vector_store()
     missing_ids = await vec_store.get_missing_ids_in_store(book_ids=set([gutenberg_id]))      # get book id if missing
@@ -217,7 +214,6 @@ async def answer_query(query:Annotated[str, Query()],
                                 timer=Timer(enabled=False))
 
     return QueryResponseApiResponse(data=llm_resp)
-
 
 
 

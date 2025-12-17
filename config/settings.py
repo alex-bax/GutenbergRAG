@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     QDRANT_SEARCH_KEY: str
 
     VECTOR_STORE_TO_USE: Literal["Qdrant", "AzureAiSearch"] = "Qdrant"
-    # COLLECTION_NAME: str = Field(default="gutenberg", description="Name of the vector store collection") 
+    
     EMBED_MODEL_DEPLOYMENT:str
     AZ_OPENAI_MODEL_DEPLOYMENT:str
     
@@ -68,15 +68,15 @@ class Settings(BaseSettings):
     )
 
     async def get_vector_store(self) -> AsyncVectorStore:
-        from db.database import get_db
-        from ingestion.book_loader import upload_missing_book_ids
+        # from db.database import get_db
+        # from ingestion.book_loader import upload_missing_book_ids
         from db.az_search_vector_store import AzSearchVectorStore
         from db.qdrant_vector_store import QdrantVectorStore
 
         if self._vector_store is None:
             if self.is_test:
                 self._vector_store = InMemoryVectorStore()
-            elif self.VECTOR_STORE_TO_USE == "Qdrant":
+            if self.VECTOR_STORE_TO_USE == "Qdrant":
                 qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.active_collection)
                 self._vector_store = qdrant_v_store
             elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":
@@ -87,14 +87,14 @@ class Settings(BaseSettings):
         
             await self._vector_store.create_missing_collection(collection_name=self.active_collection)
             
-            assert self._hyperparams and self._hyperparams.ingestion, "Instantiate settings via get_settings()"
-            hyperparams = self._hyperparams.ingestion 
-            book_ids = set(hyperparams.default_ids_used.values()) if not self.is_test else set([hyperparams.default_ids_used["Frankenstein; Or, The Modern Prometheus"]])        
+            # assert self._hyperparams and self._hyperparams.ingestion, "Instantiate settings via get_settings()"
+            # hyperparams = self._hyperparams.ingestion 
+            # book_ids = set(hyperparams.default_ids_used.values()) if not self.is_test else set([hyperparams.default_ids_used["Frankenstein; Or, The Modern Prometheus"]])        
 
-            if not self.is_test:
-                async with get_db() as db_sess:
-                    # Populate the both vector store and postgresql db with the small default book list
-                    await upload_missing_book_ids(book_ids=book_ids, db_sess=db_sess, sett=self)
+            # if not self.is_test:
+            #     async with get_db() as db_sess:
+            #         # Populate the both vector store and postgresql db with the small default book list
+            #         await upload_missing_book_ids(book_ids=book_ids, db_sess=db_sess, sett=self)
                 
 
         return self._vector_store
@@ -158,7 +158,8 @@ class Settings(BaseSettings):
 
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
-def get_settings(is_test=False, hyperparam_p=Path("config","hp-ch400.json")) -> Settings:
+def get_settings(is_test=False, 
+                 hyperparam_p=Path("config","hp-sem-ch.json")) -> Settings:
     sett = Settings(is_test=is_test, 
                     hyperparam_path=hyperparam_p)       # type:ignore
     sett.get_hyperparams()

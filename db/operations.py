@@ -23,7 +23,7 @@ async def insert_missing_book_db(book:DBBookMetaData, db_sess:AsyncSession) -> s
     
     if len(existing_books) == 0:
         await insert_book_db(book=book, db_sess=db_sess)
-        return f"\n Didn't find book {book.title} {book.id} in metadata DB - inserting it now"
+        return f"\n Didn't find book {book.title} {book.id} in metadata DB - inserting it now\n"
     else:
         return f"\n Already in metadata DB: {book.title} {book.id}"
 

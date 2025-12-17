@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransacti
 from db.database import Base
 from models.api_response_model import BookMetaApiResponse, BookMetaDataResponse, GBMetaApiResponse, QueryResponseApiResponse, SearchApiResponse
 # Importing fastapi.Depends that is used to retrieve SQLAlchemy's session
-from db.database import get_async_db_sess
+from db.database import _get_async_db_sess
 from db.operations import insert_book_db, DBBookMetaData
 from main import app
 
@@ -55,10 +55,8 @@ async def transaction(
         # Always rollback so DB is clean between tests
         await trans.rollback()
 
+
 # Use this fixture to get SQLAlchemy's AsyncSession.
-# All changes that occur in a test function are rolled back
-# after function exits, even if session.commit() is called
-# in inner functions
 @pytest.fixture()
 async def session(
     connection: AsyncConnection, transaction: AsyncTransaction) -> AsyncGenerator[AsyncSession, None]:
@@ -77,7 +75,6 @@ def test_settings() -> Settings:
     return get_settings(is_test=True)
 
 
-# Use this fixture to get HTTPX's client to test API.
 # All changes that occur in a test function are rolled back
 # after function exits, even if session.commit() is called
 # in FastAPI's application endpoints
@@ -94,7 +91,7 @@ async def client(
         async with async_session:
             yield async_session
     
-    app.dependency_overrides[get_async_db_sess] = override_get_async_session
+    app.dependency_overrides[_get_async_db_sess] = override_get_async_session
     app.dependency_overrides[get_settings] = lambda: test_settings
     
     test_client = AsyncClient(transport=ASGITransport(app=app), base_url="http://")
@@ -110,7 +107,7 @@ async def client(
             print(f"[TEST CLEANUP WARNING] Could not delete collection: {e}")
 
         await test_client.aclose()
-        del app.dependency_overrides[get_async_db_sess]
+        del app.dependency_overrides[_get_async_db_sess]
         del app.dependency_overrides[get_settings]
         # v_store = await test_settings.get_vector_store()
         # await v_store.delete_collection(collection_name=test_settings.active_collection)

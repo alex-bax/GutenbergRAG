@@ -1,25 +1,27 @@
 {
     "config_id": 2,
-    "collection": "gb-ch500",
+    "collection": "gb-semantic",
     "ingestion": {
         "chunk_size": 500,
         "chunk_overlap": 100,
-        "chunk_strategy": "fixed",
+        "chunk_strategy": "semantic",
         "embed_model": "text-embedding-3-small",
-        "embed_dim": 1536,
-        "default_ids_used": {
-            "The Adventures of Sherlock Holmes": 1661,
-            "The Strange Case of Dr. Jekyll and Mr. Hyde": 42,
-            "The Federalist Papers": 1404,
-            "Moby Dick; Or, The Whale": 2701,
-            "Meditations": 2680,
-            "The King in Yellow": 8492,
-            "Frankenstein; Or, The Modern Prometheus": 84,
-            "Alice's Adventures in Wonderland":11
-        },
-        "requests_pr_min": 3000,
         "tokens_pr_min": 501000,
-        "max_tokens_pr_req": 8000
+        "requests_pr_min": 3000,
+        "embed_dim": 1536,
+        "max_tokens_pr_req": 8000,
+        "default_ids_used": {
+            "The Adventures of Sherlock Holmes": 1661, 
+            "The Strange Case of Dr. Jekyll and Mr. Hyde": 42, 
+            "The Federalist Papers": 1404, 
+            "Moby Dick; Or, The Whale": 2701,
+            "Meditations":2680,
+            "The King in Yellow":8492,
+            "Frankenstein; Or, The Modern Prometheus":84,
+            "Beowulf: An Anglo-Saxon Epic Poem":16328,
+            "Boy Scouts Handbook: The First Edition, 1911":29558,
+            "Alice's Adventures in Wonderland":11
+        }
     },
     "retrieval": {
         "top_k": 15,

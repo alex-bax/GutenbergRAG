@@ -222,7 +222,6 @@ class QdrantVectorStore(AsyncVectorStore):
     async def delete_collection(self, collection_name:str) -> None:
         await self._client.delete_collection(collection_name)
     
-        
 
     async def upsert_chunks(self, chunks: list[UploadChunk]) -> None:
         if not chunks:

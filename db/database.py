@@ -19,13 +19,13 @@ AsyncSessionLocal = async_sessionmaker(
 
 Base = declarative_base() 
 
-async def get_async_db_sess() -> AsyncGenerator[AsyncSession, None]:
+async def _get_async_db_sess() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
 
 @asynccontextmanager
-async def get_db():
-    gen = get_async_db_sess()
+async def get_async_db():
+    gen = _get_async_db_sess()
     session = await anext(gen)
     try:
         yield session

@@ -2,6 +2,7 @@ import requests_async
 import asyncio
 from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
+from db.database import get_async_db
 from models.api_response_model import GBBookMeta
 from models.local_gb_book_model import GBBookMetaLocal
 from vector_store_utils import upload_to_index_async
@@ -60,7 +61,9 @@ def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
 
 
 #TODO - make unit test
-async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:AsyncSession) -> tuple[list[GBBookMeta], str]:
+async def upload_missing_book_ids(*, book_ids:set[int], 
+                                  sett:Settings, 
+                                ) -> tuple[list[GBBookMeta], str]:
     """Upload and book ids to vector index and insert into book meta DB if missing"""
     vector_store = await sett.get_vector_store()
     missing_book_ids = await vector_store.get_missing_ids_in_store( book_ids=book_ids)
@@ -92,9 +95,8 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
                 mess += f"Loaded content from cache for book id {b_id}"
                 print(mess)
             except Exception as exc:
-                print(f"!!! exc: tried {str(gb_meta.path_to_content)}  {exc}")
+                print(f"EXC: tried {str(gb_meta.path_to_content)}  {exc}")
                 
-
         print(f"*** Uploading Book id {b_id} to index")
         await upload_to_index_async(vec_store=vector_store, 
                                     embed_client=sett.get_async_emb_client(),
@@ -104,7 +106,9 @@ async def upload_missing_book_ids(*, book_ids:set[int], sett:Settings, db_sess:A
                                     book_meta=gb_meta
                                 )
         db_book = gbbookmeta_to_db_obj(gbm=gb_meta)
-        mess += await insert_missing_book_db(db_book, db_sess)
+
+        async with get_async_db() as db_sess:
+            mess += await insert_missing_book_db(db_book, db_sess)
 
         gb_books.append(gb_meta)
 
