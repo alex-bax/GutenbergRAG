@@ -63,8 +63,7 @@ def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
 #TODO - make unit test
 async def upload_missing_book_ids(*, book_ids:set[int], 
                                   sett:Settings, 
-                                #   db_sess:AsyncSession
-                                  ) -> tuple[list[GBBookMeta], str]:
+                                ) -> tuple[list[GBBookMeta], str]:
     """Upload and book ids to vector index and insert into book meta DB if missing"""
     vector_store = await sett.get_vector_store()
     missing_book_ids = await vector_store.get_missing_ids_in_store( book_ids=book_ids)

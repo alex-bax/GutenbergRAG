@@ -93,7 +93,7 @@ async def get_books_paginated(db:Annotated[AsyncSession, Depends(_get_async_db_s
 @prefix_router.get("/index/{gutenberg_id}", response_model=SearchApiResponse, status_code=status.HTTP_200_OK)
 async def get_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
                                 settings:Annotated[Settings, Depends(get_settings)],
-                                db:Annotated[AsyncSession, Depends(_get_async_db_sess)]):
+                                ):
     vec_store = await settings.get_vector_store()
     book_search_page = await vec_store.get_paginated_chunks_by_book_ids(book_ids=set([gutenberg_id]))
 
@@ -214,7 +214,6 @@ async def answer_query(query:Annotated[str, Query()],
                                 timer=Timer(enabled=False))
 
     return QueryResponseApiResponse(data=llm_resp)
-
 
 
 

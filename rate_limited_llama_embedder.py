@@ -1,7 +1,6 @@
 from __future__ import annotations
-
 import asyncio
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field, ConfigDict
 from llama_index.core.embeddings import BaseEmbedding
@@ -11,18 +10,6 @@ from models.vector_db_model import EmbeddingVec
 
 Vector = list[float]
 
-
-# def _run_async(coro):
-#     try:
-#         asyncio.get_running_loop()
-#     except RuntimeError:
-#         return asyncio.run(coro)
-
-#     new_loop = asyncio.new_event_loop()
-#     try:
-#         return new_loop.run_until_complete(coro)
-#     finally:
-#         new_loop.close()
 
 def _run_async_only_if_no_loop(coro):
     """Run async coro only when no loop is running in this thread."""

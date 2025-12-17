@@ -14,8 +14,6 @@ async def lifespan(app: FastAPI):
     settings: Settings = app.state.settings
 
     # Decide what to seed
-    # if getattr(settings, "SEED_ON_STARTUP", True):
-        # pick IDs based on test/prod
     hp_ing = settings.get_hyperparams().ingestion
     if settings.is_test:
         seed_ids = {hp_ing.default_ids_used["Frankenstein; Or, The Modern Prometheus"]}
