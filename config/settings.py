@@ -57,7 +57,6 @@ class Settings(BaseSettings):
     def active_collection(self) -> str:
         hp = self.get_hyperparams()
         return "test_" + hp.collection if self.is_test else hp.collection
-        # return "test_" + self.COLLECTION_NAME if self.is_test else self.COLLECTION_NAME
 
 
     model_config = SettingsConfigDict(
@@ -76,7 +75,7 @@ class Settings(BaseSettings):
         if self._vector_store is None:
             if self.is_test:
                 self._vector_store = InMemoryVectorStore()
-            if self.VECTOR_STORE_TO_USE == "Qdrant":
+            elif self.VECTOR_STORE_TO_USE == "Qdrant":
                 qdrant_v_store = QdrantVectorStore(settings=self, collection_name=self.active_collection)
                 self._vector_store = qdrant_v_store
             elif self.VECTOR_STORE_TO_USE == "AzureAiSearch":

@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
         seed_ids = set(hp_ing.default_ids_used.values())
 
     # Seed the vector store
-    print(f'SEEDING VECTOR INDEX: {seed_ids}')
+    print(f'DEF GB SEEDS: {seed_ids}')
     await settings.get_vector_store()
     await upload_missing_book_ids(
                         book_ids=seed_ids,

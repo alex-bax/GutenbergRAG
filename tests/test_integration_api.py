@@ -12,6 +12,7 @@ from models.api_response_model import BookMetaApiResponse, BookMetaDataResponse,
 from db.database import _get_async_db_sess
 from db.operations import insert_book_db, DBBookMetaData
 from main import app
+from models.schema import DBBookChunkStats
 
 ### The test DB is rolled back after each test fixture
 FRANKENSTEIN = "Frankenstein; Or, The Modern Prometheus"
@@ -21,6 +22,18 @@ DR_JEK_HIDE = "The Strange Case of Dr. Jekyll and Mr. Hyde"
 pytestmark = pytest.mark.anyio
 
 engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+
+chunk_stat_dummy = DBBookChunkStats(
+                            config_id_used=1,
+                            title="fixed_400_100",
+                            char_count=123456,
+                            chunk_count=320,
+                            token_mean=380.2,
+                            token_median=390.0,
+                            token_min=120,
+                            token_max=512,
+                            token_std=42.7,
+                        )
 
 @pytest.fixture(scope="session", autouse=True)
 async def create_test_schema():
@@ -109,11 +122,7 @@ async def client(
         await test_client.aclose()
         del app.dependency_overrides[_get_async_db_sess]
         del app.dependency_overrides[get_settings]
-        # v_store = await test_settings.get_vector_store()
-        # await v_store.delete_collection(collection_name=test_settings.active_collection)
-
-        # await test_client.aclose()
-        # del app.dependency_overrides[get_async_db_sess]
+        
 
 
 def test_settings_load_env_sanity_check(test_settings: Settings):
@@ -124,11 +133,11 @@ def test_settings_load_env_sanity_check(test_settings: Settings):
 
 # Tests showing rollbacks between functions when using API client
 async def test_get_book(client: AsyncClient, session: AsyncSession):
-    book_id = await insert_book_db(book=DBBookMetaData(gb_id=42, title="string", lang="en", authors="string"), 
+    book = await insert_book_db(book=DBBookMetaData(gb_id=42, title="string", authors="string", summary="A dummy summary"), 
                                    db_sess=session)
-    
+    book.chunk_stats = chunk_stat_dummy
     async with client as ac:
-        created_book_id = book_id #response.json()["id"]
+        created_book_id = book.gb_id #response.json()["id"]
         
         resp = await ac.get(
             f"/{VER_PREFIX}/books/{created_book_id}",
@@ -169,14 +178,14 @@ async def test_upload_1_to_index(client: AsyncClient, test_settings: Settings):
 # TODO: test this from api
 # search_books
 
-async def test_upload_same_twice_to_index_returns_422(client: AsyncClient, test_settings: Settings):
+async def test_upload_same_twice_to_index_returns_404(client: AsyncClient, test_settings: Settings):
     hp = test_settings.get_hyperparams().ingestion
     
     async with client as ac:
         body = [hp.default_ids_used[DR_JEK_HIDE], 
                 hp.default_ids_used[DR_JEK_HIDE]]
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
-        assert resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_upload_delete_book_index(client:AsyncClient, test_settings: Settings):
@@ -200,7 +209,7 @@ async def test_upload_delete_book_index(client:AsyncClient, test_settings: Setti
         assert chunk_count_before == chunk_count_after
 
 
-async def test_delete_book_index_not_found_returns_422(client:AsyncClient, test_settings: Settings):
+async def test_delete_book_index_not_found_returns_404(client:AsyncClient, test_settings: Settings):
     hp = test_settings.get_hyperparams().ingestion
     
     async with client as ac:

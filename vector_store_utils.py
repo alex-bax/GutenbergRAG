@@ -1,19 +1,20 @@
 import uuid, tiktoken
+from statistics import mean, median, stdev
 import asyncio
-from azure.search.documents import SearchClient,SearchItemPaged
+# from azure.search.documents import SearchClient,SearchItemPaged
 
 from pyrate_limiter import Limiter
 from openai import AsyncAzureOpenAI
 from pathlib import Path
 from ingestion.preprocess_book import clean_headers 
 from ingestion.chunking import fixed_size_chunking
-from config.settings import get_settings
+from config.settings import Settings, get_settings
 from embedding_pipeline import _count_tokens, batch_texts_by_tokens, create_embeddings_async
 from models.api_response_model import GBBookMeta
 from models.vector_db_model import EmbeddingVec, UploadChunk
 from db.vector_store_abstract import AsyncVectorStore
 from config.params import EmbeddingDimension
-
+from models.schema import DBBookChunkStats
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.core import Document
 from rate_limited_llama_embedder import RateLimitedAzureEmbedding
@@ -72,22 +73,47 @@ def _split_by_size(data: list, chunk_size: int) -> list[list]:
 #     return vector_items_added
 
 
+def calc_book_chunk_stats(all_chunks:list[UploadChunk], conf_id:int) -> DBBookChunkStats:
+    token_counts = [c.token_count for c in all_chunks]
+    book_name, book_id = all_chunks[0].book_name, all_chunks[0].book_id
+    assert all(book_name == c.book_name for c in all_chunks), "calc_book_chunk_stats -> All book titles not equal" 
+    assert all(book_id == c.book_id for c in all_chunks), "calc_book_chunk_stats -> All book ids not equal"
 
-async def upload_to_index_async(*, vec_store:AsyncVectorStore, 
+    if len(token_counts) == 1:
+        token_std = 0.0
+    else:
+        token_std = stdev(token_counts)  # sample std dev
+
+    return DBBookChunkStats(
+        id=all_chunks[0].book_id,
+        config_id_used=conf_id,
+        title=all_chunks[0].book_name,
+        char_count=sum([len(c.content) for c in all_chunks]),
+        chunk_count=len(all_chunks),
+        token_mean=mean(token_counts),
+        token_median=median(token_counts),
+        token_min=min(token_counts),
+        token_max=max(token_counts),
+        token_std=token_std,
+    )
+
+
+async def async_upload_book_to_index(*, vec_store:AsyncVectorStore, 
                                 embed_client:AsyncAzureOpenAI, 
                                 token_limiter:Limiter,
                                 request_limiter:Limiter,
                                 raw_book_content: str,
                                 book_meta: GBBookMeta,
-                            ) -> list[UploadChunk]:
-    sett = get_settings()
-
-    book_str = clean_headers(raw_book=raw_book_content) 
+                                sett:Settings
+                            ) -> tuple[list[UploadChunk], DBBookChunkStats|None]:
+    
+    # TODO ENABLE BACK BEFORE PUSH
+    # book_str = clean_headers(raw_book=raw_book_content) if not sett.is_test else raw_book_content
+    book_str = clean_headers(raw_book=raw_book_content) if not True else raw_book_content
     if len(book_str) == 0:      
-        print(f'** INFO No book content str extracted --- skipping {book_meta.title}')
-        return []
+        return ([], None)
 
-    docs:list[UploadChunk] = []
+    upload_chunks:list[UploadChunk] = []
     vector_items_added:list[UploadChunk] = []
     
     hp = sett.get_hyperparams()
@@ -125,12 +151,13 @@ async def upload_to_index_async(*, vec_store:AsyncVectorStore,
                             char_count=len(chunk),
                             token_count=_count_tokens(chunk, enc=tiktoken.get_encoding("cl100k_base"))
                         )
-        docs.append(chapter_item)
+        upload_chunks.append(chapter_item)
  
-    print([len(d.content) for d in docs])
-    await vec_store.upsert_chunks(chunks=docs)
+    await vec_store.upsert_chunks(chunks=upload_chunks)
+    hp = sett.get_hyperparams()
+    book_chunk_stats = calc_book_chunk_stats(all_chunks=upload_chunks, conf_id=hp.config_id)
 
-    return vector_items_added
+    return vector_items_added, book_chunk_stats
 
 
 
@@ -146,13 +173,14 @@ async def _try():
     with open(cached_gb_meta.path_to_content, "r", encoding="utf-8") as f:
         book_content = f.read()
     
-    s = await upload_to_index_async(
+    s = await async_upload_book_to_index(
                     vec_store=await sett.get_vector_store(),
                     embed_client=sett.get_async_emb_client(),
                     token_limiter=token_lim,
                     request_limiter=req_lim,
                     raw_book_content=book_content,
-                    book_meta=cached_gb_meta
+                    book_meta=cached_gb_meta,
+                    sett=sett
                 )
     print(s)
     # embeddings = await create_embeddings_async(embed_client=sett.get_async_emb_client(), 

@@ -9,7 +9,7 @@ from evals.timer_helper import Timer
 from db.database import engine, _get_async_db_sess, Base
 from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.operations import select_all_books_db, select_books_db_by_id, delete_book_db,  select_books_like_db, select_documents_paginated_db, BookNotFoundException
+from db.operations import select_all_books_db, select_books_by_id_db, delete_book_db,  select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
 from models.api_response_model import ApiResponse, BookMetaDataResponse, BookMetaApiResponse, GBBookMeta, GBMetaApiResponse, QueryResponseApiResponse, SearchApiResponse
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -54,7 +54,7 @@ async def search_books(db:Annotated[AsyncSession, Depends(_get_async_db_sess)],
     if not any([title, authors, lang]):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Provide at least one filter parameter.")
     
-    db_books = await select_books_like_db(title=title, authors=authors, lang=lang, db_sess=db)
+    db_books = await select_books_like_db(title=title, authors=authors, db_sess=db)
     book_meta_objs = [db_obj_to_response(b) for b in db_books]
 
     return BookMetaApiResponse(data=book_meta_objs)
@@ -64,7 +64,7 @@ async def search_books(db:Annotated[AsyncSession, Depends(_get_async_db_sess)],
 async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(_get_async_db_sess)]):
     db_books = None
     
-    db_books = await select_books_db_by_id(set([book_id]), db)
+    db_books = await select_books_by_id_db(gb_ids=set([book_id]), db_sess=db)
 
     if len(db_books) == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
@@ -128,7 +128,7 @@ async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(descripti
 
     if len(gutenberg_ids) != len(set(gutenberg_ids)):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="gutenberg_ids must be unique",
         )
 
@@ -159,7 +159,7 @@ async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="G
         err_mess_not_found =f"No items in vector found with book_id {gutenberg_id}"
 
     try:
-        await delete_book_db(book_id=None, gb_id=gutenberg_id, db_sess=db)
+        await delete_book_db(gb_id=gutenberg_id, db_sess=db)
     except BookNotFoundException:
         err_mess_not_found += f"\nBook with id {gutenberg_id} not found in DB"
     
