@@ -233,7 +233,7 @@ class QdrantVectorStore(AsyncVectorStore):
                 vector=c.content_vector.vector,
                 payload={
                     "uuid_str": c.uuid_str,
-                    "chunk_nr": c.chunk_nr,
+                    "chunk_nr": c.chunk_id,
                     "book_name": c.book_name,
                     "book_id": c.book_id,
                     "content": c.content,

@@ -1,4 +1,4 @@
-import uuid
+import uuid, tiktoken
 import asyncio
 from azure.search.documents import SearchClient,SearchItemPaged
 
@@ -8,7 +8,7 @@ from pathlib import Path
 from ingestion.preprocess_book import clean_headers 
 from ingestion.chunking import fixed_size_chunking
 from config.settings import get_settings
-from embedding_pipeline import batch_texts_by_tokens, create_embeddings_async
+from embedding_pipeline import _count_tokens, batch_texts_by_tokens, create_embeddings_async
 from models.api_response_model import GBBookMeta
 from models.vector_db_model import EmbeddingVec, UploadChunk
 from db.vector_store_abstract import AsyncVectorStore
@@ -119,9 +119,11 @@ async def upload_to_index_async(*, vec_store:AsyncVectorStore,
                             uuid_str=str(uuid.uuid4()),
                             book_name=book_meta.title,
                             book_id=book_meta.id,
-                            chunk_nr=i,
+                            chunk_id=i,
                             content=chunk,
                             content_vector=EmbeddingVec(vector=emb_vec, dim=EmbeddingDimension.SMALL),
+                            char_count=len(chunk),
+                            token_count=_count_tokens(chunk, enc=tiktoken.get_encoding("cl100k_base"))
                         )
         docs.append(chapter_item)
  

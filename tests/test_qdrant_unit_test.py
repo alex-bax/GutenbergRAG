@@ -38,7 +38,7 @@ def make_upload_chunks(book_id: int, chunk_content:str, sett:Settings, use_rand_
             uuid_str=str(uuid.uuid4()),
             book_id=book_id,
             book_name="Frankenstein; Or, The Modern Prometheus",
-            chunk_nr=random.randint(0, 10000),
+            chunk_id=random.randint(0, 10000),
             content=chunk_content,
             content_vector=EmbeddingVec(vector=embed_vec,
                                         dim=hp_ing.embed_dim)  

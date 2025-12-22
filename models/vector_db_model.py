@@ -19,8 +19,10 @@ class UploadChunk(BaseModel):
     uuid_str:str = Field(...)
     book_name:str = Field(..., description="Name/title of the book")
     book_id:int = Field(...)
-    chunk_nr:int = Field(..., description="Nth chunk of all chunks, e.g. if 6, then it's the 6th chunk")
+    chunk_id:int = Field(..., description="Nth chunk of all chunks, e.g. if 6, then it's the 6th chunk")
     content:str = Field(..., description="Content of the chapter")
+    token_count:int 
+    char_count:int
     content_vector:EmbeddingVec
 
     def to_dict(self) -> dict[str, int|str|list[float]]:
@@ -31,10 +33,12 @@ class UploadChunk(BaseModel):
 # Uses optional since user search request can toggle fields on/off
 class SearchChunk(BaseModel):
     uuid_str: str|None = None
-    chunk_nr: int|None = Field(default=None,  description="Nth chunk of all chunks")
+    chunk_id: int|None = Field(default=None,  description="Nth chunk of all chunks")
     book_name: str|None = None
     book_id: int|None = None
     content: str|None = None
+    token_count:int|None = None
+    char_count:int|None = None
     rank:int|None = Field(default=None, description="Rank recieved from the LLM re-ranker after initial vector search")
     rank_reason:str|None = None
     search_score: float

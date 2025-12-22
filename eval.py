@@ -80,7 +80,7 @@ async def build_eval_dataset():
 
             # Retrieval metadata
             "retrieved_book_ids": [c.book_id for c in chunks_found],
-            "retrieved_chunk_nrs": [c.chunk_nr for c in chunks_found],
+            "retrieved_chunk_nrs": [c.chunk_id for c in chunks_found],
         })
 
     ds = Dataset.from_list(records)
