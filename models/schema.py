@@ -1,5 +1,5 @@
 from db.database import Base
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, TIMESTAMP
+from sqlalchemy import ARRAY, Column, Integer, String, Float, ForeignKey, TIMESTAMP
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -34,12 +34,16 @@ class DBBookChunkStats(Base):
     token_max:Mapped[int]= mapped_column(Integer, nullable=False)
     token_std:Mapped[float]= mapped_column(Float, nullable=False)
 
+    token_counts: Mapped[list[int]] = mapped_column(
+                                            ARRAY(Integer),
+                                            nullable=False,
+                                        )
+
     book_meta_fk: Mapped[int] = mapped_column(
                                     ForeignKey("book_metadata.gb_id", ondelete="CASCADE"),
                                     nullable=False,
                                     unique=True,  # enforces 1–1 at the DB level
                                 )
-
 
     book_metadata: Mapped["DBBookMetaData"] = relationship(
                                                     back_populates="chunk_stats"

@@ -95,6 +95,7 @@ def calc_book_chunk_stats(all_chunks:list[UploadChunk], conf_id:int) -> DBBookCh
         token_min=min(token_counts),
         token_max=max(token_counts),
         token_std=token_std,
+        token_counts=token_counts
     )
 
 
@@ -104,7 +105,8 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
                                 request_limiter:Limiter,
                                 raw_book_content: str,
                                 book_meta: GBBookMeta,
-                                sett:Settings
+                                sett:Settings,
+                                calc_chunk_stats=True
                             ) -> tuple[list[UploadChunk], DBBookChunkStats|None]:
     
     # TODO ENABLE BACK BEFORE PUSH
@@ -156,6 +158,9 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
     await vec_store.upsert_chunks(chunks=upload_chunks)
     hp = sett.get_hyperparams()
     book_chunk_stats = calc_book_chunk_stats(all_chunks=upload_chunks, conf_id=hp.config_id)
+
+    if calc_chunk_stats:
+        
 
     return vector_items_added, book_chunk_stats
 

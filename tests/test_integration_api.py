@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from config.params import VER_PREFIX
 from config.settings import Settings, get_settings
@@ -6,14 +7,14 @@ from fastapi import status
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction, create_async_engine
 
-from db.database import Base
+from db.database import Base, DbSessionFactory, get_async_db_sess, get_db_session_factory
 from models.api_response_model import BookMetaApiResponse, BookMetaDataResponse, GBMetaApiResponse, QueryResponseApiResponse, SearchApiResponse
 # Importing fastapi.Depends that is used to retrieve SQLAlchemy's session
-from db.database import _get_async_db_sess
+# from db.database import _get_async_db_sess
 from db.operations import insert_book_db, DBBookMetaData
 from main import app
 from models.schema import DBBookChunkStats
-
+from sqlalchemy import text
 ### The test DB is rolled back after each test fixture
 FRANKENSTEIN = "Frankenstein; Or, The Modern Prometheus"
 DR_JEK_HIDE = "The Strange Case of Dr. Jekyll and Mr. Hyde"
@@ -37,7 +38,7 @@ chunk_stat_dummy = DBBookChunkStats(
 
 @pytest.fixture(scope="session", autouse=True)
 async def create_test_schema():
-    # Create the schema (tables)
+    
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -88,6 +89,10 @@ def test_settings() -> Settings:
     return get_settings(is_test=True)
 
 
+
+
+
+
 # All changes that occur in a test function are rolled back
 # after function exits, even if session.commit() is called
 # in FastAPI's application endpoints
@@ -96,15 +101,27 @@ async def client(
     connection: AsyncConnection,
     test_settings:Settings,
 ) -> AsyncGenerator[AsyncClient, None]:
-    async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    # async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    #     async_session = AsyncSession(
+    #         bind=connection,
+    #         join_transaction_mode="create_savepoint",
+    #     )
+    #     async with async_session:
+    #         yield async_session
+    async def sqlite_session_dep() -> AsyncGenerator[AsyncSession, None]:
         async_session = AsyncSession(
             bind=connection,
             join_transaction_mode="create_savepoint",
         )
         async with async_session:
             yield async_session
-    
-    app.dependency_overrides[_get_async_db_sess] = override_get_async_session
+
+    # Override the factory dependency to return our sqlite session generator
+    def override_db_session_factory() -> DbSessionFactory:
+        return sqlite_session_dep
+
+    # app.dependency_overrides[get_async_db_sess] = override_get_async_session
+    app.dependency_overrides[get_db_session_factory] = override_db_session_factory
     app.dependency_overrides[get_settings] = lambda: test_settings
     
     test_client = AsyncClient(transport=ASGITransport(app=app), base_url="http://")
@@ -120,7 +137,7 @@ async def client(
             print(f"[TEST CLEANUP WARNING] Could not delete collection: {e}")
 
         await test_client.aclose()
-        del app.dependency_overrides[_get_async_db_sess]
+        del app.dependency_overrides[get_db_session_factory]
         del app.dependency_overrides[get_settings]
         
 
@@ -130,6 +147,11 @@ def test_settings_load_env_sanity_check(test_settings: Settings):
     assert test_settings.AZURE_SEARCH_ENDPOINT is not None
     assert test_settings.QDRANT_SEARCH_ENDPOINT is not None
     
+
+@pytest.mark.anyio
+async def test_db_is_sqlite(session: AsyncSession):
+    res = await session.execute(text("select sqlite_version()"))
+    assert res.scalar_one() 
 
 # Tests showing rollbacks between functions when using API client
 async def test_get_book(client: AsyncClient, session: AsyncSession):
@@ -165,6 +187,11 @@ async def test_upload_1_to_index(client: AsyncClient, test_settings: Settings):
         vec_store = await test_settings.get_vector_store()
         missing_ids_before = await vec_store.get_missing_ids_in_store(book_ids=set(body))
         assert body[0] in missing_ids_before
+
+        # async with get_async_db_sess() as db_sess:
+        #     b = db_sess.get_bind()
+        #     url = getattr(b, "url", None)
+        #     print("DB bind:", url if url is not None else b)
 
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
         assert resp.status_code == status.HTTP_201_CREATED

@@ -1,8 +1,9 @@
+from typing import Callable
 import requests_async
 import asyncio
 from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.database import get_async_db
+from db.database import DbSessionFactory, get_async_db_sess, open_session
 from db.operations import insert_missing_book_db
 from models.api_response_model import GBBookMeta
 from models.local_gb_book_model import GBBookMetaLocal
@@ -64,6 +65,7 @@ def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
 #TODO - make unit test
 async def upload_missing_book_ids(*, book_ids:set[int], 
                                   sett:Settings, 
+                                  db_factory: DbSessionFactory,
                                 ) -> tuple[list[GBBookMeta], str]:
     """Upload and book ids to vector index and insert into book meta DB if missing"""
     vector_store = await sett.get_vector_store()
@@ -93,9 +95,9 @@ async def upload_missing_book_ids(*, book_ids:set[int],
             try:
                 with open(gb_meta.path_to_content, "r", encoding="utf-8") as f:
                     book_content = f.read()
-                # book_content = book_content[:2000] if sett.is_test else book_content
                 # TODO! DISABLE BEFORE 
-                book_content = book_content[:2000] if True else book_content
+                book_content = book_content[:2000] if sett.is_test else book_content
+                # book_content = book_content[:2000] if True else book_content
                 mess += f"Loaded content from cache for book id {b_id}"
                 print(mess)
             except Exception as exc:
@@ -112,12 +114,12 @@ async def upload_missing_book_ids(*, book_ids:set[int],
                                                 sett=sett
                                             )
         db_book = gbbookmeta_to_db_obj(gbm=gb_meta)
-
-        async with get_async_db() as db_sess:
-            db_book.chunk_stats = db_b_stats
+        
+        db_book.chunk_stats = db_b_stats
+        async with open_session(db_factory) as db_sess:
             is_inserted, mess_ = await insert_missing_book_db(book_meta=db_book, 
-                                                               db_sess=db_sess)
-            mess += mess_
+                                                                db_sess=db_sess)
+        mess += mess_
 
         gb_books.append(gb_meta)
 

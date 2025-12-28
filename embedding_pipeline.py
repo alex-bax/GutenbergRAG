@@ -73,9 +73,10 @@ async def create_embeddings_async(*, embed_client:AsyncAzureOpenAI,
     all_embeddings = []
     enc_ = tiktoken.get_encoding("cl100k_base")
 
-    for batch in inp_batches:
+    print(f'\nEmbedding: tokens needed from limiter: ')
+    for batch in tqdm(inp_batches):
         tokens_needed = sum([_count_tokens(chunk, enc=enc_) for chunk in batch])
-        print(f'\nEmbedding: tokens needed from limiter: {tokens_needed}')
+        print(tokens_needed,  end='')
         
         await _acquire_budget_async(tok_limiter=tok_limiter, 
                             req_limiter=req_limiter, 
