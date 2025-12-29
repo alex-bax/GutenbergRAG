@@ -85,16 +85,6 @@ class Settings(BaseSettings):
                 raise ValueError("No valid Vector store specified - Check settings!")
         
             await self._vector_store.create_missing_collection(collection_name=self.active_collection)
-            
-            # assert self._hyperparams and self._hyperparams.ingestion, "Instantiate settings via get_settings()"
-            # hyperparams = self._hyperparams.ingestion 
-            # book_ids = set(hyperparams.default_ids_used.values()) if not self.is_test else set([hyperparams.default_ids_used["Frankenstein; Or, The Modern Prometheus"]])        
-
-            # if not self.is_test:
-            #     async with get_db() as db_sess:
-            #         # Populate the both vector store and postgresql db with the small default book list
-            #         await upload_missing_book_ids(book_ids=book_ids, db_sess=db_sess, sett=self)
-                
 
         return self._vector_store
 

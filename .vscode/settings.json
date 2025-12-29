@@ -4,5 +4,30 @@
   "python.testing.pytestEnabled": true,
   "python.testing.cwd": "${workspaceFolder}",
   "python.envFile": "${workspaceFolder}/.env",
-  "python.analysis.extraPaths": ["${workspaceFolder}"]  // helps Pylance resolve "db"
+"python.analysis.extraPaths": [
+    "${workspaceFolder}"
+],
+"editor.fontWeight": "normal", // helps Pylance resolve "db"
+
+
+"files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/.venv": true,
+    "**/.venvlinux": true
+    },
+
+    "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/*/**": true,
+    "**/.hg/store/**": true,
+    "**/.venv/**": true,
+    "**/.venvlinux/**": true
+    },
+
 }

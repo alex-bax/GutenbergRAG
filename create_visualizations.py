@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-import matplotlib.pyplot as plt
 from datetime import datetime
 
 from matplotlib.ticker import MaxNLocator
@@ -23,14 +22,16 @@ def load_metrics_scores(json_path: str | Path):
 def save_plot(file_name:str, 
               save_parent_p:Path,
             ) -> None:
-    safe_name = file_name.replace(" ", "_")
+    import matplotlib.pyplot as plt
+    
+    safe_name = file_name.replace(" ", "_").replace('.','').replace(":","_")
     
     output_file = save_parent_p / Path(f"{safe_name}.png")
     plt.savefig(output_file, dpi=200)
     plt.close()
 
     print(f"Saved: {output_file}")
-
+ 
 
 def format_hyperparams(hyperparams: dict | None) -> str:
     if not hyperparams:
@@ -43,27 +44,29 @@ def format_hyperparams(hyperparams: dict | None) -> str:
 def plot_token_counts_bar(*, token_counts: list[int], 
                           title:str,
                           save_folder_name:Path):
+    import matplotlib.pyplot as plt
+    
     if not token_counts:
         raise ValueError("token_counts is empty")
 
     x = list(range(len(token_counts)))
 
-    plt.figure()
-    plt.bar(x, token_counts)
-    plt.xlabel("Chunk index")
-    plt.ylabel("Token count")
-    ax = plt.gca()
+    fig, ax = plt.subplots()  
+    ax.bar(x, token_counts)
+    ax.set_xlabel("Chunk index")
+    ax.set_ylabel("Token count")
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set_title(title)
 
-    plt.title(title)
-
-    save_plot(file_name=title, 
+    save_plot(file_name=title.replace(" ", "_").replace('.','').replace(":","_"), 
               save_parent_p=save_folder_name)
 
 
 def plot_bar_charts(save_folder_name:Path, 
                     metrics_scores:list[dict], 
                     hyperparams: dict):
+    import matplotlib.pyplot as plt
+    
     threshold = 0.7
     hp_text = format_hyperparams(hyperparams)
 
@@ -124,27 +127,27 @@ def plot_bar_charts(save_folder_name:Path,
 
 
 def main():
-    sub_dir = "1512-2025_1634"
-    # json_path = Path("evals", sub_dir, ".latest_test_run.json")  # change if needed
-    # metrics_scores = load_metrics_scores(json_path)
-    # outp_p = Path(root_folder, sub_folder, run_name)
+    sub_dir = "2812-2025_2147"
+    json_path = Path("evals", sub_dir, ".latest_test_run.json")  # change if needed
+    metrics_scores = load_metrics_scores(json_path)
 
     now = datetime.now().strftime("%d-%m-%Y_%H%M")
-    # eval_parent_p = Path("evals", "plots", f"{sub_dir}_{now}")
-    # eval_parent_p.mkdir(exist_ok=True, parents=True)
+    eval_parent_p = Path("evals", "plots", f"{sub_dir}_{now}")
+    eval_parent_p.mkdir(exist_ok=True, parents=True)
 
-    # plot_bar_charts(metrics_scores=metrics_scores, 
-    #                 save_folder_name=eval_parent_p,
-    #                 hyperparams={"Hyperparameter config":"hp-ch500", 
-                                # })
+    plot_bar_charts(metrics_scores=metrics_scores, 
+                    save_folder_name=eval_parent_p,
+                    hyperparams={"Config name":"hp-ch500", 
+                                })
+    
     token_counts = [233, 150, 1406]  # replace with your real array
     now = datetime.now().strftime("%d-%m-%Y_%H%M")
-    token_count_parent_p = Path("imgs", "index_stats", now)
-    token_count_parent_p.mkdir(exist_ok=True, parents=True)
+    # token_count_parent_p = Path("stats", "index_stats", now)
+    # token_count_parent_p.mkdir(exist_ok=True, parents=True)
 
-    plot_token_counts_bar(token_counts=token_counts,
-                          save_folder_name=token_count_parent_p,
-                          title="Book token_counts")
+    # plot_token_counts_bar(token_counts=token_counts,
+    #                       save_folder_name=token_count_parent_p,
+    #                       title="Book token_counts")
 
 
 if __name__ == "__main__":

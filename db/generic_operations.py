@@ -42,7 +42,7 @@ async def insert_if_missing_db(
                             model=model, pk_name=pk_name, pk_value=pk_value, db_sess=db_sess
                         )
     if existing is not None:
-        return False, f"Already in DB: {model.__name__}({pk_name}={pk_value})"
+        return False, f"\nAlready in DB: {model.__name__}({pk_name}={pk_value})"
 
     obj_added = await insert_row_db(obj=obj, db_sess=db_sess)
     # await db_sess.flush()       # flush so DB-generated PKs get populated if relevant

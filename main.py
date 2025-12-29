@@ -134,10 +134,10 @@ async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(descripti
             detail="gutenberg_ids must be unique",
         )
 
-    gb_books_uploaded, info = await upload_missing_book_ids(book_ids=set(gutenberg_ids), 
-                                                            sett=settings, 
-                                                            db_factory=db_factory
-                                                        )
+    gb_books_uploaded, info, book_stats = await upload_missing_book_ids(book_ids=set(gutenberg_ids), 
+                                                                        sett=settings, 
+                                                                        db_factory=db_factory
+                                                                    )
 
     if len(gb_books_uploaded) == 0:
         info += f"\nBook ids:{gutenberg_ids} already in index {settings.active_collection}"

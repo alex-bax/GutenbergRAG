@@ -1,3 +1,4 @@
+from datetime import datetime
 import uuid, tiktoken
 from statistics import mean, median, stdev
 import asyncio
@@ -6,6 +7,7 @@ import asyncio
 from pyrate_limiter import Limiter
 from openai import AsyncAzureOpenAI
 from pathlib import Path
+from create_visualizations import plot_token_counts_bar
 from ingestion.preprocess_book import clean_headers 
 from ingestion.chunking import fixed_size_chunking
 from config.settings import Settings, get_settings
@@ -110,8 +112,8 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
                             ) -> tuple[list[UploadChunk], DBBookChunkStats|None]:
     
     # TODO ENABLE BACK BEFORE PUSH
-    # book_str = clean_headers(raw_book=raw_book_content) if not sett.is_test else raw_book_content
-    book_str = clean_headers(raw_book=raw_book_content) if not True else raw_book_content
+    book_str = clean_headers(raw_book=raw_book_content) if not sett.is_test else raw_book_content
+    # book_str = clean_headers(raw_book=raw_book_content) if not True else raw_book_content
     if len(book_str) == 0:      
         return ([], None)
 
@@ -132,11 +134,11 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
     splitter = SemanticSplitterNodeParser(
                     embed_model=embed_model,
                     buffer_size=1,
-                    breakpoint_percentile_threshold=95,
+                    breakpoint_percentile_threshold=75,     # TODO: add as param
                 )
 
     doc = Document(text=book_str, metadata=book_meta.model_dump())
-    # nodes = splitter.get_nodes_from_documents([doc])
+    
     nodes = await asyncio.to_thread(splitter.get_nodes_from_documents, [doc])
 
     chunks: list[str] = [n.get_content() for n in nodes]
@@ -160,7 +162,12 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
     book_chunk_stats = calc_book_chunk_stats(all_chunks=upload_chunks, conf_id=hp.config_id)
 
     if calc_chunk_stats:
-        
+        now = datetime.now().strftime("%d-%m-%Y_%H%M")
+        token_count_parent_p = Path("imgs", "index_stats", now)
+        token_count_parent_p.mkdir(parents=True, exist_ok=True)
+        plot_token_counts_bar(token_counts=book_chunk_stats.token_counts,
+                            save_folder_name=token_count_parent_p,
+                            title=book_chunk_stats.title)
 
     return vector_items_added, book_chunk_stats
 

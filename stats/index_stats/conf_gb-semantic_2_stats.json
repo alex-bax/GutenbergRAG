@@ -1,0 +1,20 @@
+{
+    "config_id_used": 2,
+    "book_count": 3,
+    "total_chunks": 619,
+    "book_chunk_count_median": 257.0,
+    "book_chunk_count_p90": 295.4,
+    "book_token_mean_median": 608.7719298245614,
+    "book_token_mean_p90": 770.1793039976992,
+    "book_token_std_median": 684.5281747708693,
+    "book_token_std_p90": 941.7852296816263,
+    "book_token_max_median": 3866.0,
+    "book_token_max_p90": 6410.0,
+    "chunk_token_p10": 27.0,
+    "chunk_token_p50": 377.0,
+    "chunk_token_p90": 1751.6000000000004,
+    "chunk_token_p99": 3839.5400000000072,
+    "pct_books_token_std_gt_p90": 33.33333333333333,
+    "pct_books_token_max_gt_2xp90": 0.0,
+    "pct_books_chunk_count_gt_p99": 33.33333333333333
+}
