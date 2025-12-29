@@ -91,24 +91,66 @@ In this case about every 500 characters with `\n` as separator and an overlap be
 TODO! ADD RESULT CHARTS - fixed size chunking
 
 **Semantic sized chunking**\
-Even with overlap between the chunks context are easily lost.
-With semantic chunking, chunks are split based on their meaning, in turn making each chunk more relevant. This produces chunks with varying lengths, and requires use of an embedding model while building the collection.
-This implementation uses a custom made splitter, with the ([Semantic splitter by LlamaIndex](https://developers.llamaindex.ai/python/framework-api-reference/node_parsers/semantic_splitter/)) as the base.
+Even with overlap between the chunks, context are easily lost when using fixed chunk sizes.\
+With semantic chunking, chunks are split based on their meaning, in turn making each chunk more relevant.\
+This produces chunks with varying lengths, and requires use of an embedding model while building the collection.\
+This implementation uses a custom made splitter, with the [Semantic splitter by LlamaIndex](https://developers.llamaindex.ai/python/framework-api-reference/node_parsers/semantic_splitter/) as the base.
+
+In brief, the splitter works roughly by:
+1. Split the document into small base units (often sentences).
+2. Make embedding of each sentences.
+3. For every sentence, compute semantic dissimilarity between it and its adjacent sentence (using cosine distance).
+4. Collect all these distances and make a distribution
+4. Define a `cutoff` based on the distribution and the breakpoint percentile threshold parameter.
+5. Loop over all sentences, and insert a breakpoint only when the dissimilarity is > `cutoff`.
+
+Example of how the threshold is used:
+Say we're given the sentences:
+```markdown
+S1: Holmes lit his pipe.
+S2: He considered the evidence carefully.
+S3: The fog lay thick over Baker Street.
+S4: Meanwhile, in Paris, the minister resigned.
+```
+And their distances are
+```markdown
+S1–S2: 0.06
+S2–S3: 0.08
+S3–S4: 0.42   ← semantic jump
+```
+So if the cutoff is `0.3`:
+* Sentences 1–3 → one chunk
+* Sentence 4 → new chunk
 
 
-Initially, using the semantic splitter with its default parameters of 95 percentile dissimilarity as the break point threshold for splitting, it created better results than when using *fixed sized* chunking as seen here:
+
+TODO! Add collection fingerprint summary
+
+Initially, I experimented with using the semantic splitter with its default parameters of 95 percentile dissimilarity as the break point threshold for splitting.  
+
+It created better results than when using *fixed sized* chunking as seen here:
 TODO! *ADD 95p breakpoint eval results*
 
 
 
 
 
-However the distribution of the chunk lengths were very unenven as seen in "Alice's Adventure in Wonderland" and "Frankenstein":
-<img src="./stats/index_stats/charts/28-12-2025_2016/Alice&apos;s_Adventures_in_Wonderland.png" alt="Diagram" height="325" >
+However the distribution of the chunk lengths were very unenven, as seen in "Alice's Adventure in Wonderland" and "Frankenstein":
+<img src="./stats/index_stats/charts/28-12-2025_2016/Alice&apos;s_Adventures_in_Wonderland.png" alt="Diagram" height="305" >
 
-<img src="./stats/index_stats/charts/28-12-2025_2016/Frankenstein;_Or,_The_Modern_Prometheus.png" alt="Diagram" height="325" >
+<img src="./stats/index_stats/charts/28-12-2025_2016/Frankenstein;_Or,_The_Modern_Prometheus.png" alt="Diagram" height="305" >
+
+The disadvantages of having few but very long chunks are:
+- Bias: longer chunks can dominate, since they are more "matchable" due their length.
+- Cost/latency: With the reranker + generation over large contexts, it gets slower and more expensive.
+- Answer quality drift: long chunks can make topics/meaning too "bland", increasing hallucination risk or making citations fuzzy.
 
 
+Using 75% percentile dissimilarity yielded more balanced plots:\
+!TODO ADD ALICE AND FRANKENSTEIN DISTR PLOTS
+
+**Eval results**
+!TODO ADD EVAL RESULTS WITH UPDATED BREAKPOINT!
 
 **Summary of the semantic vector collection**
 To better understand how the semantic splitting is applied, \
