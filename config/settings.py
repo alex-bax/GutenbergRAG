@@ -148,7 +148,7 @@ class Settings(BaseSettings):
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
 def get_settings(is_test=False, 
-                 hyperparam_p=Path("config","hp-sem-ch.json")) -> Settings:
+                 hyperparam_p=Path("config","hp-sem70p-ch.json")) -> Settings:
     sett = Settings(is_test=is_test, 
                     hyperparam_path=hyperparam_p)       # type:ignore
     sett.get_hyperparams()

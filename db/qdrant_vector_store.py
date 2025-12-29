@@ -1,3 +1,4 @@
+import json
 import asyncio
 from typing import Any
 from pydantic import PrivateAttr
@@ -19,6 +20,7 @@ from qdrant_client.models import (
     Record,
     FacetValueHit
 )
+MAX_QDRANT_JSON_BYTES = 20 * 1024 * 1024  # 28MB
 
 INDEXED_PAYL_FIELDS = { "chunk_nr":"integer", 
                         "book_id":"integer",
@@ -36,7 +38,8 @@ class QdrantVectorStore(AsyncVectorStore):
     def model_post_init(self, __context):
         self._client = AsyncQdrantClient(url=self.settings.QDRANT_SEARCH_ENDPOINT, 
                                         api_key=self.settings.QDRANT_SEARCH_KEY,
-                                        verify=False)       # TODO: remove before prod and make proper fix
+                                        verify=False,
+                                        timeout=60)       # TODO: remove before prod and make proper fix
 
     def _build_must_filter(self, filters: dict[str, Any]) -> Filter:
         return Filter(must=[FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filters.items()])
@@ -223,10 +226,25 @@ class QdrantVectorStore(AsyncVectorStore):
         await self._client.delete_collection(collection_name)
     
 
-    async def upsert_chunks(self, chunks: list[UploadChunk]) -> None:
-        if not chunks:
-            return
-        
+    def _estimate_bytes_of_point(self, points:PointStruct) -> int:
+        """
+        Estimate the serialized JSON size of an upload chunk as a Qdrant Point.
+        """
+        d = points.model_dump()
+        return  len(json.dumps(d, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+
+
+    async def upsert_chunks(
+            self,
+            chunks: list[UploadChunk],
+            max_bytes: int = MAX_QDRANT_JSON_BYTES,
+        ) -> None:
+        """
+        Upsert UploadChunk objects in batches whose JSON payload stays under max_bytes.
+        """
+        batch: list[PointStruct] = []
+        batch_bytes = 2  # approx overhead for "[]"
+
         points = [
             PointStruct(
                 id=c.uuid_str,
@@ -240,10 +258,49 @@ class QdrantVectorStore(AsyncVectorStore):
                 },
             ) for c in chunks]
 
-        await self._client.upsert(
-            collection_name=self.collection_name,
-            points=points,
-        )
+        for p in points:
+            item_bytes = self._estimate_bytes_of_point(p)
+
+            # If a single item is too large, batching cannot fix it.
+            if item_bytes > max_bytes:
+                raise ValueError(
+                    f"Single UploadChunk too large: ~{item_bytes / (1024*1024):.2f} MB. "
+                    "Reduce chunk size or store `content` elsewhere (and keep only an id/snippet in Qdrant)."
+                )
+
+            # Flush current batch if adding this item would exceed limit.
+            if batch and (batch_bytes + item_bytes) > max_bytes:
+                await self._client.upsert(points=batch, 
+                                          collection_name=self.collection_name)  
+                batch = []
+                batch_bytes = 2
+
+            batch.append(p)
+            batch_bytes += item_bytes + 1  # +1 for comma/overhead
+
+        return
+
+    # async def upsert_chunks_(self, chunks: list[UploadChunk]) -> None:
+    #     if not chunks:
+    #         return
+        
+    #     points = [
+    #         PointStruct(
+    #             id=c.uuid_str,
+    #             vector=c.content_vector.vector,
+    #             payload={
+    #                 "uuid_str": c.uuid_str,
+    #                 "chunk_nr": c.chunk_id,
+    #                 "book_name": c.book_name,
+    #                 "book_id": c.book_id,
+    #                 "content": c.content,
+    #             },
+    #         ) for c in chunks]
+
+    #     await self._client.upsert(
+    #             collection_name=self.collection_name,
+    #             points=points,
+    #         )
 
     async def search_by_embedding(self, embed_query_vector: EmbeddingVec, filter:dict[str,Any]|None, k: int=10) -> list[SearchChunk]:
         qdrant_filter = self._build_must_filter(filter) if filter else None

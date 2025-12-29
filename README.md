@@ -48,32 +48,21 @@ It’s designed to be production-ready and showcase modern vector search, advanc
 
 **Vector DB config**
 
-All vector collections use *HNSW* (graph-based approximate nearest neighbor) as vector search algorithm. Cosine distance is used to calculate the similarity, and uses a vector dimension of 1536 (requried by the embedding model `text-embedding-3-small`). Remaining configuration parameters can be found in the [Qdrant configuration file](config/qdrant_collection_config.json)
+All vector collections use *HNSW* (graph-based approximate nearest neighbor) as vector search algorithm.\
+Cosine distance is used to calculate the similarity, and uses a vector dimension of 1536 (requried by the embedding model `text-embedding-3-small`).\
+Remaining configuration parameters can be found in the [Qdrant configuration file](config/qdrant_collection_config.json)
 
-Additional metadata fields used:
-```json
-{
-  "content": {
-    "data_type": "text",
-  },
-  "uuid_str": {
-    "data_type": "uuid",
-  },
-  "book_id": {
-    "data_type": "integer",
-  },
-  "chunk_nr": {
-    "data_type": "integer",
-  },
-  "book_name": {
-    "data_type": "keyword",
-  }
-}
-```
+Additional metadata fields for each chunk are:
+- content (actual text content)
+- uuid_str
+- book_id (the Gutenberg ID that the chunk is from)
+- chunk_nr (chunk index, i.e. if chunk_nr is 3 it's the 3rd chunk in the book)
+- book_name
+
 
 ### Ingestion 
 A default book list is used for populating the vector DB, however book(s) can also be ingested by calling the API on the route ``/query/`` with the list of Gutenberg IDs to upload and index.\
-The default book list can be found under the attribute `default_ids_used` in the [configuration file](config/hp-sem-ch.json)
+The default book list can be found under the attribute `default_ids_used` in the [configuration file](config/hp-sem-ch.json)\
 <img src="./imgs/GBRAG-Ingestion.png" alt="Diagram" height="625" >
 
 ### Chunking
@@ -84,7 +73,7 @@ To ensure the quality of the retrieved context, 2 different approaches have been
 **Fixed size chunking** \
 A simple but naive way to split up the book text. Here done by chunking by some hard defined length. \
 In this case about every 500 characters with `\n` as separator and an overlap between the chunks of 100.
-*Example of a fixed size chunk*
+*Example of a fixed size chunk*\
 <img src="./imgs/qdrant-fixed-coll1.png" alt="Diagram" height="325" >
 
 *Evaluation results*
@@ -135,10 +124,8 @@ TODO! *ADD 95p breakpoint eval results*
 
 
 
-However the distribution of the chunk lengths were very unenven, as seen in "Alice's Adventure in Wonderland" and "Frankenstein":
-<img src="./stats/index_stats/charts/28-12-2025_2016/Alice&apos;s_Adventures_in_Wonderland.png" alt="Diagram" height="305" >
-
-<img src="./stats/index_stats/charts/28-12-2025_2016/Frankenstein;_Or,_The_Modern_Prometheus.png" alt="Diagram" height="305" >
+However the distribution of the chunk lengths were very unenven, as seen in "Alice's Adventure in Wonderland" and "Frankenstein":\
+<img src="./stats/index_stats/charts/28-12-2025_2016/Alice&apos;s_Adventures_in_Wonderland.png" alt="Diagram" height="305" > <img src="./stats/index_stats/charts/28-12-2025_2016/Frankenstein;_Or,_The_Modern_Prometheus.png" alt="Diagram" height="305" >
 
 The disadvantages of having few but very long chunks are:
 - Bias: longer chunks can dominate, since they are more "matchable" due their length.
@@ -213,21 +200,18 @@ For example in *Sherlock Holmes*, from the eval golden set `gb_gold_med.csv` the
 ## 📋 Planned features
 #### RAG: Improving quality in retrieval
   
-  * Improved semantic context in chunking:
-    * ~~Use dynamic chunk lengths depending the semantic context, ensuring that each chunk is as close as possible to having a single meaning, instead of many.~~
+  * Hybrid search integrating with BM25 sparse vector algorithms.
+  * Improved semantic context in the chunks:
     * More context in chunks: Add "who-what-where" sentence summary or similar to each chunk header with cheap LLM. 
     * Experiment with other semantic chunkers such as *Statistical chunking* or *Cumulative Semantic chunking*
   * Experiment with better embedding models: Based on the [Hugging Face embedding leaderboard](https://huggingface.co/spaces/mteb/leaderboard) many better models are available.  
-  * Hybrid search integrating with BM25 sparse vector algorithms.
   * Add halucination metric to evaluation suite
 #### Production and increased safety
 * Monitoring via [LangFuse](https://langfuse.com/), allowing for tracing the intermediate steps in the answer generation, prompt version control, metrics and even better evaluation.
 * Guardrails to ensure that e.g. underage users wouldn't get inappropiate responses. Can be done directly in Azure Foundry, or custom made by adding input and output filters.
 #### Other
-* Parallelization of evaluation by using multiple threads to speed it up 
 * Adding interface for embedding models to also make them easily swapable
 * Further API integration tests + test coverage on Azure Devops
-
 
 
 ### Misc

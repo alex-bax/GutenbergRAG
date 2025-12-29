@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     if settings.is_test:
         seed_ids = {hp_ing.default_ids_used["Frankenstein; Or, The Modern Prometheus"]}
     else:
-        seed_ids = list(hp_ing.default_ids_used.values())[:1]       
+        seed_ids = list(hp_ing.default_ids_used.values())#[:1]       
 
     # Seed the vector store
     print(f'DEF GB SEEDS: {seed_ids}')
@@ -33,11 +33,15 @@ async def lifespan(app: FastAPI):
 
     hp = settings.get_hyperparams()
     if len(book_stats) > 0:
-        collection_finger = make_collection_fingerprint(chunk_stats=book_stats, 
-                                                        config_id_used=hp.config_id)
+        try:
+            collection_finger = make_collection_fingerprint(chunk_stats=book_stats, 
+                                                            config_id_used=hp.config_id)
 
-        with open(Path("stats", "index_stats", f"conf_id_{hp.config_id}_{hp.collection}_stats.json"), "w") as f:
-            f.write(collection_finger.model_dump_json(indent=4))
+            with open(Path("stats", "index_stats", f"conf_id_{hp.config_id}_{hp.collection}_stats.json"), "w") as f:
+                f.write(collection_finger.model_dump_json(indent=4))
+        except Exception as ex:
+            print(ex)
+            print(book_stats)
 
     yield
 

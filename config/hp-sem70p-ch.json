@@ -1,6 +1,6 @@
 {
-    "config_id": 2,
-    "collection": "gb-semantic-75p",
+    "config_id": 3,
+    "collection": "gb-semantic-70p",
     "ingestion": {
         "chunk_size": 500,
         "chunk_overlap": 100,

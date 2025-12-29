@@ -133,8 +133,8 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
 
     splitter = SemanticSplitterNodeParser(
                     embed_model=embed_model,
-                    buffer_size=1,
-                    breakpoint_percentile_threshold=75,     # TODO: add as param
+                    buffer_size=5,
+                    breakpoint_percentile_threshold=70,     # TODO: add as param
                 )
 
     doc = Document(text=book_str, metadata=book_meta.model_dump())
