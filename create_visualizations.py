@@ -127,7 +127,7 @@ def plot_bar_charts(save_folder_name:Path,
 
 
 def main():
-    sub_dir = "2912-2025_2339"
+    sub_dir = "3112-2025_1424"
     json_path = Path("evals", sub_dir, ".latest_test_run.json")  # change if needed
     metrics_scores = load_metrics_scores(json_path)
 

@@ -100,7 +100,7 @@ async def upload_missing_book_ids(*, book_ids:set[int],
             try:
                 with open(gb_meta.path_to_content, "r", encoding="utf-8") as f:
                     book_content = f.read()
-                # TODO! DISABLE BEFORE 
+                
                 # book_content = book_content[:2000] if sett.is_test else book_content
                 # book_content = book_content[:1000] if True else book_content
                 mess += f"\nLoaded content from cache for book id {b_id}"

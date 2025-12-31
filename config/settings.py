@@ -9,7 +9,6 @@ from db.vector_store_abstract import AsyncVectorStore
 
 from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
-# from config.hyperparams import TOKEN_PR_MIN, requests_pr_min, DEF_BOOK_NAMES_TO_IDS, ID_FRANKENSTEIN, ConfigSettings, EmbeddingDimension
 
 # Initializes fields via .env file
 
@@ -67,8 +66,6 @@ class Settings(BaseSettings):
     )
 
     async def get_vector_store(self) -> AsyncVectorStore:
-        # from db.database import get_db
-        # from ingestion.book_loader import upload_missing_book_ids
         from db.az_search_vector_store import AzSearchVectorStore
         from db.qdrant_vector_store import QdrantVectorStore
 
@@ -148,7 +145,7 @@ class Settings(BaseSettings):
 
 @lru_cache      # Enforces singleton pattern - only one settings instance allowed
 def get_settings(is_test=False, 
-                 hyperparam_p=Path("config","hp-sem70p-ch.json")) -> Settings:
+                 hyperparam_p=Path("config","hp-sem-ch.json")) -> Settings:
     sett = Settings(is_test=is_test, 
                     hyperparam_path=hyperparam_p)       # type:ignore
     sett.get_hyperparams()

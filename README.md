@@ -19,11 +19,7 @@ It’s designed to be production-ready and showcase modern vector search, advanc
 * Fast embeddings via Azure OpenAI (text-embedding-3-small) with rate limiting
 * RAG response generation using Azure OpenAI GPT models
 * LLM-based reranking 
-* Evaluation with DeepEval using RAG relevant metrics:
-     * Answer generation metrics: *Answer relevancy*, *Faithfulness*
-     * Retrieval metrics: *Context relevance*, *Context precision*
-     * Golden answer datasets with varying complexity
- * Structured outputs with Pydantic classes
+* Structured outputs with Pydantic classes
 
 ### 🧱 Architecture
 - Backend: FastAPI in Azure Web App service
@@ -33,19 +29,32 @@ It’s designed to be production-ready and showcase modern vector search, advanc
 - Vector DB interface and implementation: **Qdrant** / Azure AI Search
 - LLM: GPT-5-mini with Azure OpenAI, using a custom lenient guardrail filter on Azure Foundry 
 
+### ⚖️ LLM Evaluation
+* Evaluation with DeepEval using RAG specific metrics:
+     * **Answer generation metrics:**
+        * *Answer relevancy* - Is the answer on-topic? Low score means vague/generic answer
+        * *Faithfulness* - Is the answer supported by the retrieved context? And not made up by hallucination
+     * **Retrieval metrics:** 
+        * *Context relevance* - Was the right information retrieved for this question? High score is when context is directly related to the question, minimal noise, etc.
+        * *Context precision* - How much of the retrieved context is actually useful? Low score would e.g. be if 5 out of 6 paragraphs retrieved were irrelevant 
+* Golden datasets (found in `evals/datasets`) for concrete "who-what-where" questions and varying difficulty   
+
+
 ### 🛜 API / Software 
 * Interfaces for easily swapping vector databases, currently supporting Qdrant and Azure AI Search
 * API uses paging for either book metadata or vector store, allowing for memory safe browsing
-* Settings, secrets and hyperparameters are handled securely and neatly organised via a Pydantinc Settings singleton
+* Settings, secrets and hyperparameters are handled securely and neatly organised via Pydantic Settings singleton
 * Built-in ratelimiter for ingestion pipeline, ensuring safely running large uploads 
 * Pydantic data classes for strong typing and intellisense
+
 
 ### 📦 Production and deployment
 * CI automated:
     * Integration and unit testing with PyTest (FastAPI + async DB)
-    * Evaluation of the system using DeepEval + golden dataset
+    * LLM evaluation using DeepEval + golden dataset
     * All steps must succeed in order to deploy 
 * CD pushing and deploying to Azure Container Registry and Docker 
+
 
 ### 📈 Monitoring (Soon)
 * Prometheus + Grafana
@@ -59,7 +68,6 @@ ___
 - [Chunking and chunking experiments](docs/chunking.md)
 - [Details on vector store](docs/vector_store.md)
 - [Testing approach](docs/testing.md)
-- [CI/CD pipelines](docs/deploying.md)
 
 
 ## Ingestion 
@@ -91,40 +99,50 @@ The `book_chunk_stats` shows relevant stats related to how the individual book w
 <img src="./imgs/GBRAG-Retrieval.png" alt="Diagram" height="525" >
 
 
-### Automatic deployment with Docker + CI/CD pipelines
-For further details, the entire see `Dockerfile` and the CI/CD pipelines specified in `azure-pipelines.yml`
+### Automatic testing and deployment with Docker + CI/CD pipelines
+The pipelines are triggered whenever a new commit is pushed to *main* branch, usually after merging *dev* into it.\
+The steps run are the following:
+1. **Tests**
+    * Integration test of the API, using an async in-memory SQLite DB and mock vector DB
+    * Small unit test suite for the actual vector DB (Qdrant)
+    * DeepEval tests, using the [CI golden set](evals/datasets/gb_ci_pipeline.csv)
+2. **Build and push**
+    * Build the image according to the steps in the Docker file
+    * Push it to Azure Container Registry with a new tag
+3. **Deploy to the Azure Web Service**
+    * Pull the newly created image
+    * Deploy it to the web service
 
+Each step is dependent on the previous step succeeding.\
+For further details, see the `Dockerfile` and the CI/CD pipelines specified in `azure-pipelines.yml`\
+
+Screenshots from the CI/CD pipeline:
 <img src="./imgs/screenshots/GB-cicd-steps.png" alt="Diagram" style="max-width: 750px; width: 100%;">
 <img src="./imgs/screenshots/GB-cicd.png" alt="Diagram" style="max-width: 750px; width: 100%;">
 
 
-### Experiments and findings *(Work in progress)*
-One of the interesting challenges with works in long book form, is how they can be quite implicit and wordy, making such
-sections i.e. chunks, harder to use for more explicit who-what-where questions. Or when the answer to a question requires *multi-hopping* combining multiple chunks located at different places in the work and jointly reasoning over them all.
-
-For example in *Sherlock Holmes*, from the eval golden set `gb_gold_med.csv` the question *"Which character hires Holmes to investigate the strange advertisement seeking red-headed men?"* is non-trivial to answer for the system. 
-
-*How semantic chunking fixes this* \
-...
 
 ## 📋 Planned features
 #### RAG: Improving quality in retrieval
-  
   * Hybrid search integrating with BM25 sparse vector algorithms.
   * Improved semantic context in the chunks:
     * More context in chunks: Add "who-what-where" sentence summary or similar to each chunk header with cheap LLM. 
     * Experiment with other semantic chunkers such as *Statistical chunking* or *Cumulative Semantic chunking*
+    * Graph RAG: Use knowlegde graphs to link relevant chunks together. Use this (GraphRAG library)[https://microsoft.github.io/graphrag/]
   * Experiment with better embedding models: Based on the [Hugging Face embedding leaderboard](https://huggingface.co/spaces/mteb/leaderboard) many better models are available.  
   * Add halucination metric to evaluation suite
 #### Production and increased safety
-* Monitoring via [LangFuse](https://langfuse.com/), allowing for tracing the intermediate steps in the answer generation, prompt version control, metrics and even better evaluation.
+* **System/API monitoring with Promethus and Grafana**
+* **Simple API key as Auth**
+* LLM monitoring via [LangFuse](https://langfuse.com/), allowing for tracing the intermediate steps in the answer generation, prompt version control, metrics and even better evaluation.
 * Guardrails to ensure that e.g. underage users wouldn't get inappropiate responses. Can be done directly in Azure Foundry, or custom made by adding input and output filters.
-#### Other
+
+### Other
 * Adding interface for embedding models to also make them easily swapable
 * Further API integration tests + test coverage on Azure Devops
+* Refactor to use Clean Architecture
 
-
-### Misc
+## Misc
 - Hyperparameter json files used are prefixed by 'hp' and are found in the folder `config`.
 - Golden datasets for evaluation are located in folder `evals/datasets`
 
