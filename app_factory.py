@@ -8,6 +8,7 @@ from ingestion.book_loader import upload_missing_book_ids
 from stats import make_collection_fingerprint
 import matplotlib
 matplotlib.use("Agg")
+from datetime import datetime
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,12 +33,14 @@ async def lifespan(app: FastAPI):
                                                     db_factory=db_factory)
 
     hp = settings.get_hyperparams()
+    now = datetime.now().strftime("%d-%m-%Y_%H%M")
+
     if len(book_stats) > 0:
         try:
             collection_finger = make_collection_fingerprint(chunk_stats=book_stats, 
                                                             config_id_used=hp.config_id)
 
-            with open(Path("stats", "index_stats", f"conf_id_{hp.config_id}_{hp.collection}_stats.json"), "w") as f:
+            with open(Path("stats", "index_stats", f"conf_id_{hp.config_id}_{hp.collection}_{now}.json"), "w") as f:
                 f.write(collection_finger.model_dump_json(indent=4))
         except Exception as ex:
             print(ex)
@@ -49,7 +52,14 @@ async def lifespan(app: FastAPI):
 
 
 def create_app(settings: Settings) -> FastAPI:
-    app = FastAPI(title="MobyRAG", lifespan=lifespan)
+    app = FastAPI(title="MobyRAG", 
+                  swagger_ui_parameters={
+                        "logo": {
+                            "url": "imgs/GBRAGLogo.png",
+                            "altText": "Gutenberg RAG API Logo"
+                        }
+                    },
+                  lifespan=lifespan)
     app.state.settings = settings
 
     # include_router(...)

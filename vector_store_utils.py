@@ -111,9 +111,8 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
                                 calc_chunk_stats=True
                             ) -> tuple[list[UploadChunk], DBBookChunkStats|None]:
     
-    # TODO ENABLE BACK BEFORE PUSH
     book_str = clean_headers(raw_book=raw_book_content) if not sett.is_test else raw_book_content
-    # book_str = clean_headers(raw_book=raw_book_content) if not True else raw_book_content
+    
     if len(book_str) == 0:      
         return ([], None)
 

@@ -96,7 +96,7 @@ def make_collection_fingerprint(
 
     return CollectionFingerprint(
                 config_id_used=config_id_used,
-                book_count=int(book_chunk_counts.size),
+                book_count=len(chunk_stats),
                 total_chunks=int(total_chunks),
 
                 book_chunk_count_median=book_chunk_count_median,

@@ -14,8 +14,8 @@ from typing import AsyncIterator
 import pytest_asyncio
 from datetime import datetime
 
-# HP_PATH = Path("config", "hp-sem-ch.json")
-HP_PATH = Path("config", "hp-ch500.json")
+HP_PATH = Path("config", "hp-sem70p-ch.json")
+# HP_PATH = Path("config", "hp-ch500.json")
 
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
@@ -31,7 +31,6 @@ async def settings() -> AsyncIterator[Settings]:
         # ensure Qdrant client (and other async resources) are closed
         await sett.close_vector_store()
 
-# TODO: move this to fixtures also?
 dataset_p = Path("evals", "datasets", "gb_ci_pipeline.csv")
 dataset = EvaluationDataset()
 

@@ -278,7 +278,10 @@ class QdrantVectorStore(AsyncVectorStore):
             batch.append(p)
             batch_bytes += item_bytes + 1  # +1 for comma/overhead
 
-        return
+        if batch:
+            await self._client.upsert(points=batch, 
+                                        collection_name=self.collection_name)  
+
 
     # async def upsert_chunks_(self, chunks: list[UploadChunk]) -> None:
     #     if not chunks:
