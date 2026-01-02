@@ -41,7 +41,9 @@ def make_upload_chunks(book_id: int, chunk_content:str, sett:Settings, use_rand_
             chunk_id=random.randint(0, 10000),
             content=chunk_content,
             content_vector=EmbeddingVec(vector=embed_vec,
-                                        dim=hp_ing.embed_dim)  
+                                        dim=hp_ing.embed_dim),
+            token_count=random.randint(0, 5000),
+            char_count=random.randint(0, 5000)
         )
     return chunk
 
@@ -51,8 +53,6 @@ def make_test_settings() -> Settings:
     """
     return get_settings(is_test=True)  # NB relies on env vars for all fields
 
-
-# ---  Fixtures 
 
 @pytest.fixture(scope="session")
 def qdrant_settings() -> Settings:
@@ -80,8 +80,6 @@ async def store(qdrant_settings: Settings) -> AsyncGenerator[AsyncVectorStore, N
 
 
 # --- Tests
-
-
 async def test_create_missing_collection_idempotent(store: AsyncVectorStore, qdrant_settings:Settings):
     """
     Calling create_missing_collection twice should not error.

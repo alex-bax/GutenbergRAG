@@ -65,7 +65,7 @@ stages:
         DB_PORT: $(DB_PORT)
         RUN_QDRANT_TESTS: $(RUN_QDRANT_TESTS)      
 
-    - script: deepeval test run tests/test_llm.py -n 5 -c -i    # 5 parallel workers, -c cache results, -i keeps going if one case fails (temporary)
+    - script: deepeval test run tests/test_llm.py -n 6 -c -i    # 6 parallel workers, -c cache results, -i keeps going if one case fails (temporary)
       displayName: Run DeepEval LLM tests 
       continueOnError: true       # not block rest of pipeline - temporary
       env:
