@@ -51,7 +51,8 @@ stages:
         DB_PW: $(DB_PW)
         DB_USER: $(DB_USER)
         DB_PORT: $(DB_PORT)
-        
+    
+ 
     # Run Qdrant integration tests (only if enabled)
     - script: |
         pytest tests/test_qdrant_unit_test.py --junitxml=qdrant-test-results.xml
@@ -65,11 +66,18 @@ stages:
         DB_PORT: $(DB_PORT)
         RUN_QDRANT_TESTS: $(RUN_QDRANT_TESTS)      
 
+    - task: Cache@2
+      inputs:
+          key: 'deepeval | "$(Agent.OS)" | requirements.txt'
+          path: '$(Build.SourcesDirectory)/.deepeval'
+      displayName: Restore DeepEval cache
+    
+
     - powershell: | 
                 $env:PYTHONUTF8="1"
                 $env:PYTHONIOENCODING="utf-8"
                 python -c "import sys; print('stdout:', sys.stdout.encoding, 'stderr:', sys.stderr.encoding)"
-                deepeval test run tests/test_llm.py -n 6 -c -i
+                deepeval test run tests/test_llm.py -n 4 -c -i
       displayName: Run DeepEval LLM tests 
       continueOnError: true       # not block rest of pipeline - temporary
       env:

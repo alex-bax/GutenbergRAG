@@ -48,7 +48,7 @@ def get_async_emb_client() -> AsyncAzureOpenAI:
 
 
 rag_generation_seconds = Histogram(
-    "rag_generation_seconds",
+    "rag_generation_seconds",       # custom pql metric
     "Time spent generating LLM answer"
 )
  
@@ -65,7 +65,6 @@ def ask():
     return {"answer": "hello"}
 
 
-Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 @prefix_router.get("/books/search", response_model=BookMetaApiResponse, status_code=status.HTTP_200_OK)
 async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)], 
@@ -130,7 +129,6 @@ async def get_chunk_count_in_book(gutenberg_id:Annotated[int, Path(description="
 async def search_index_by_texts(skip:Annotated[int, Query(description="Number of search result documents to skip", le=100, ge=0)], 
                                 take:Annotated[int, Query(description="Number of search result documents to take after skipping", le=100, ge=1)],
                                 settings:Annotated[Settings, Depends(get_settings)],
-                                # select:Annotated[list[Literal["book_name", "book_id", "content", "chunk_id", "content_vector", "*"]], Query(description="Fields to select from the vector index")] = ["*"],
                                 query:Annotated[str, Query(description="The search query")] = "", 
                                 ):
     vec_store = await settings.get_vector_store()
@@ -235,12 +233,13 @@ async def answer_query(query:Annotated[str, Query()],
 
     llm_resp = await answer_rag(query=query, 
                                 sett=settings,
-                                top_n_matches=top_n_matches,
-                                timer=Timer(enabled=False))
-
+                                keep_top_k=top_n_matches,
+                                timer=Timer(enabled=True))
+    
     return QueryResponseApiResponse(data=llm_resp)
 
 
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 app.include_router(prefix_router)
 add_pagination(app)
