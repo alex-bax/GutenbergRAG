@@ -24,16 +24,18 @@ async def lifespan(app: FastAPI):
     else:
         seed_ids = list(hp_ing.default_ids_used.values())#[:1]       
 
+    now = datetime.now().strftime("%d-%m-%Y_%H%M")
+
     # Seed the vector store
     print(f'DEF GB SEEDS: {seed_ids}')
     await settings.get_vector_store()
     db_factory = get_db_session_factory()
     _, _, book_stats = await upload_missing_book_ids(book_ids=set(seed_ids), 
                                                     sett=settings, 
+                                                    time_started=now,
                                                     db_factory=db_factory)
 
     hp = settings.get_hyperparams()
-    now = datetime.now().strftime("%d-%m-%Y_%H%M")
 
     if len(book_stats) > 0:
         try:

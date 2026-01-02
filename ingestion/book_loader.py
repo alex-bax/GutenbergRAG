@@ -69,6 +69,7 @@ def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
 async def upload_missing_book_ids(*, book_ids:set[int], 
                                   sett:Settings, 
                                   db_factory: DbSessionFactory,
+                                  time_started:str
                                 ) -> tuple[list[GBBookMeta], str, list[DBBookChunkStats]]:
     """Upload and book ids to vector index and insert into book meta DB if missing"""
     vector_store = await sett.get_vector_store()
@@ -116,7 +117,8 @@ async def upload_missing_book_ids(*, book_ids:set[int],
                                                                     request_limiter=req_lim,
                                                                     raw_book_content=book_content,
                                                                     book_meta=gb_meta,
-                                                                    sett=sett
+                                                                    sett=sett,
+                                                                    time_started=time_started
                                                                 )
         book_stats.append(db_b_stats)
         

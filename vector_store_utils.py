@@ -108,6 +108,7 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
                                 raw_book_content: str,
                                 book_meta: GBBookMeta,
                                 sett:Settings,
+                                time_started:str,
                                 calc_chunk_stats=True
                             ) -> tuple[list[UploadChunk], DBBookChunkStats|None]:
     
@@ -132,8 +133,8 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
 
     splitter = SemanticSplitterNodeParser(
                     embed_model=embed_model,
-                    buffer_size=1,
-                    breakpoint_percentile_threshold=90,     # TODO: add as param
+                    buffer_size=hp.ingestion.sem_split_buffer_size,
+                    breakpoint_percentile_threshold=hp.ingestion.sem_split_break_percentile,
                 )
 
     doc = Document(text=book_str, metadata=book_meta.model_dump())
@@ -161,12 +162,11 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
     book_chunk_stats = calc_book_chunk_stats(all_chunks=upload_chunks, conf_id=hp.config_id)
 
     if calc_chunk_stats:
-        now = datetime.now().strftime("%d-%m-%Y_%H%M")
-        token_count_parent_p = Path("imgs", "index_stats", now)
+        token_count_parent_p = Path("imgs", "index_stats", time_started)
         token_count_parent_p.mkdir(parents=True, exist_ok=True)
         plot_token_counts_bar(token_counts=book_chunk_stats.token_counts,
                             save_folder_name=token_count_parent_p,
-                            title=book_chunk_stats.title)
+                            title=f"{book_chunk_stats.title} conf id:{hp.config_id}")
 
     return vector_items_added, book_chunk_stats
 
@@ -178,6 +178,7 @@ async def _try():
     # skip default vec population with is_test=True
     sett = get_settings(hyperparam_p=Path("config", "hp-sem-ch.json"))
     req_lim, token_lim = sett.get_limiters()
+    now = datetime.now().strftime("%d-%m-%Y_%H%M")
    
     p = Path("evals", "books", "alices-adventures-in-wonderland_carroll-lewis_11.json")
     cached_gb_meta = _load_gb_meta_local(path=p)
@@ -191,7 +192,8 @@ async def _try():
                     request_limiter=req_lim,
                     raw_book_content=book_content,
                     book_meta=cached_gb_meta,
-                    sett=sett
+                    sett=sett,
+                    time_started=now
                 )
     print(s)
     # embeddings = await create_embeddings_async(embed_client=sett.get_async_emb_client(), 

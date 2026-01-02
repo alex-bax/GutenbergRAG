@@ -1,5 +1,5 @@
 {
-    "config_id": 2,
+    "config_id": 3,
     "collection": "gb-semantic",
     "ingestion": {
         "chunk_size": 500,
@@ -10,6 +10,9 @@
         "requests_pr_min": 3000,
         "embed_dim": 1536,
         "max_tokens_pr_req": 8000,
+        "sem_split_break_percentile":90,
+        "sem_split_buffer_size":1,
+
         "default_ids_used": {
             "The Adventures of Sherlock Holmes": 1661, 
             "The Strange Case of Dr. Jekyll and Mr. Hyde": 42, 

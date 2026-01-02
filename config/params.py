@@ -12,10 +12,9 @@ class EmbeddingDimension(int, Enum):
     SMALL = 1536
     LARGE = 3072
 
-
 class IngestionConfig(BaseModel):
     chunk_size: int = 400
-    chunk_overlap: int = 40
+    chunk_overlap: int = 100
     chunk_strategy:Literal["fixed", "semantic"]
     embed_model:str
     embed_dim:EmbeddingDimension = EmbeddingDimension.SMALL
@@ -23,7 +22,8 @@ class IngestionConfig(BaseModel):
     requests_pr_min:int
     tokens_pr_min:int
     max_tokens_pr_req:int
-
+    sem_split_break_percentile:int
+    sem_split_buffer_size: int
 
 class RetrievalConfig(BaseModel):
     top_k: int = 8

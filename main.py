@@ -1,8 +1,11 @@
 from contextlib import asynccontextmanager
+from datetime import datetime
+from prometheus_client import Histogram
 import uvicorn, requests
 from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
 from openai import AsyncAzureOpenAI
 from typing import Annotated
+import time
 import psycopg2
 from app_factory import create_app
 from evals.timer_helper import Timer
@@ -19,8 +22,7 @@ from converters import gbbookmeta_to_db_obj, db_obj_to_response
 from ingestion.book_loader import fetch_book_content_from_id, upload_missing_book_ids
 from config.settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
-
-# TODO REFACTOR get_async_db_sess TO USE factory!
+from prometheus_fastapi_instrumentator import Instrumentator
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,7 +36,6 @@ async def lifespan(app: FastAPI):
 
 
 app = create_app(get_settings())
-# app = FastAPI(title="MobyRAG", lifespan=lifespan)
 prefix_router = APIRouter(prefix="/v1")
 
 
@@ -45,6 +46,26 @@ async def get_vector_store() -> AsyncVectorStore:
 def get_async_emb_client() -> AsyncAzureOpenAI:
     return get_settings().get_async_emb_client()
 
+
+rag_generation_seconds = Histogram(
+    "rag_generation_seconds",
+    "Time spent generating LLM answer"
+)
+ 
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+@app.get("/ask")
+def ask():
+    # simulate "generation"
+    start = time.perf_counter()
+    time.sleep(0.2)
+    rag_generation_seconds.observe(time.perf_counter() - start)
+    return {"answer": "hello"}
+
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 @prefix_router.get("/books/search", response_model=BookMetaApiResponse, status_code=status.HTTP_200_OK)
 async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)], 
@@ -133,10 +154,12 @@ async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(descripti
             status_code=status.HTTP_404_NOT_FOUND,
             detail="gutenberg_ids must be unique",
         )
+    now = datetime.now().strftime("%d-%m-%Y_%H%M")
 
     gb_books_uploaded, info, book_stats = await upload_missing_book_ids(book_ids=set(gutenberg_ids), 
                                                                         sett=settings, 
-                                                                        db_factory=db_factory
+                                                                        db_factory=db_factory,
+                                                                        time_started=now
                                                                     )
 
     if len(gb_books_uploaded) == 0:

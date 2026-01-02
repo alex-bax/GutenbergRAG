@@ -37,6 +37,9 @@ pytest-asyncio
 deepeval
 uvicorn[standard]
 
+prometheus-fastapi-instrumentator
+prometheus-client
+
 langchain-text-splitters
 langchain-core
 qdrant-client
