@@ -161,12 +161,12 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
     hp = sett.get_hyperparams()
     book_chunk_stats = calc_book_chunk_stats(all_chunks=upload_chunks, conf_id=hp.config_id)
 
-    if calc_chunk_stats:
+    if calc_chunk_stats and not sett.is_test:
         token_count_parent_p = Path("imgs", "index_stats", time_started)
         token_count_parent_p.mkdir(parents=True, exist_ok=True)
         plot_token_counts_bar(token_counts=book_chunk_stats.token_counts,
                             save_folder_name=token_count_parent_p,
-                            title=f"{book_chunk_stats.title} conf id:{hp.config_id}")
+                            title=f"{book_chunk_stats.title}\nconf id:{hp.config_id}")
 
     return vector_items_added, book_chunk_stats
 

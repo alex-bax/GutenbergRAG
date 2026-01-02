@@ -107,7 +107,6 @@ async def client(
     def override_db_session_factory() -> DbSessionFactory:
         return sqlite_session_dep
 
-    # app.dependency_overrides[get_async_db_sess] = override_get_async_session
     app.dependency_overrides[get_db_session_factory] = override_db_session_factory
     app.dependency_overrides[get_settings] = lambda: test_settings
     

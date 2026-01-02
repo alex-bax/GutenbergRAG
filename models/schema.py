@@ -34,11 +34,6 @@ class DBBookChunkStats(Base):
     token_max:Mapped[int]= mapped_column(Integer, nullable=False)
     token_std:Mapped[float]= mapped_column(Float, nullable=False)
 
-    # token_counts: Mapped[list[int]] = mapped_column(
-    #                                         ARRAY(Integer),
-    #                                         nullable=False,
-    #                                     )
-
     token_counts: Mapped[list[int]] = mapped_column(
                                         ARRAY(Integer).with_variant(JSON, "sqlite"),
                                         nullable=False,
