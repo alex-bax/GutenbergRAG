@@ -22,9 +22,6 @@ def _run_async_only_if_no_loop(coro):
             "Ensure you are using the async embedding methods (_aget_*) and not the sync ones."
         )
     except RuntimeError as e:
-        # Two different RuntimeErrors can occur:
-        # 1) get_running_loop() raises RuntimeError when *no loop* exists (good)
-        # 2) we raised our own RuntimeError above (bad)
         if "no running event loop" in str(e).lower():
             return asyncio.run(coro)
         raise
@@ -60,7 +57,6 @@ class RateLimitedAzureEmbedding(BaseEmbedding):
     def embed_dim(self) -> int|None:
         return self.embed_dim_value
 
-    #  SYNC methods (required abstract methods) 
     def _get_text_embedding(self, text: str) -> Vector:
         return _to_vector(_run_async_only_if_no_loop(self._aget_text_embedding(text)))
 
@@ -71,7 +67,6 @@ class RateLimitedAzureEmbedding(BaseEmbedding):
         vecs = _run_async_only_if_no_loop(self._aget_text_embeddings(texts))
         return [_to_vector(v) for v in vecs]
 
-    #  ASYNC methods 
     async def _aget_query_embedding(self, query: str) -> Vector:
         return (await self._aget_text_embeddings([query]))[0]
 
@@ -83,7 +78,7 @@ class RateLimitedAzureEmbedding(BaseEmbedding):
                                 texts=texts,
                                 max_tokens_per_request=self.batch_size,
                             )
-
+        
         vectors = await create_embeddings_async(
                             embed_client=self.embed_client,
                             model_deployed=self.deployment_name,

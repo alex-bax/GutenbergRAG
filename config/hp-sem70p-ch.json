@@ -1,0 +1,44 @@
+{
+    "config_id": 4,
+    "collection": "gb-semantic-70p",
+    "ingestion": {
+        "chunk_size": 500,
+        "chunk_overlap": 100,
+        "chunk_strategy": "semantic",
+        "embed_model": "text-embedding-3-small",
+        "tokens_pr_min": 501000,
+        "requests_pr_min": 3000,
+        "embed_dim": 1536,
+        "max_tokens_pr_req": 8000,
+        "sem_split_break_percentile":70,
+        "sem_split_buffer_size":4,
+
+        "default_ids_used": {
+            "The Adventures of Sherlock Holmes": 1661, 
+            "The Strange Case of Dr. Jekyll and Mr. Hyde": 42, 
+            "The Federalist Papers": 1404, 
+            "Moby Dick; Or, The Whale": 2701,
+            "Meditations":2680,
+            "The King in Yellow":8492,
+            "Frankenstein; Or, The Modern Prometheus":84,
+            "Beowulf: An Anglo-Saxon Epic Poem":16328,
+            "Boy Scouts Handbook: The First Edition, 1911":29558,
+            "Alice's Adventures in Wonderland":11
+        }
+    },
+    "retrieval": {
+        "top_k": 15,
+        "vector_db": "Qdrant",
+        "vector_db_type": "vector"
+    },
+    "rerank": {
+        "enabled": true,
+        "batch_size": 5,
+        "model": "gpt-5-nano",
+        "rank_method": "scale, 0-10"
+    },
+    "generation": {
+        "model": "gpt-5-mini",
+        "num_context_chunks": 4
+    }
+}

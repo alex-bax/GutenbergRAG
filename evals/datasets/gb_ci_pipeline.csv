@@ -1,2 +1,15 @@
 gb_id,book,author,question,expected_output,chapter_section,gold_passage_hint,difficulty,type
+2701,Moby-Dick,Herman Melville,Who narrates the story in Moby Dick?,Ishmael,Chapter 1: Loomings,Opening line: 'Call me Ishmael.',easy,who
+2701,Moby-Dick,Herman Melville,What is the name of the whaling ship that Ishmael sails on?,The Pequod,Chs. 16–20 (shipping on),Ishmael and Queequeg sign aboard the Pequod at Nantucket.,easy,what
+2701,Moby-Dick,Herman Melville,Which captain is obsessed with hunting the white whale?,Captain Ahab,"Ch. 28 (Ahab), throughout mid-late book",Ahab’s obsession is described upon his first appearance and soliloquies.,easy,who
+84,Frankenstein,Mary Shelley,In which city does Victor study and create the creature?,Ingolstadt,"Volume I, Chs. 3–4",Victor leaves Geneva for the University of Ingolstadt.,easy,where
+84,Frankenstein,Mary Shelley,What natural phenomenon inspires Victor’s early interest in science?,A lightning strike,"Volume I, Ch. 2",Victor witnesses lightning destroy a tree sparking his fascination with natural philosophy.,easy,what
+84,Frankenstein,Mary Shelley,Who nurses Victor back to health after his illness at Ingolstadt?,Henry Clerval,"Volume I, Ch. 5",Clerval cares for Victor following the creature’s animation.,easy,who
+84,Frankenstein,Mary Shelley,Where does Victor retreat to recover his health after returning home?,The valley of Chamounix,"Volume II, Ch. 1",Victor seeks solace in the Alps near Mont Blanc.,easy,where
 1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,Which musical instrument does Holmes play?,The violin,Recurring; referenced in multiple stories,Holmes plays to think or relax at Baker Street.,easy,what
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,What is Sherlock Holmes’s London address?,221B Baker Street,Recurring; stated in multiple stories,Often mentioned at the beginning of cases.,easy,where
+1661,The Adventures of Sherlock Holmes,Arthur Conan Doyle,Who is Holmes’s friend and the usual narrator of the stories?,Dr. John Watson,Recurring across stories,Watson narrates most adventures in first person.,easy,who
+16328,Beowulf: An Anglo-Saxon Epic Poem,Unknown,Who is the hero who defeats the monster Grendel?,Beowulf,"Lines 194–836 (Grendel episode)",Beowulf arrives in Denmark and fights Grendel bare-handed.,easy,who
+16328,Beowulf: An Anglo-Saxon Epic Poem,Unknown,Which king rules the Danes and is plagued by Grendel?,King Hrothgar,"Lines 1–193 (Scyldings and Heorot)",Hrothgar builds Heorot which Grendel attacks nightly.,easy,who
+11,Alice's Adventures in Wonderland,Lewis Carroll,Who does Alice follow down the rabbit hole?,The White Rabbit,Chapter 1: Down the Rabbit-Hole,The White Rabbit runs past Alice checking his watch.,easy,who
+11,Alice's Adventures in Wonderland,Lewis Carroll,At what event does Alice encounter the Queen of Hearts?,The croquet game,Chapter 8: The Queen’s Croquet-Ground,Alice plays croquet using flamingos and hedgehogs.,easy,where

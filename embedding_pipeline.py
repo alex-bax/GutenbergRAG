@@ -1,16 +1,14 @@
-import backoff, time, asyncio
-from pathlib import Path
+import backoff, asyncio
 import re, unicodedata, tiktoken
 from openai import AzureOpenAI
 from openai._exceptions import RateLimitError
 from tiktoken import Encoding
+from tqdm import tqdm
 
 from models.vector_db_model import EmbeddingVec
 from config.params import EmbeddingDimension
 from openai import RateLimitError
 from pyrate_limiter import Duration, Rate, Limiter, BucketFullException
-from tqdm import tqdm
-
 from openai import AsyncAzureOpenAI
 
 
@@ -73,9 +71,10 @@ async def create_embeddings_async(*, embed_client:AsyncAzureOpenAI,
     all_embeddings = []
     enc_ = tiktoken.get_encoding("cl100k_base")
 
+    # print(f'\nEmbedding: tokens needed from limiter: ')
     for batch in inp_batches:
         tokens_needed = sum([_count_tokens(chunk, enc=enc_) for chunk in batch])
-        print(f'\nEmbedding: tokens needed from limiter: {tokens_needed}')
+        print(f'{tokens_needed}, ',  end='')
         
         await _acquire_budget_async(tok_limiter=tok_limiter, 
                             req_limiter=req_limiter, 

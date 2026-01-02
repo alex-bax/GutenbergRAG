@@ -1,14 +1,19 @@
+from typing import Callable
 import requests_async
+import json
 import asyncio
 from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.database import get_async_db
+from tqdm import tqdm
+from db.database import DbSessionFactory, get_async_db_sess, open_session
+from db.operations import insert_missing_book_db
 from models.api_response_model import GBBookMeta
 from models.local_gb_book_model import GBBookMetaLocal
-from vector_store_utils import upload_to_index_async
-from db.operations import insert_missing_book_db
-from converters import gbbookmeta_to_db_obj
+from vector_store_utils import async_upload_book_to_index
 
+from stats import make_collection_fingerprint
+from converters import gbbookmeta_to_db_obj
+from models.schema import DBBookChunkStats, DBBookMetaData
 from config.settings import Settings
 from ingestion.preprocess_book import make_slug_book_key
 
@@ -63,7 +68,9 @@ def _write_to_files(book_content:str, gb_meta:GBBookMeta) -> Path:
 #TODO - make unit test
 async def upload_missing_book_ids(*, book_ids:set[int], 
                                   sett:Settings, 
-                                ) -> tuple[list[GBBookMeta], str]:
+                                  db_factory: DbSessionFactory,
+                                  time_started:str
+                                ) -> tuple[list[GBBookMeta], str, list[DBBookChunkStats]]:
     """Upload and book ids to vector index and insert into book meta DB if missing"""
     vector_store = await sett.get_vector_store()
     missing_book_ids = await vector_store.get_missing_ids_in_store( book_ids=book_ids)
@@ -75,7 +82,9 @@ async def upload_missing_book_ids(*, book_ids:set[int],
     cache_p = Path("evals", "books")
     cache_p.mkdir(parents=True, exist_ok=True)
 
-    for b_id in missing_book_ids:
+    book_stats = []
+
+    for b_id in tqdm(missing_book_ids): 
         eval_book_paths = get_cached_paths_by_book_id(book_id=b_id, folder_p=cache_p)
         
         if len(eval_book_paths) == 0:
@@ -92,27 +101,37 @@ async def upload_missing_book_ids(*, book_ids:set[int],
             try:
                 with open(gb_meta.path_to_content, "r", encoding="utf-8") as f:
                     book_content = f.read()
-                mess += f"Loaded content from cache for book id {b_id}"
-                print(mess)
+                
+                book_content = book_content[:2000] if sett.is_test else book_content
+                mess += f"\n Is test? {sett.is_test} -- Loaded content from cache for book id {b_id}"
+                print(mess) 
             except Exception as exc:
-                print(f"EXC: tried {str(gb_meta.path_to_content)}  {exc}")
+                print(f"EXC: tried {str(gb_meta.path_to_content)} {exc}")
                 
         print(f"*** Uploading Book id {b_id} to index")
-        await upload_to_index_async(vec_store=vector_store, 
-                                    embed_client=sett.get_async_emb_client(),
-                                    token_limiter=token_lim,
-                                    request_limiter=req_lim,
-                                    raw_book_content=book_content,
-                                    book_meta=gb_meta
-                                )
-        db_book = gbbookmeta_to_db_obj(gbm=gb_meta)
 
-        async with get_async_db() as db_sess:
-            mess += await insert_missing_book_db(db_book, db_sess)
+        upload_chunks, db_b_stats = await async_upload_book_to_index(vec_store=vector_store, 
+                                                                    embed_client=sett.get_async_emb_client(),
+                                                                    token_limiter=token_lim,
+                                                                    request_limiter=req_lim,
+                                                                    raw_book_content=book_content,
+                                                                    book_meta=gb_meta,
+                                                                    sett=sett,
+                                                                    time_started=time_started
+                                                                )
+        book_stats.append(db_b_stats)
+        
+        db_book = gbbookmeta_to_db_obj(gbm=gb_meta)
+        db_book.chunk_stats = db_b_stats
+        async with open_session(db_factory) as db_sess:
+            is_inserted, mess_ = await insert_missing_book_db(book_meta=db_book, 
+                                                                db_sess=db_sess)
+        mess += mess_
 
         gb_books.append(gb_meta)
 
-    return gb_books, mess
+ 
+    return gb_books, mess, book_stats
 
 
 async def _fetch_gutendex_meta_from_id(*, gb_id:int) -> GBBookMeta:

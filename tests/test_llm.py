@@ -14,7 +14,7 @@ from typing import AsyncIterator
 import pytest_asyncio
 from datetime import datetime
 
-HP_PATH = Path("config", "hp-ch500.json")
+HP_PATH = Path("config", "hp-sem70p-ch.json")
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
@@ -29,9 +29,8 @@ async def settings() -> AsyncIterator[Settings]:
         # ensure Qdrant client (and other async resources) are closed
         await sett.close_vector_store()
 
-# TODO: move this to fixtures also?
-dataset = EvaluationDataset()
 dataset_p = Path("evals", "datasets", "gb_ci_pipeline.csv")
+dataset = EvaluationDataset()
 
 dataset.add_goldens_from_csv_file(
     file_path=str(dataset_p),
@@ -133,9 +132,8 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
     faith_met = FaithfulnessMetric(threshold=0.7, model=deepeval_az_model)
     context_rel_metric = ContextualRelevancyMetric(threshold=0.65, model=deepeval_az_model)
     context_prec_metric = ContextualPrecisionMetric(threshold=0.65, model=deepeval_az_model)
-    metrics = [
-                # ans_rel_met, faith_met,
-                # context_prec_metric, 
+    metrics = [ans_rel_met, faith_met,
+                context_prec_metric, 
                 context_rel_metric]
     
     log_hyperparams(config=settings.get_hyperparams(), 
@@ -154,7 +152,7 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
     try:
         with t.start_timer(key="deep_eval_assert"):
             assert_test(test_case=test_case,
-                        metrics=metrics,
+                        metrics=metrics,    # type:ignore
                         run_async=True)
     
     except Exception as ex:

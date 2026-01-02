@@ -124,7 +124,7 @@ def answer_with_context(*, query:str,
     assert all(c is not None for c in relev_chunk_hits)
 
     for chunk_h in relev_chunk_hits:
-        chunk_format_str = f"[ book: {chunk_h.book_name} ; chunk_nr: {chunk_h.chunk_nr} ] || {chunk_h.content} ||"
+        chunk_format_str = f"[ book: {chunk_h.book_name} ; chunk_nr: {chunk_h.chunk_id} ] || {chunk_h.content} ||"
         relevant_context.append(chunk_format_str)
 
     ## TODO! work on this. the delims for contetn

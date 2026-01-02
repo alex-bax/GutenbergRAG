@@ -1,15 +1,18 @@
 from contextlib import asynccontextmanager
+from datetime import datetime
+from prometheus_client import Histogram
 import uvicorn, requests
 from fastapi import Body, FastAPI, APIRouter, Depends, HTTPException, Query, Path, status
 from openai import AsyncAzureOpenAI
 from typing import Annotated
+import time
 import psycopg2
 from app_factory import create_app
 from evals.timer_helper import Timer
-from db.database import engine, _get_async_db_sess, Base
+from db.database import DbSessionFactory, engine, Base, get_async_db_sess, get_db_session_factory
 from db.vector_store_abstract import AsyncVectorStore
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.operations import select_all_books_db, select_books_db_by_id, delete_book_db,  select_books_like_db, select_documents_paginated_db, BookNotFoundException
+from db.operations import select_all_books_db, select_books_by_id_db, delete_book_db,  select_books_like_db, select_documents_paginated_db, BookNotFoundException
 
 from models.api_response_model import ApiResponse, BookMetaDataResponse, BookMetaApiResponse, GBBookMeta, GBMetaApiResponse, QueryResponseApiResponse, SearchApiResponse
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -19,7 +22,7 @@ from converters import gbbookmeta_to_db_obj, db_obj_to_response
 from ingestion.book_loader import fetch_book_content_from_id, upload_missing_book_ids
 from config.settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
-
+from prometheus_fastapi_instrumentator import Instrumentator
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,7 +36,6 @@ async def lifespan(app: FastAPI):
 
 
 app = create_app(get_settings())
-# app = FastAPI(title="MobyRAG", lifespan=lifespan)
 prefix_router = APIRouter(prefix="/v1")
 
 
@@ -45,8 +47,28 @@ def get_async_emb_client() -> AsyncAzureOpenAI:
     return get_settings().get_async_emb_client()
 
 
+rag_generation_seconds = Histogram(
+    "rag_generation_seconds",
+    "Time spent generating LLM answer"
+)
+ 
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+@app.get("/ask")
+def ask():
+    # simulate "generation"
+    start = time.perf_counter()
+    time.sleep(0.2)
+    rag_generation_seconds.observe(time.perf_counter() - start)
+    return {"answer": "hello"}
+
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
 @prefix_router.get("/books/search", response_model=BookMetaApiResponse, status_code=status.HTTP_200_OK)
-async def search_books(db:Annotated[AsyncSession, Depends(_get_async_db_sess)], 
+async def search_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)], 
                        title: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
                        authors: Annotated[str|None, Query(min_length=3, max_length=100)] = None, 
                        lang:Annotated[str|None, Query(min_length=2, max_length=2, examples=["en", "da", "nl"])] = None ):
@@ -54,17 +76,17 @@ async def search_books(db:Annotated[AsyncSession, Depends(_get_async_db_sess)],
     if not any([title, authors, lang]):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Provide at least one filter parameter.")
     
-    db_books = await select_books_like_db(title=title, authors=authors, lang=lang, db_sess=db)
+    db_books = await select_books_like_db(title=title, authors=authors, db_sess=db)
     book_meta_objs = [db_obj_to_response(b) for b in db_books]
 
     return BookMetaApiResponse(data=book_meta_objs)
 
 
 @prefix_router.get("/books/{book_id}", response_model=BookMetaApiResponse, status_code=status.HTTP_200_OK)
-async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(_get_async_db_sess)]):
+async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     db_books = None
     
-    db_books = await select_books_db_by_id(set([book_id]), db)
+    db_books = await select_books_by_id_db(gb_ids=set([book_id]), db_sess=db)
 
     if len(db_books) == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Book with id {book_id} not found")
@@ -77,14 +99,14 @@ async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(_get_async_db
 
 
 @prefix_router.get("/books/", response_model=BookMetaApiResponse)
-async def get_books(db:Annotated[AsyncSession, Depends(_get_async_db_sess)]):
+async def get_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     books = await select_all_books_db(db)
     return BookMetaApiResponse(data=[db_obj_to_response(b) for b in books])
 
 
 # TODO: test this - how is the result paginated
 @prefix_router.get("/books/paginated")
-async def get_books_paginated(db:Annotated[AsyncSession, Depends(_get_async_db_sess)]) -> Page[BookMetaDataResponse]:
+async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_sess)]) -> Page[BookMetaDataResponse]:
     db_books = await select_documents_paginated_db(db)
     books = paginate([BookMetaDataResponse(**b.__dict__) for b in db_books.items])
     return books
@@ -122,19 +144,22 @@ async def search_index_by_texts(skip:Annotated[int, Query(description="Number of
 # no body needed, only gutenberg id since we're uploading from Gutenberg 
 @prefix_router.post("/index", status_code=status.HTTP_201_CREATED, response_model=GBMetaApiResponse)
 async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(description="Unique Gutenberg IDs to upload", min_length=1, max_length=30)],
-                                # db_sess:Annotated[AsyncSession, Depends(_get_async_db_sess)],
+                                db_factory: Annotated[DbSessionFactory, Depends(get_db_session_factory)],
                                 settings:Annotated[Settings, Depends(get_settings)]):
     info = ""
 
     if len(gutenberg_ids) != len(set(gutenberg_ids)):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="gutenberg_ids must be unique",
         )
+    now = datetime.now().strftime("%d-%m-%Y_%H%M")
 
-    gb_books_uploaded, info = await upload_missing_book_ids(book_ids=set(gutenberg_ids), 
-                                                            sett=settings, 
-                                                            )
+    gb_books_uploaded, info, book_stats = await upload_missing_book_ids(book_ids=set(gutenberg_ids), 
+                                                                        sett=settings, 
+                                                                        db_factory=db_factory,
+                                                                        time_started=now
+                                                                    )
 
     if len(gb_books_uploaded) == 0:
         info += f"\nBook ids:{gutenberg_ids} already in index {settings.active_collection}"
@@ -147,7 +172,7 @@ async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(descripti
 @prefix_router.delete("/index/{gutenberg_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
                                 settings:Annotated[Settings, Depends(get_settings)],
-                                db:Annotated[AsyncSession, Depends(_get_async_db_sess)]):
+                                db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
     
     vec_store = await settings.get_vector_store()
     missing_ids = await vec_store.get_missing_ids_in_store(book_ids=set([gutenberg_id]))      # get book id if missing
@@ -159,7 +184,7 @@ async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="G
         err_mess_not_found =f"No items in vector found with book_id {gutenberg_id}"
 
     try:
-        await delete_book_db(book_id=None, gb_id=gutenberg_id, db_sess=db)
+        await delete_book_db(gb_id=gutenberg_id, db_sess=db)
     except BookNotFoundException:
         err_mess_not_found += f"\nBook with id {gutenberg_id} not found in DB"
     

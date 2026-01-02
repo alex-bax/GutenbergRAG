@@ -39,7 +39,7 @@ class AzSearchVectorStore(AsyncVectorStore):
     def _dict_to_search_page(self, d:dict[Any,Any]) -> SearchChunk:
         return SearchChunk(
                 uuid_str=d.get("uuid_str"),
-                chunk_nr=d.get("chunk_nr"),
+                chunk_id=d.get("chunk_nr"),
                 book_name=d.get("book_name"),
                 book_id=d.get("book_id"),
                 content=d.get("content"),
@@ -189,7 +189,7 @@ class AzSearchVectorStore(AsyncVectorStore):
         async for r in results:
             chunk = SearchChunk(search_score=r["@search.score"], 
                                 uuid_str=r["uuid_str"],
-                                chunk_nr=r["chunk_nr"],
+                                chunk_id=r["chunk_nr"],
                                 book_id=r["book_id"],
                                 content=r["content"],
                                 book_name=r["book_name"],

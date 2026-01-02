@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 import asyncio
-from db.database import get_async_db
+from db.database import get_async_db_sess, get_db_session_factory, open_session
 from embedding_pipeline import create_embeddings_async
 from config.settings import get_settings, Settings
 from retrieval.retrieve import answer_with_context
@@ -38,10 +38,12 @@ async def build_eval_dataset():
     test_book_ids = set(list(df["gb_id"].unique().tolist())[:2])
 
     # TODO: update to use test sess, i.e. not prod DB and vector store
-    async with get_async_db() as db_sess:
-        gb_books = await upload_missing_book_ids(book_ids=test_book_ids, 
+    db_factory = get_db_session_factory()
+    # async with db_factory() as db_sess:
+    
+    gb_books = await upload_missing_book_ids(book_ids=test_book_ids, 
                                                 sett=sett, 
-                                                db_sess=db_sess)
+                                                db_factory=db_factory)
 
     ## Retrival
     req_lim, tok_lim = sett.get_limiters()
@@ -80,7 +82,7 @@ async def build_eval_dataset():
 
             # Retrieval metadata
             "retrieved_book_ids": [c.book_id for c in chunks_found],
-            "retrieved_chunk_nrs": [c.chunk_nr for c in chunks_found],
+            "retrieved_chunk_nrs": [c.chunk_id for c in chunks_found],
         })
 
     ds = Dataset.from_list(records)

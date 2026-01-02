@@ -3,12 +3,10 @@ from models.vector_db_model import SearchPage, SearchChunk
 from pydantic import BaseModel, Field, field_validator
 
 
-### TODO: make response model for Search and one DB
-
 class QueryResponse(BaseModel):
     answer:str
-    citations:list[SearchChunk] #?
-    #canditates:list[]  #TODO: add content chunks?
+    citations:list[SearchChunk] 
+    
 
 class BookBase(BaseModel):
     id: int
@@ -16,7 +14,7 @@ class BookBase(BaseModel):
     title: str
 
 class BookMetaDataResponse(BookBase):
-    lang:str = Field(..., description="ISO language code the book is written in", examples=["en", "nl", "da"])
+    # lang:str = Field(..., description="ISO language code the book is written in", examples=["en", "nl", "da"])
     authors: str 
     model_config = {"from_attributes": True}        
 
@@ -56,7 +54,6 @@ class GBBookMeta(BaseModel):
     
 
 class ApiResponse(BaseModel):
-    # data: BookMetaDataResponse|list[BookMetaDataResponse]|SearchPage|GBBookMeta|list[GBBookMeta]|QueryResponse|None = Field(default=None)
     job_id: int|None = Field(default=None, description="Id for long running async jobs when uploading many books to index at once")   
     message: str|None = None    
 

@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from config.params import VER_PREFIX
 from config.settings import Settings, get_settings
@@ -6,14 +7,13 @@ from fastapi import status
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction, create_async_engine
 
-from db.database import Base
+from db.database import Base, DbSessionFactory, get_async_db_sess, get_db_session_factory
 from models.api_response_model import BookMetaApiResponse, BookMetaDataResponse, GBMetaApiResponse, QueryResponseApiResponse, SearchApiResponse
-# Importing fastapi.Depends that is used to retrieve SQLAlchemy's session
-from db.database import _get_async_db_sess
 from db.operations import insert_book_db, DBBookMetaData
 from main import app
+from models.schema import DBBookChunkStats
+from sqlalchemy import text
 
-### The test DB is rolled back after each test fixture
 FRANKENSTEIN = "Frankenstein; Or, The Modern Prometheus"
 DR_JEK_HIDE = "The Strange Case of Dr. Jekyll and Mr. Hyde"
 
@@ -22,9 +22,21 @@ pytestmark = pytest.mark.anyio
 
 engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 
+chunk_stat_dummy = DBBookChunkStats(
+                            config_id_used=1,
+                            title="fixed_400_100",
+                            char_count=123456,
+                            chunk_count=320,
+                            token_mean=380.2,
+                            token_median=390.0,
+                            token_min=120,
+                            token_max=512,
+                            token_std=42.7,
+                        )
+
 @pytest.fixture(scope="session", autouse=True)
 async def create_test_schema():
-    # Create the schema (tables)
+    
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -56,7 +68,6 @@ async def transaction(
         await trans.rollback()
 
 
-# Use this fixture to get SQLAlchemy's AsyncSession.
 @pytest.fixture()
 async def session(
     connection: AsyncConnection, transaction: AsyncTransaction) -> AsyncGenerator[AsyncSession, None]:
@@ -75,6 +86,7 @@ def test_settings() -> Settings:
     return get_settings(is_test=True)
 
 
+
 # All changes that occur in a test function are rolled back
 # after function exits, even if session.commit() is called
 # in FastAPI's application endpoints
@@ -83,15 +95,19 @@ async def client(
     connection: AsyncConnection,
     test_settings:Settings,
 ) -> AsyncGenerator[AsyncClient, None]:
-    async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    async def sqlite_session_dep() -> AsyncGenerator[AsyncSession, None]:
         async_session = AsyncSession(
             bind=connection,
             join_transaction_mode="create_savepoint",
         )
         async with async_session:
             yield async_session
-    
-    app.dependency_overrides[_get_async_db_sess] = override_get_async_session
+
+    # Override the factory dependency to return our sqlite session generator
+    def override_db_session_factory() -> DbSessionFactory:
+        return sqlite_session_dep
+
+    app.dependency_overrides[get_db_session_factory] = override_db_session_factory
     app.dependency_overrides[get_settings] = lambda: test_settings
     
     test_client = AsyncClient(transport=ASGITransport(app=app), base_url="http://")
@@ -107,13 +123,9 @@ async def client(
             print(f"[TEST CLEANUP WARNING] Could not delete collection: {e}")
 
         await test_client.aclose()
-        del app.dependency_overrides[_get_async_db_sess]
+        del app.dependency_overrides[get_db_session_factory]
         del app.dependency_overrides[get_settings]
-        # v_store = await test_settings.get_vector_store()
-        # await v_store.delete_collection(collection_name=test_settings.active_collection)
-
-        # await test_client.aclose()
-        # del app.dependency_overrides[get_async_db_sess]
+        
 
 
 def test_settings_load_env_sanity_check(test_settings: Settings):
@@ -122,13 +134,18 @@ def test_settings_load_env_sanity_check(test_settings: Settings):
     assert test_settings.QDRANT_SEARCH_ENDPOINT is not None
     
 
+@pytest.mark.anyio
+async def test_db_is_sqlite(session: AsyncSession):
+    res = await session.execute(text("select sqlite_version()"))
+    assert res.scalar_one() 
+
 # Tests showing rollbacks between functions when using API client
 async def test_get_book(client: AsyncClient, session: AsyncSession):
-    book_id = await insert_book_db(book=DBBookMetaData(gb_id=42, title="string", lang="en", authors="string"), 
+    book = await insert_book_db(book=DBBookMetaData(gb_id=42, title="string", authors="string", summary="A dummy summary"), 
                                    db_sess=session)
-    
+    book.chunk_stats = chunk_stat_dummy
     async with client as ac:
-        created_book_id = book_id #response.json()["id"]
+        created_book_id = book.gb_id #response.json()["id"]
         
         resp = await ac.get(
             f"/{VER_PREFIX}/books/{created_book_id}",
@@ -169,14 +186,14 @@ async def test_upload_1_to_index(client: AsyncClient, test_settings: Settings):
 # TODO: test this from api
 # search_books
 
-async def test_upload_same_twice_to_index_returns_422(client: AsyncClient, test_settings: Settings):
+async def test_upload_same_twice_to_index_returns_404(client: AsyncClient, test_settings: Settings):
     hp = test_settings.get_hyperparams().ingestion
     
     async with client as ac:
         body = [hp.default_ids_used[DR_JEK_HIDE], 
                 hp.default_ids_used[DR_JEK_HIDE]]
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
-        assert resp.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_upload_delete_book_index(client:AsyncClient, test_settings: Settings):
@@ -200,7 +217,7 @@ async def test_upload_delete_book_index(client:AsyncClient, test_settings: Setti
         assert chunk_count_before == chunk_count_after
 
 
-async def test_delete_book_index_not_found_returns_422(client:AsyncClient, test_settings: Settings):
+async def test_delete_book_index_not_found_returns_404(client:AsyncClient, test_settings: Settings):
     hp = test_settings.get_hyperparams().ingestion
     
     async with client as ac:
