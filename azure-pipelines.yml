@@ -65,7 +65,11 @@ stages:
         DB_PORT: $(DB_PORT)
         RUN_QDRANT_TESTS: $(RUN_QDRANT_TESTS)      
 
-    - script: deepeval test run tests/test_llm.py -n 6 -c -i    # 6 parallel workers, -c cache results, -i keeps going if one case fails (temporary)
+    - powershell: | 
+                $env:PYTHONUTF8="1"
+                $env:PYTHONIOENCODING="utf-8"
+                python -c "import sys; print('stdout:', sys.stdout.encoding, 'stderr:', sys.stderr.encoding)"
+                deepeval test run tests/test_llm.py -n 6 -c -i
       displayName: Run DeepEval LLM tests 
       continueOnError: true       # not block rest of pipeline - temporary
       env:
