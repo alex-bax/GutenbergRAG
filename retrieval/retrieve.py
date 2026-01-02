@@ -9,6 +9,7 @@ from embedding_pipeline import create_embeddings_async
 from models.vector_db_model import SearchChunk
 from pydantic import Field, BaseModel
 from vector_store_utils import _split_by_size
+from metrics.rag_metrics import rag_stage_seconds
 
 class RankedChunk(BaseModel):
     score:int = Field(ge=0, le=10)
@@ -32,16 +33,13 @@ class AnswerChunk(BaseModel):
 async def search_chunks(*, query: str, 
                         vector_store:AsyncVectorStore, 
                         embed_client:AsyncAzureOpenAI, 
-                        llm_client:AzureOpenAI,
                         embed_model_deployed:str, 
                         tok_lim:Limiter,
                         req_lim:Limiter,
-                        llm_reranker:str,
                         keep_top_k:int,
-                        split_every_k:int,
-                        timer:Timer
                         ) -> list[SearchChunk]: 
     print(f'TOP K : {keep_top_k}')
+
     query_emb_vec = await create_embeddings_async(inp_batches=[[query]], 
                                                 embed_client=embed_client, 
                                                 model_deployed=embed_model_deployed,
@@ -54,14 +52,8 @@ async def search_chunks(*, query: str,
                                                 filter=None,
                                                 k=keep_top_k
                                             )
-    ranked_results = simple_llm_reranker(q=query, 
-                                         chunks=results, 
-                                        llm_client=llm_client, 
-                                        llm_model=llm_reranker,
-                                        split_every_k=split_every_k,
-                                        timer=timer)
+    return results
 
-    return ranked_results
 
 def simple_llm_reranker(q:str, chunks:list[SearchChunk], 
                         llm_client:AzureOpenAI, 
@@ -70,7 +62,7 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk],
                         timer:Timer
                         ) -> list[SearchChunk]:
     
-    with timer.start_timer("reranking_total"):
+    with timer.start_timer("rerank_total"):
         scored_chunks:list[tuple[int, str, SearchChunk]] = []
         assert all(c.uuid_str for c in chunks)
         uuid_to_chunk = {c.uuid_str:c for c in chunks}
@@ -87,7 +79,7 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk],
                         Documents: {contents_joined}
                     """
 
-            with timer.start_timer(f"reranking_{i}"):
+            with timer.start_timer(f"rerank_{i}"):
                 resp = llm_client.responses.parse(      
                             model=llm_model,
                             input=[
@@ -162,27 +154,34 @@ def answer_with_context(*, query:str,
 
 async def answer_rag(*, query: str, 
                     sett:Settings,
-                    top_n_matches:int,
+                    keep_top_k:int,
                     timer:Timer
                     ) -> QueryResponse:
         
     req_lim, tok_lim = sett.get_limiters()
     hp = sett.get_hyperparams()
 
-    with timer.start_timer("search+rerank_total"):
-        ranked_chunks = await search_chunks(query=query, 
-                                        vector_store=await sett.get_vector_store(), 
-                                        embed_client=sett.get_async_emb_client(), 
-                                        embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
-                                        tok_lim=tok_lim,
-                                        req_lim=req_lim,
-                                        keep_top_k=top_n_matches,
-                                        llm_client=sett.get_llm_client(),
-                                        llm_reranker=hp.rerank.model,
+    with timer.start_timer("search"):
+        unranked_chunks = await search_chunks(query=query, 
+                                            vector_store=await sett.get_vector_store(), 
+                                            embed_client=sett.get_async_emb_client(), 
+                                            embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
+                                            tok_lim=tok_lim,
+                                            req_lim=req_lim,
+                                            keep_top_k=keep_top_k,
+                                        )
+    rag_stage_seconds.labels(stage="search").observe(timer.timings["search"])
+
+    ranked_chunks = simple_llm_reranker(q=query, 
+                                        chunks=unranked_chunks, 
+                                        llm_client=sett.get_llm_client(), 
+                                        llm_model=hp.rerank.model,
                                         split_every_k=hp.rerank.batch_size,
-                                        timer=timer
-                                    )
-        top_chunks = ranked_chunks[:hp.generation.num_context_chunks]      #TODO
+                                        timer=timer)
+    
+    top_chunks = ranked_chunks[:hp.generation.num_context_chunks]      
+    rag_stage_seconds.labels(stage="rerank_total").observe(timer.timings["rerank_total"])
+    
 
     with timer.start_timer("answer_with_contexts"):
         llm_answer, relevant_chunks = answer_with_context(query=query, 
@@ -190,6 +189,7 @@ async def answer_rag(*, query: str,
                                                         llm_model_deployed=sett.AZ_OPENAI_MODEL_DEPLOYMENT, 
                                                         chunk_hits=top_chunks,
                                                         )    
+    rag_stage_seconds.labels(stage="answer_with_contexts").observe(timer.timings["answer_with_contexts"])
 
     return QueryResponse(answer=llm_answer, citations=top_chunks)
 
@@ -205,7 +205,7 @@ async def run_gutenberg_rag(question: str, sett:Settings, timer:Timer) -> tuple[
     
     q_resp = await answer_rag(query=question, 
                               sett=sett, 
-                              top_n_matches=sett.get_hyperparams().retrieval.top_k,#15, 
+                              keep_top_k=sett.get_hyperparams().retrieval.top_k,#15, 
                               timer=timer)
     
     contexts_found = [c.content for c in q_resp.citations if c.content]
