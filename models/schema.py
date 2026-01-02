@@ -1,5 +1,5 @@
 from db.database import Base
-from sqlalchemy import ARRAY, Column, Integer, String, Float, ForeignKey, TIMESTAMP
+from sqlalchemy import ARRAY, JSON, Column, Integer, String, Float, ForeignKey, TIMESTAMP
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -34,10 +34,15 @@ class DBBookChunkStats(Base):
     token_max:Mapped[int]= mapped_column(Integer, nullable=False)
     token_std:Mapped[float]= mapped_column(Float, nullable=False)
 
+    # token_counts: Mapped[list[int]] = mapped_column(
+    #                                         ARRAY(Integer),
+    #                                         nullable=False,
+    #                                     )
+
     token_counts: Mapped[list[int]] = mapped_column(
-                                            ARRAY(Integer),
-                                            nullable=False,
-                                        )
+                                        ARRAY(Integer).with_variant(JSON, "sqlite"),
+                                        nullable=False,
+                                    )
 
     book_meta_fk: Mapped[int] = mapped_column(
                                     ForeignKey("book_metadata.gb_id", ondelete="CASCADE"),

@@ -144,7 +144,6 @@ async def search_index_by_texts(skip:Annotated[int, Query(description="Number of
 # no body needed, only gutenberg id since we're uploading from Gutenberg 
 @prefix_router.post("/index", status_code=status.HTTP_201_CREATED, response_model=GBMetaApiResponse)
 async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(description="Unique Gutenberg IDs to upload", min_length=1, max_length=30)],
-                                # db_sess:Annotated[AsyncSession, Depends(get_async_db_sess)],
                                 db_factory: Annotated[DbSessionFactory, Depends(get_db_session_factory)],
                                 settings:Annotated[Settings, Depends(get_settings)]):
     info = ""

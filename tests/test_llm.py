@@ -14,9 +14,7 @@ from typing import AsyncIterator
 import pytest_asyncio
 from datetime import datetime
 
-# HP_PATH = Path("config", "hp-sem70p-ch.json")
-HP_PATH = Path("config", "hp-ch500.json")
-
+HP_PATH = Path("config", "hp-sem70p-ch.json")
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
