@@ -9,7 +9,7 @@ from embedding_pipeline import create_embeddings_async
 from models.vector_db_model import SearchChunk
 from pydantic import Field, BaseModel
 from vector_store_utils import _split_by_size
-from metrics.rag_metrics import rag_stage_seconds
+from monitor_metrics.rag_metrics import rag_stage_seconds
 
 class RankedChunk(BaseModel):
     score:int = Field(ge=0, le=10)

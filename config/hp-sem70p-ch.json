@@ -39,6 +39,6 @@
     },
     "generation": {
         "model": "gpt-5-mini",
-        "num_context_chunks": 4
+        "num_context_chunks": 10
     }
 }

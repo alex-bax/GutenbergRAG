@@ -7,9 +7,10 @@ See the OpenAPI specification and try out the API itself [here](https://gbragfas
 
 It’s designed to be production-ready and showcase modern vector search, advanced chunking strategies, proper evaluation, structured experiments and monitoring techniques.
 
-- The `/books/` route query the metadata Postgres DB, fetch metadata of books, either individually, in chunks through paginations or all books at a time. Addtionally `/books/gutenberg/` allows for exploring books in Project Gutenberg without leaving the API.
-- The `/index/` route interacts with the vector index/collection. It allows for searching chunks from text, Delete and upload new books by just giving its Gutenberg ID, in turn using the **ingestion** pipeline.  
-- The `/query/` route which uses the **retrieval** workflow to answer any text based query, with citations.  
+### Routers overview
+- The `/books/` route queries the metadata Postgres DB. It fetches metadata of book(s), either one at a time, with pagination or all books at once. Addtionally `/books/gutenberg/` allows for exploring books in Project Gutenberg.
+- The `/index/` route interacts with the vector collection(s). It allows for searching chunks from text, delete chunks and upload new books by just giving its Gutenberg ID. Uploading to the collection triggers the **ingestion** pipeline.  
+- The `/query/` route uses the **retrieval** workflow to answer any text based query, with citations.  
 
 ## Features
 ### 🔍 RAG
@@ -30,7 +31,7 @@ It’s designed to be production-ready and showcase modern vector search, advanc
 - LLM: GPT-5-mini with Azure OpenAI, using a custom lenient guardrail filter on Azure Foundry 
 
 ### ⚖️ LLM Evaluation
-* Evaluation with DeepEval using RAG specific metrics:
+* Evaluation with DeepEval using RAG specific metrics, scoring from 0 to 1:
      * **Answer generation metrics:**
         * *Answer relevancy* - Is the answer on-topic? Low score means vague/generic answer
         * *Faithfulness* - Is the answer supported by the retrieved context? And not made up by hallucination
@@ -56,8 +57,9 @@ It’s designed to be production-ready and showcase modern vector search, advanc
 * CD pushing and deploying to Azure Container Registry and Docker 
 
 
-### 📈 Monitoring (Soon)
-* Prometheus + Grafana
+### 📈 API Monitoring 
+* Prometheus 
+* Grafana  
 
 ### 🔒 Simple Authentication (Soon)
 * API key auth
@@ -68,6 +70,7 @@ ___
 - [Chunking and chunking experiments](docs/chunking.md)
 - [Details on vector store](docs/vector_store.md)
 - [Testing approach](docs/testing.md)
+- [API monitoring](docs/api_monitoring.md)
 
 
 ## Ingestion 
@@ -77,7 +80,7 @@ A default list of 10 different types of books/works are used for populating the 
 
 Populating the vector collection is a long running operation and requires a lot of calls to both the embedding model and the Qdrant client. In order to upload large and high volume of books smoothly without errors, **rate limiting** with *pyrate limiter* and **batching** has been implemented. 
 
-In this latest version the rate limiter is used in the [semantic chunking](docs/chunking.md) step and the embedding of the chunks. Since the embedding model only accepts string (chunks) up to a certain size, all chunks are split into batches based on this "max token threshold" which all is specified in the [config files.](/config/hp-sem70p-ch.json)\
+In this latest version, the rate limiter is also used in the [semantic chunking](docs/chunking.md) step and the embedding of the chunks. Since the embedding model only accepts string (chunks) up to a certain size, all chunks are split into batches based on this "max token threshold" which all is specified in the [config files.](/config/hp-sem70p-ch.json)\
 The entire ingestion pipeline is seen here:\
 <img src="./imgs/GBRAG-Ingestion.png" alt="Diagram" height="625" >
 
