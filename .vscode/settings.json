@@ -5,7 +5,8 @@
   "python.testing.cwd": "${workspaceFolder}",
   "python.envFile": "${workspaceFolder}/.env",
 "python.analysis.extraPaths": [
-    "${workspaceFolder}"
+    "${workspaceFolder}",
+    "./monitor_"
 ],
 "editor.fontWeight": "normal", // helps Pylance resolve "db"
 

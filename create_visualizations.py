@@ -127,7 +127,7 @@ def plot_bar_charts(save_folder_name:Path,
 
 
 def main():
-    sub_dir = "3112-2025_1424"
+    sub_dir = "0401-2026_1600"
     json_path = Path("evals", sub_dir, ".latest_test_run.json")  # change if needed
     metrics_scores = load_metrics_scores(json_path)
 
@@ -137,7 +137,7 @@ def main():
 
     plot_bar_charts(metrics_scores=metrics_scores, 
                     save_folder_name=eval_parent_p,
-                    hyperparams={"Config name":"hp-ch500", 
+                    hyperparams={"Config name":"hp-sem70p-ch", 
                                 })
     
     token_counts = [233, 150, 1406]  # replace with your real array

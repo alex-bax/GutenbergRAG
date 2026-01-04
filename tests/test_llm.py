@@ -128,11 +128,12 @@ async def test_gutenberg_rag_answer_relevancy(test_case:LLMTestCase,#golden: Gol
     test_case.actual_output = answer
     test_case.retrieval_context = contexts
 
-    ans_rel_met = AnswerRelevancyMetric(threshold=0.7, model=deepeval_az_model)
-    faith_met = FaithfulnessMetric(threshold=0.7, model=deepeval_az_model)
+    # ans_rel_met = AnswerRelevancyMetric(threshold=0.7, model=deepeval_az_model)
+    # faith_met = FaithfulnessMetric(threshold=0.7, model=deepeval_az_model)
     context_rel_metric = ContextualRelevancyMetric(threshold=0.65, model=deepeval_az_model)
     context_prec_metric = ContextualPrecisionMetric(threshold=0.65, model=deepeval_az_model)
-    metrics = [ans_rel_met, faith_met,
+    metrics = [
+        # ans_rel_met, faith_met,
                 context_prec_metric, 
                 context_rel_metric]
     

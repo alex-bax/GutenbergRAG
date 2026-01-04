@@ -8,18 +8,18 @@ class CollectionFingerprint(BaseModel):
     book_count: int
     total_chunks: int
 
-    # Book-level summary (median, p90)
+    # Book-level summary (median, p90) for all books
     book_chunk_count_median: float
     book_chunk_count_p90: float
 
-    book_token_mean_median: float
-    book_token_mean_p90: float
+    book_chunk_size_mean_median: float
+    book_chunk_size_mean_p90: float
 
-    book_token_std_median: float
-    book_token_std_p90: float
+    book_chunk_size_std_median: float
+    book_chunk_size_std_p90: float
 
-    book_token_max_median: float
-    book_token_max_p90: float
+    book_chunk_size_max_median: float
+    book_chunk_size_max_p90: float
 
     # Chunk-level token_count pooled (p10, p50, p90, p99)
     chunk_token_p10: float
@@ -102,14 +102,14 @@ def make_collection_fingerprint(
                 book_chunk_count_median=book_chunk_count_median,
                 book_chunk_count_p90=book_chunk_count_p90,
 
-                book_token_mean_median=book_token_mean_median,
-                book_token_mean_p90=book_token_mean_p90,
+                book_chunk_size_mean_median=book_token_mean_median,
+                book_chunk_size_mean_p90=book_token_mean_p90,
 
-                book_token_std_median=book_token_std_median,
-                book_token_std_p90=book_token_std_p90,
+                book_chunk_size_std_median=book_token_std_median,
+                book_chunk_size_std_p90=book_token_std_p90,
 
-                book_token_max_median=book_token_max_median,
-                book_token_max_p90=book_token_max_p90,
+                book_chunk_size_max_median=book_token_max_median,
+                book_chunk_size_max_p90=book_token_max_p90,
 
                 chunk_token_p10=chunk_token_p10,
                 chunk_token_p50=chunk_token_p50,
