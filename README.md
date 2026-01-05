@@ -58,8 +58,8 @@ It’s designed to be production-ready and showcase modern vector search, advanc
 
 
 ### 📈 API Monitoring 
-* Prometheus 
-* Grafana  
+* Prometheus exposing standard and custom metrics on `/metrics`
+* Grafana with custom dashboards 
 
 ### 🔒 Simple Authentication (Soon)
 * API key auth
@@ -103,7 +103,7 @@ The `book_chunk_stats` shows relevant stats related to how the individual book w
 
 
 ### Automatic testing and deployment with Docker + CI/CD pipelines
-The pipelines are triggered whenever a new commit is pushed to *main* branch, usually after merging *dev* into it.\
+The pipelines are triggered whenever a new commit is pushed to *main* branch, usually after merging the *dev* branch into it with a pull-request.\
 The steps run are the following:
 1. **Tests**
     * Integration test of the API, using an async in-memory SQLite DB and mock vector DB
@@ -135,10 +135,9 @@ Screenshots from the CI/CD pipeline:
   * Experiment with better embedding models: Based on the [Hugging Face embedding leaderboard](https://huggingface.co/spaces/mteb/leaderboard) many better models are available.  
   * Add halucination metric to evaluation suite
 #### Production and increased safety
-* **System/API monitoring with Promethus and Grafana**
 * **Simple API key as Auth**
 * LLM monitoring via [LangFuse](https://langfuse.com/), allowing for tracing the intermediate steps in the answer generation, prompt version control, metrics and even better evaluation.
-* Guardrails to ensure that e.g. underage users wouldn't get inappropiate responses. Can be done directly in Azure Foundry, or custom made by adding input and output filters.
+* More Guardrails to ensure that e.g. underage users wouldn't get inappropiate responses. Can be done directly in Azure Foundry, or custom made by adding input and output filters.
 
 ### Other
 * Adding interface for embedding models to also make them easily swapable

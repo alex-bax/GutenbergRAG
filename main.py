@@ -56,14 +56,6 @@ rag_generation_seconds = Histogram(
 def health():
     return {"ok": True}
 
-@app.get("/ask")
-def ask():
-    # simulate "generation"
-    start = time.perf_counter()
-    time.sleep(0.2)
-    rag_generation_seconds.observe(time.perf_counter() - start)
-    return {"answer": "hello"}
-
 
 
 @prefix_router.get("/books/search", response_model=BookMetaApiResponse, status_code=status.HTTP_200_OK)
