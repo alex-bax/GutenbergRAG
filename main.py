@@ -56,14 +56,6 @@ rag_generation_seconds = Histogram(
 def health():
     return {"ok": True}
 
-@app.get("/ask")
-def ask():
-    # simulate "generation"
-    start = time.perf_counter()
-    time.sleep(0.2)
-    rag_generation_seconds.observe(time.perf_counter() - start)
-    return {"answer": "hello"}
-
 
 
 @prefix_router.get("/books/search", response_model=BookMetaApiResponse, status_code=status.HTTP_200_OK)
@@ -104,15 +96,15 @@ async def get_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
 
 
 # TODO: test this - how is the result paginated
-@prefix_router.get("/books/paginated")
-async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_sess)]) -> Page[BookMetaDataResponse]:
-    db_books = await select_documents_paginated_db(db)
-    books = paginate([BookMetaDataResponse(**b.__dict__) for b in db_books.items])
-    return books
+# @prefix_router.get("/books/paginated")
+# async def get_books_paginated(db:Annotated[AsyncSession, Depends(get_async_db_sess)]) -> Page[BookMetaDataResponse]:
+#     db_books = await select_documents_paginated_db(db)
+#     books = paginate([BookMetaDataResponse(**b.__dict__) for b in db_books.items])
+#     return books
 
 
 @prefix_router.get("/index/{gutenberg_id}", response_model=SearchApiResponse, status_code=status.HTTP_200_OK)
-async def get_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
+async def get_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID", gt=0)],
                                 settings:Annotated[Settings, Depends(get_settings)],
                                 ):
     vec_store = await settings.get_vector_store()
@@ -166,7 +158,7 @@ async def upload_book_to_index(gutenberg_ids:Annotated[list[int], Body(descripti
 
 
 
-#TODO: add delete and lookup by specific chunk by uuid?
+#TODO: add lookup by specific chunk by uuid?
 @prefix_router.delete("/index/{gutenberg_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book_from_index(gutenberg_id:Annotated[int, Path(description="Gutenberg ID to delete", gt=0)],
                                 settings:Annotated[Settings, Depends(get_settings)],
@@ -228,7 +220,7 @@ async def show_gutenberg_books_paginated(page_number:Annotated[int, Query(descri
 @prefix_router.get("/query/", status_code=status.HTTP_202_ACCEPTED, response_model=QueryResponseApiResponse)
 async def answer_query(query:Annotated[str, Query()],
                         settings:Annotated[Settings, Depends(get_settings)],
-                        top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=40)]=10,
+                        top_n_matches:Annotated[int, Query(description="Number of matching chunks to include in response", gt=0, lt=40)]=7,
                         only_gb_book_id:Annotated[int|None, Query(description="Filter out all other books than this", gt=0)] = None):
 
     llm_resp = await answer_rag(query=query, 
