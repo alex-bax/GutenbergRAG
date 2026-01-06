@@ -32,7 +32,7 @@ From running the above test with Postman, it affected the dasboard like so:
 
 
 
-* Blue visualizations are for monitoring API use of resources on the host, in this case the RAM usage and the number of CPUs used.\
+* Blue visualizations are for monitoring API use of resources on the host, in this case the difference in RAM usage and the number of CPUs used.\
 * Green are tracking the total number of HTTP requests over 1 minute and the average number of HTTP 4XX and 5XX errors over the last 5 minutes.\
 * "API Up" showing a 1, at the bottom, is displaying if the API is up and running or not.\
 
