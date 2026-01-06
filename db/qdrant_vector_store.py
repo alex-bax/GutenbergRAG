@@ -283,27 +283,6 @@ class QdrantVectorStore(AsyncVectorStore):
                                         collection_name=self.collection_name)  
 
 
-    # async def upsert_chunks_(self, chunks: list[UploadChunk]) -> None:
-    #     if not chunks:
-    #         return
-        
-    #     points = [
-    #         PointStruct(
-    #             id=c.uuid_str,
-    #             vector=c.content_vector.vector,
-    #             payload={
-    #                 "uuid_str": c.uuid_str,
-    #                 "chunk_nr": c.chunk_id,
-    #                 "book_name": c.book_name,
-    #                 "book_id": c.book_id,
-    #                 "content": c.content,
-    #             },
-    #         ) for c in chunks]
-
-    #     await self._client.upsert(
-    #             collection_name=self.collection_name,
-    #             points=points,
-    #         )
 
     async def search_by_embedding(self, embed_query_vector: EmbeddingVec, filter:dict[str,Any]|None, k: int=10) -> list[SearchChunk]:
         qdrant_filter = self._build_must_filter(filter) if filter else None
