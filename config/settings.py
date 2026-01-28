@@ -44,6 +44,7 @@ class Settings(BaseSettings):
 
    # Not to be validated as model fields
     _llm_client: AzureOpenAI | None = PrivateAttr(default=None)
+    _async_llm_client: AsyncAzureOpenAI | None = PrivateAttr(default=None)
     _async_emb_client: AsyncAzureOpenAI | None = PrivateAttr(default=None)
     _emb_client: AzureOpenAI | None = PrivateAttr(default=None)
     _vector_store: AsyncVectorStore | None = PrivateAttr(default=None)
@@ -107,6 +108,14 @@ class Settings(BaseSettings):
                                             api_version=self.AZ_OPENAI_API_VER,
                                             api_key=self.AZ_OPENAI_GPT_KEY)
         return self._llm_client
+
+
+    def get_async_llm_client(self) -> AsyncAzureOpenAI:
+        if self._async_llm_client is None:
+            self._async_llm_client = AsyncAzureOpenAI(azure_endpoint=self.AZ_OPENAI_GPT_ENDPOINT,
+                                                    api_version=self.AZ_OPENAI_API_VER,
+                                                    api_key=self.AZ_OPENAI_GPT_KEY)
+        return self._async_llm_client
 
 
     def get_async_emb_client(self) -> AsyncAzureOpenAI:
