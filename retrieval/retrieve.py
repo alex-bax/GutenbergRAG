@@ -72,7 +72,13 @@ async def async_llm_reranker(q:str, chunks:list[SearchChunk],
     sem = asyncio.Semaphore(max_concurrency)
 
     async def _rerank_batch(i:int, chs:list[SearchChunk]) -> None:
-        contents_joined = " ".join([f"--- START #{i}, Document uuid:{c.uuid_str} ---\n"+c.content+f"\n--- END #{i} Document {c.uuid_str}---\n" for i,c in enumerate(chs)])
+        contents_joined = " ".join(
+                                f"--- START #{i}, Document uuid:{c.uuid_str or 'Unknown'} ---\n"
+                                f"{c.content or 'Unknown'}\n"
+                                f"--- END #{i} Document {c.uuid_str or 'Unknown'} ---\n"
+                                for i, c in enumerate(chs)
+                            )
+
         prompt = f"""
                     You are given {len(chs)} documents. For each document you MUST:
                     - Assign a relevance score on a scale from 0 to 10 (10 = highly relevant, 0 = irrelevant), determining how relevant this document is to the query
