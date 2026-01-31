@@ -11,13 +11,15 @@ from models.api_response_model import GBBookMeta
 from models.local_gb_book_model import GBBookMetaLocal
 from vector_store_utils import async_upload_book_to_index
 
-from stats import make_collection_fingerprint
 from converters import gbbookmeta_to_db_obj
 from models.schema import DBBookChunkStats, DBBookMetaData
 from config.settings import Settings
 from ingestion.preprocess_book import make_slug_book_key
+import logging
 
-# TODO: make async
+
+logger = logging.getLogger(__name__)
+
 async def _fetch_book_content(*, download_url) -> str:
     resp = await requests_async.get(download_url, timeout=60, follow_redirects=True)
     resp.raise_for_status()
@@ -77,7 +79,7 @@ async def upload_missing_book_ids(*, book_ids:set[int],
 
     gb_books = []
     req_lim, token_lim = sett.get_limiters()
-    print(f'--- Missing book ids: {missing_book_ids}')
+    logging.info(f'--- Missing book ids: {missing_book_ids}')
     mess = ""
     cache_p = Path("evals", "books")
     cache_p.mkdir(parents=True, exist_ok=True)
@@ -93,7 +95,7 @@ async def upload_missing_book_ids(*, book_ids:set[int],
 
             local_gb_p = _write_to_files(book_content=book_content, gb_meta=gb_meta)
             mess += " Wrote book to cache."
-            print(f"GB meta obj not found in cache - fetching from Gutendex. Wrote content + gb obj to: {local_gb_p.name}")
+            logging.info(f"GB meta obj not found in cache - fetching from Gutendex. Wrote content + gb obj to: {local_gb_p.name}")
         else:
             gb_meta = _load_gb_meta_local(path=eval_book_paths[0])
             gb_meta.path_to_content.parent.mkdir(parents=True, exist_ok=True)
@@ -104,11 +106,11 @@ async def upload_missing_book_ids(*, book_ids:set[int],
                 
                 book_content = book_content[:2000] if sett.is_test else book_content
                 mess += f"\n Is test? {sett.is_test} -- Loaded content from cache for book id {b_id}"
-                print(mess) 
+                logging.info(mess) 
             except Exception as exc:
-                print(f"EXC: tried {str(gb_meta.path_to_content)} {exc}")
+                logging.error(f"EXC: tried {str(gb_meta.path_to_content)} {exc}")
                 
-        print(f"*** Uploading Book id {b_id} to index")
+        logging.info(f"*** Uploading Book id {b_id} to index")
 
         upload_chunks, db_b_stats = await async_upload_book_to_index(vec_store=vector_store, 
                                                                     embed_client=sett.get_async_emb_client(),
@@ -148,7 +150,7 @@ async def download_or_load_from_cache(*, book_key:str, url:str) -> str:
 
     if book_p.exists():
         with open(book_p, 'r', encoding="utf-8") as f:
-            print(f"\n From file: {book_p.name}")
+            logging.info(f"\n From file: {book_p.name}")
             book_txt = f.read()
         
     else:

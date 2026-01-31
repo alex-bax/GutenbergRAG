@@ -6,9 +6,15 @@ from db.database import Base
 from config.settings import Settings
 from ingestion.book_loader import upload_missing_book_ids
 from stats import make_collection_fingerprint
+import logging
+from config.logging_config import configure_logging
 import matplotlib
 matplotlib.use("Agg")
 from datetime import datetime
+
+logger = logging.getLogger("app.lifecycle")
+logging.getLogger("watchfiles").setLevel(logging.WARNING)
+logging.getLogger("watchfiles.main").setLevel(logging.WARNING)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,7 +23,6 @@ async def lifespan(app: FastAPI):
 
     settings: Settings = app.state.settings
 
-    # Decide what to seed
     hp_ing = settings.get_hyperparams().ingestion
     if settings.is_test:
         seed_ids = {hp_ing.default_ids_used["Frankenstein; Or, The Modern Prometheus"]}
@@ -27,7 +32,7 @@ async def lifespan(app: FastAPI):
     now = datetime.now().strftime("%d-%m-%Y_%H%M")
 
     # Seed the vector store
-    print(f'DEF GB SEEDS: {seed_ids}')
+    logger.info(f'DEF GB SEEDS: {seed_ids}')
     await settings.get_vector_store()
     db_factory = get_db_session_factory()
     _, _, book_stats = await upload_missing_book_ids(book_ids=set(seed_ids), 
@@ -45,8 +50,8 @@ async def lifespan(app: FastAPI):
             with open(Path("stats", "index_stats", f"conf_id_{hp.config_id}_{hp.collection}_{now}.json"), "w") as f:
                 f.write(collection_finger.model_dump_json(indent=4))
         except Exception as ex:
-            print(ex)
-            print(book_stats)
+            logger.error(ex)
+            logger.error(book_stats)
 
     yield
 
@@ -54,6 +59,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app(settings: Settings) -> FastAPI:
+    configure_logging()
     app = FastAPI(title="MobyRAG", 
                   swagger_ui_parameters={
                         "logo": {
@@ -64,5 +70,4 @@ def create_app(settings: Settings) -> FastAPI:
                   lifespan=lifespan)
     app.state.settings = settings
 
-    # include_router(...)
     return app

@@ -1,0 +1,28 @@
+auth_enabled: false             # in prod Loki thus locked behind Grafana auth 
+
+server:
+  http_listen_port: 3100
+
+common:
+  path_prefix: /loki            # I.e. Grafana queries Loki on http://loki:3100 ; Alloy push logs to http://loki:3100/loki/api/v1/push
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1         # for simplicity only have 1 Loki instance
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-10-24
+      store: boltdb-shipper
+      object_store: filesystem    # use local filesystem instead of e.g. Azure Blobstorage
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+ruler:
+  alertmanager_url: http://localhost:9093
