@@ -1,3 +1,4 @@
+import asyncio
 from evals.timer_helper import Timer
 from openai import AzureOpenAI, AsyncAzureOpenAI
 from config.settings import Settings, get_settings
@@ -55,32 +56,40 @@ async def search_chunks(*, query: str,
     return results
 
 
-def simple_llm_reranker(q:str, chunks:list[SearchChunk], 
-                        llm_client:AzureOpenAI, 
-                        llm_model:str,
-                        split_every_k:int,
-                        timer:Timer
-                        ) -> list[SearchChunk]:
+async def async_llm_reranker(q:str, chunks:list[SearchChunk], 
+                            llm_client:AsyncAzureOpenAI, 
+                            llm_model:str,
+                            split_every_k:int,
+                            timer:Timer,
+                            max_concurrency:int = 4
+                            ) -> list[SearchChunk]:
     
-    with timer.start_timer("rerank_total"):
-        scored_chunks:list[tuple[int, str, SearchChunk]] = []
-        assert all(c.uuid_str for c in chunks)
-        uuid_to_chunk = {c.uuid_str:c for c in chunks}
+    scored_chunks:list[tuple[int, str, SearchChunk]] = []
+    assert all(c.uuid_str for c in chunks)
+    uuid_to_chunk = {c.uuid_str:c for c in chunks}
 
-        n_chunks = _split_by_size(chunks, chunk_size=split_every_k)
-        for i, chs in enumerate(n_chunks):
-            contents_joined = " ".join([f"--- START #{i}, Document uuid:{c.uuid_str} ---\n"+c.content+f"\n--- END #{i} Document {c.uuid_str}---\n" for i,c in enumerate(chs)])
-            # print(contents_joined)
-            prompt = f"""
-                        You are given {len(chs)} documents. For each document you MUST:
-                        - Assign a relevance score on a scale from 0 to 10 (10 = highly relevant, 0 = irrelevant), determining how relevant this document is to the query
+    n_chunks = _split_by_size(chunks, chunk_size=split_every_k)
+    sem = asyncio.Semaphore(max_concurrency)
 
-                        Query: {q}
-                        Documents: {contents_joined}
-                    """
+    async def _rerank_batch(i:int, chs:list[SearchChunk]) -> None:
+        contents_joined = " ".join(
+                                f"--- START #{i}, Document uuid:{c.uuid_str or 'Unknown'} ---\n"
+                                f"{c.content or 'Unknown'}\n"
+                                f"--- END #{i} Document {c.uuid_str or 'Unknown'} ---\n"
+                                for i, c in enumerate(chs)
+                            )
 
+        prompt = f"""
+                    You are given {len(chs)} documents. For each document you MUST:
+                    - Assign a relevance score on a scale from 0 to 10 (10 = highly relevant, 0 = irrelevant), determining how relevant this document is to the query
+
+                    Query: {q}
+                    Documents: {contents_joined}
+                """
+
+        async with sem:
             with timer.start_timer(f"rerank_{i}"):
-                resp = llm_client.responses.parse(      
+                resp = await llm_client.responses.parse(      
                             model=llm_model,
                             input=[
                                 {"role":"system","content":"You're a helpful assistant. Your task is to evaluate the relevance of EACH document to the given query"},
@@ -88,16 +97,19 @@ def simple_llm_reranker(q:str, chunks:list[SearchChunk],
                             ],
                             text_format=RankedChunks
                         )
-            
-            if resp.output_parsed and resp.output_parsed.ranked_chunks:
-                ranked_cs = resp.output_parsed.ranked_chunks
-                try:
-                    for rc in ranked_cs:
-                        scored_chunks.append((rc.score, rc.score_reason, uuid_to_chunk[rc.uuid_str]))
-                except Exception as ex:
-                    print(f'EX: {ex}\n{rc} \n{scored_chunks}\n{uuid_to_chunk}')
-            else:
-                print(f"Missing attrb in reranker {resp}")
+        
+        if resp.output_parsed and resp.output_parsed.ranked_chunks:
+            ranked_cs = resp.output_parsed.ranked_chunks
+            try:
+                for rc in ranked_cs:
+                    scored_chunks.append((rc.score, rc.score_reason, uuid_to_chunk[rc.uuid_str]))
+            except Exception as ex:
+                print(f'EX: {ex}\n{rc} \n{scored_chunks}\n{uuid_to_chunk}')
+        else:
+            print(f"Missing attrb in reranker {resp}")
+
+    with timer.start_timer("rerank_total"):
+        await asyncio.gather(*[_rerank_batch(i, chs) for i, chs in enumerate(n_chunks)])
 
     scored_chunks = sorted(scored_chunks, key=lambda x:x[0], reverse=True)
     
@@ -172,12 +184,12 @@ async def answer_rag(*, query: str,
                                         )
     rag_stage_seconds.labels(stage="search").observe(timer.timings["search"])
 
-    ranked_chunks = simple_llm_reranker(q=query, 
-                                        chunks=unranked_chunks, 
-                                        llm_client=sett.get_llm_client(), 
-                                        llm_model=hp.rerank.model,
-                                        split_every_k=hp.rerank.batch_size,
-                                        timer=timer)
+    ranked_chunks = await async_llm_reranker(q=query, 
+                                            chunks=unranked_chunks, 
+                                            llm_client=sett.get_async_llm_client(), 
+                                            llm_model=hp.rerank.model,
+                                            split_every_k=hp.rerank.batch_size,
+                                            timer=timer)
     
     top_chunks = ranked_chunks[:hp.generation.num_context_chunks]      
     rag_stage_seconds.labels(stage="rerank_total").observe(timer.timings["rerank_total"])

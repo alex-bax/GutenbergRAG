@@ -1,0 +1,29 @@
+services:
+  loki:
+    image: grafana/loki:2.9.8
+    command: ["-config.file=/etc/loki/config.yml"]
+    volumes:
+      - ./config/loki.yml:/etc/loki/config.yml:ro
+      - ./loki-data:/loki
+    ports:
+      - "3100:3100"
+
+  grafana:
+    image: grafana/grafana:10.4.10
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana-data:/var/lib/grafana
+    depends_on:
+      - loki
+
+  alloy:
+    image: grafana/alloy:latest
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./config/alloy.alloy:/etc/alloy/config.alloy:ro
+      - ./logs:/var/log/app:ro
+    ports:
+      - "12345:12345"
+    depends_on:
+      - loki

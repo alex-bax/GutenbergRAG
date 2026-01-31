@@ -23,16 +23,9 @@ from ingestion.book_loader import fetch_book_content_from_id, upload_missing_boo
 from config.settings import get_settings, Settings
 from retrieval.retrieve import answer_rag
 from prometheus_fastapi_instrumentator import Instrumentator
+import logging
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    print("Running startup, creating tables...")
-    async with engine.begin() as conn:      # startup
-        await conn.run_sync(Base.metadata.create_all)
-
-    yield  # now app starts serving
-
-    await engine.dispose()  # shutdown
+logger = logging.getLogger(__name__)
 
 
 app = create_app(get_settings())
@@ -91,6 +84,7 @@ async def get_book(book_id:int, db:Annotated[AsyncSession, Depends(get_async_db_
 
 @prefix_router.get("/books/", response_model=BookMetaApiResponse)
 async def get_books(db:Annotated[AsyncSession, Depends(get_async_db_sess)]):
+    # logger.info("**** CALLING /books/")
     books = await select_all_books_db(db)
     return BookMetaApiResponse(data=[db_obj_to_response(b) for b in books])
 

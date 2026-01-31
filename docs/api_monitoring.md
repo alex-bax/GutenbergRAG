@@ -8,6 +8,7 @@ They are deployed in Azure with the following architecture:
 <img src="../imgs/API monitoring.png" alt="Diagram" height="420" >\
 ℹ️ See the `prometheus` and `grafana` folders for more deployment details with `.yml`.
 
+Secrets and credentials for e.g. Grafana is configured via environment variables on Azure
 
 ## Metrics 
 For efficiency [Prometheus FastAPI Instrumentator](https://github.com/trallnag/prometheus-fastapi-instrumentator) is used to expose many commonly used metrics, such as counters and histograms for `http_requests_total`, `http_request_duration_seconds` and HTTP status codes. 
