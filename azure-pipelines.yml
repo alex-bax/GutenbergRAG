@@ -12,7 +12,7 @@ variables:
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'      # e.g. 9, 10, 11, etc.
   pipCacheDir: '$(Pipeline.Workspace)/.pip'
-  deepevalSamples: 2
+  deepevalSamples: 4
 
   azureSubscription: 'GutenbergRAGAppReg-ServiceConn'
   webAppName: 'gbRAGFastAPI'

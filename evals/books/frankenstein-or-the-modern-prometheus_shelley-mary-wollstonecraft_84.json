@@ -1,0 +1,39 @@
+{
+    "title": "Frankenstein; Or, The Modern Prometheus",
+    "id": 84,
+    "summaries": [
+        "\"Frankenstein; Or, The Modern Prometheus\" by Mary Wollstonecraft Shelley is a novel written in the early 19th century. The story explores themes of ambition, the quest for knowledge, and the consequences of man's hubris through the experiences of Victor Frankenstein and the monstrous creation of his own making.   The opening of the book introduces Robert Walton, an ambitious explorer on a quest to discover new lands and knowledge in the icy regions of the Arctic. In his letters to his sister Margaret, he expresses both enthusiasm and the fear of isolation in his grand venture. As Walton's expedition progresses, he encounters a mysterious, emaciated stranger who has faced great suffering—furthering the intrigue of his narrative. This stranger ultimately reveals his tale of creation, loss, and the profound consequences of seeking knowledge that lies beyond human bounds. The narrative is set up in a manner that suggests a deep examination of the emotions and ethical dilemmas faced by those who dare to defy the natural order. (This is an automatically generated summary.)"
+    ],
+    "subjects": [
+        "Frankenstein's monster (Fictitious character) -- Fiction",
+        "Frankenstein, Victor (Fictitious character) -- Fiction",
+        "Gothic fiction",
+        "Horror tales",
+        "Monsters -- Fiction",
+        "Science fiction",
+        "Scientists -- Fiction"
+    ],
+    "languages": [
+        "en"
+    ],
+    "authors": [
+        {
+            "name": "Shelley, Mary Wollstonecraft",
+            "birth_year": 1797,
+            "death_year": 1851
+        }
+    ],
+    "editors": [],
+    "download_count": 303668,
+    "formats": {
+        "text/html": "https://www.gutenberg.org/ebooks/84.html.images",
+        "application/epub+zip": "https://www.gutenberg.org/ebooks/84.epub3.images",
+        "application/x-mobipocket-ebook": "https://www.gutenberg.org/ebooks/84.kf8.images",
+        "text/plain; charset=us-ascii": "https://www.gutenberg.org/ebooks/84.txt.utf-8",
+        "application/rdf+xml": "https://www.gutenberg.org/ebooks/84.rdf",
+        "image/jpeg": "https://www.gutenberg.org/cache/epub/84/pg84.cover.medium.jpg",
+        "application/octet-stream": "https://www.gutenberg.org/cache/epub/84/pg84-h.zip"
+    },
+    "copyright": false,
+    "path_to_content": "evals\\books\\frankenstein-or-the-modern-prometheus_shelley-mary-wollstonecraft_84.txt"
+}

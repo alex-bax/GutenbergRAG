@@ -12,6 +12,7 @@ pydantic
 pydantic-settings 
 python-dotenv
 tqdm
+numpy
 
 pyrate_limiter
 asyncio
