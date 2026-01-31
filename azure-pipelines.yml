@@ -11,6 +11,8 @@ variables:
   containerRegistry: 'raggutenbergregistry.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'      # e.g. 9, 10, 11, etc.
+  pipCacheDir: '$(Pipeline.Workspace)/.pip'
+  deepevalSamples: 2
 
   azureSubscription: 'GutenbergRAGAppReg-ServiceConn'
   webAppName: 'gbRAGFastAPI'
@@ -30,13 +32,19 @@ stages:
       inputs:
         versionSpec: '3.12'
 
+    - task: Cache@2
+      inputs:
+          key: 'pip | "$(Agent.OS)" | requirements.txt'
+          path: '$(pipCacheDir)'
+      displayName: Restore pip cache
+
     - script: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r requirements.txt --cache-dir $(pipCacheDir)
       displayName: Install Python dependencies
 
     # Integration tests
-    - script: pytest tests/test_integration_api.py --junitxml=test-results.xml
+    - script: pytest -n auto --dist=loadfile tests/test_integration_api.py --junitxml=test-results.xml
       displayName: Run pytest
       env:
         AZURE_SEARCH_ENDPOINT: $(AZURE_SEARCH_ENDPOINT)
@@ -55,7 +63,7 @@ stages:
  
     # Run Qdrant integration tests (only if enabled)
     - script: |
-        pytest tests/test_qdrant_unit_test.py --junitxml=qdrant-test-results.xml
+        pytest -n auto --dist=loadfile tests/test_qdrant_unit_test.py --junitxml=qdrant-test-results.xml
       displayName: Run Qdrant integration tests
       env:
         QDRANT_SEARCH_ENDPOINT: $(QDRANT_SEARCH_ENDPOINT)
@@ -77,7 +85,7 @@ stages:
                 $env:PYTHONUTF8="1"
                 $env:PYTHONIOENCODING="utf-8"
                 python -c "import sys; print('stdout:', sys.stdout.encoding, 'stderr:', sys.stderr.encoding)"
-                deepeval test run tests/test_llm.py -n 5 -c -i
+                deepeval test run tests/test_llm.py -n $(deepevalSamples) -c -i
       displayName: Run DeepEval LLM tests 
       continueOnError: true       # not block rest of pipeline - temporary
       env:
