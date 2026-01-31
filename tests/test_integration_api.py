@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from db.fake_vector_store import InMemoryVectorStore
 from typing import AsyncGenerator
 from config.params import VER_PREFIX
 from config.settings import Settings, get_settings
@@ -133,6 +134,8 @@ def test_settings_load_env_sanity_check(test_settings: Settings):
     assert test_settings.AZURE_SEARCH_ENDPOINT is not None
     assert test_settings.QDRANT_SEARCH_ENDPOINT is not None
     
+async def test_settings_uses_load_mock_vec_store(test_settings: Settings):
+    assert isinstance(await test_settings.get_vector_store(), InMemoryVectorStore)
 
 @pytest.mark.anyio
 async def test_db_is_sqlite(session: AsyncSession):
@@ -174,6 +177,8 @@ async def test_upload_1_to_index(client: AsyncClient, test_settings: Settings):
         missing_ids_before = await vec_store.get_missing_ids_in_store(book_ids=set(body))
         assert body[0] in missing_ids_before
 
+        assert isinstance(await test_settings.get_vector_store(), InMemoryVectorStore)
+
         resp = await ac.post(f"/{VER_PREFIX}/index", json=body)
         assert resp.status_code == status.HTTP_201_CREATED
 
@@ -198,7 +203,7 @@ async def test_upload_same_twice_to_index_returns_404(client: AsyncClient, test_
 
 async def test_upload_delete_book_index(client:AsyncClient, test_settings: Settings):
     hp = test_settings.get_hyperparams().ingestion
-    
+    assert isinstance(await test_settings.get_vector_store(), InMemoryVectorStore)
     async with client as ac:
         body = [hp.default_ids_used[FRANKENSTEIN]]
         vec_store = await test_settings.get_vector_store()
