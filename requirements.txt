@@ -34,6 +34,7 @@ httpx
 httpx
 pytest
 pytest-asyncio
+pytest-xdist
 deepeval
 uvicorn[standard]
 
