@@ -18,8 +18,8 @@ evals/*
 !evals/timer_helper.py
 
 # Exception - books in testing
-evals/books/frankenstein-or-the-modern-prometheus_shelley-mary-wollstonecraft_84.*
-evals/books/the-strange-case-of-dr-jekyll-and-mr-hyde_stevenson-robert-louis_42.*
+!evals/books/frankenstein-or-the-modern-prometheus_shelley-mary-wollstonecraft_84.*
+!evals/books/the-strange-case-of-dr-jekyll-and-mr-hyde_stevenson-robert-louis_42.*
 
 # Complete results and plots:
 !evals/results/*            
