@@ -12,6 +12,7 @@ pydantic
 pydantic-settings 
 python-dotenv
 tqdm
+numpy
 
 pyrate_limiter
 asyncio
@@ -34,6 +35,7 @@ httpx
 httpx
 pytest
 pytest-asyncio
+pytest-xdist
 deepeval
 uvicorn[standard]
 

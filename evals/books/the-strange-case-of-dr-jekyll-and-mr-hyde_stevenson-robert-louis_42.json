@@ -1,0 +1,39 @@
+{
+    "title": "The Strange Case of Dr. Jekyll and Mr. Hyde",
+    "id": 42,
+    "summaries": [
+        "\"The Strange Case of Dr. Jekyll and Mr. Hyde\" by Robert Louis Stevenson is a Gothic novella written during the late 19th century. The story explores the duality of human nature through the contrasting figures of the respectable Dr. Jekyll and the malevolent Mr. Hyde, and delves into themes of morality, identity, and the struggle between good and evil.  At the start of the novella, we are introduced to Mr. Utterson, a lawyer who is troubled by the mysterious arrangements in Dr. Jekyll's will, which bequeath everything to the enigmatic Mr. Hyde in the event of Jekyll's disappearance. As Utterson learns more about Hyde—particularly after a shocking incident in which Hyde tramples a child and later compensates the family with a cheque signed by Jekyll—he grows increasingly uneasy. This section sets the stage for the deepening mystery surrounding Hyde's true nature and his connection to Jekyll, as Utterson's curiosity drives him to confront the dark implications of their relationship. (This is an automatically generated summary.)"
+    ],
+    "subjects": [
+        "Horror tales",
+        "London (England) -- Fiction",
+        "Multiple personality -- Fiction",
+        "Physicians -- Fiction",
+        "Psychological fiction",
+        "Science fiction",
+        "Self-experimentation in medicine -- Fiction"
+    ],
+    "languages": [
+        "en"
+    ],
+    "authors": [
+        {
+            "name": "Stevenson, Robert Louis",
+            "birth_year": 1850,
+            "death_year": 1894
+        }
+    ],
+    "editors": [],
+    "download_count": 3368,
+    "formats": {
+        "text/html": "https://www.gutenberg.org/ebooks/42.html.images",
+        "application/epub+zip": "https://www.gutenberg.org/ebooks/42.epub3.images",
+        "application/x-mobipocket-ebook": "https://www.gutenberg.org/ebooks/42.kf8.images",
+        "text/plain; charset=us-ascii": "https://www.gutenberg.org/ebooks/42.txt.utf-8",
+        "application/rdf+xml": "https://www.gutenberg.org/ebooks/42.rdf",
+        "image/jpeg": "https://www.gutenberg.org/cache/epub/42/pg42.cover.medium.jpg",
+        "application/octet-stream": "https://www.gutenberg.org/files/42/42-0.zip"
+    },
+    "copyright": false,
+    "path_to_content": "evals\\books\\the-strange-case-of-dr-jekyll-and-mr-hyde_stevenson-robert-louis_42.txt"
+}

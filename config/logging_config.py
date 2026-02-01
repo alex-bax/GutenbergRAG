@@ -2,6 +2,7 @@
 import logging
 import json
 from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 LOG_PATH = Path("logs", "app.log")
@@ -40,9 +41,14 @@ def configure_logging() -> None:
     if any(isinstance(h, logging.FileHandler) for h in root_logger.handlers):
         return
 
-    file_handler = logging.FileHandler(LOG_PATH, encoding="utf-8")
-    file_handler.setFormatter(JsonFormatter())
-    root_logger.addHandler(file_handler)
+    # file_handler = logging.FileHandler(LOG_PATH, encoding="utf-8")
+    handler = RotatingFileHandler(      # ensure the file doesn't explose in size, by renaming on max size reached. Oldest files are deleted automatically
+                    LOG_PATH,
+                    maxBytes=25 * 1024 * 1024,  # 25 MB
+                    backupCount=5               # keep last 5 files
+                )      
+    handler.setFormatter(JsonFormatter())
+    root_logger.addHandler(handler)
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(JsonFormatter())
