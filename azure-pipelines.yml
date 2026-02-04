@@ -44,8 +44,6 @@ stages:
       displayName: Install Python dependencies
 
     # Integration tests
-    # - script: pytest -n 8 --dist=loadfile tests/test_integration_api.py --junitxml=test-results.xml -s -vv
-    # - script: python -u -m pytest -n 4 -s -vv --no-header --no-summary -p no:terminal --dist=loadfile tests/test_integration_api.py::test_upload_delete_book_index --junitxml=test-results.xml 
     - script: 
         python -u -m pytest ^
         -n 4 --dist=loadfile ^
