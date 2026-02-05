@@ -11,7 +11,7 @@ from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
 from embedding_service import (
     AzureOpenAIEmbeddingService,
-    EmbeddingService,
+    AsyncEmbeddingService,
     MockEmbeddingService,
 )
 
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     _async_emb_client: AsyncAzureOpenAI | None = PrivateAttr(default=None)
     _emb_client: AzureOpenAI | None = PrivateAttr(default=None)
     _vector_store: AsyncVectorStore | None = PrivateAttr(default=None)
-    _embedding_service: EmbeddingService | None = PrivateAttr(default=None)
+    _embedding_service: AsyncEmbeddingService | None = PrivateAttr(default=None)
 
     _req_limiter: Limiter | None = PrivateAttr(default=None)
     _tok_limiter: Limiter | None = PrivateAttr(default=None)
@@ -157,7 +157,8 @@ class Settings(BaseSettings):
 
         return [self._req_limiter, self._tok_limiter]
 
-    def get_embedding_service(self) -> EmbeddingService:
+
+    def get_embedding_service(self) -> AsyncEmbeddingService:
         if self._embedding_service is None:
             hp = self.get_hyperparams()
             if self.is_test:

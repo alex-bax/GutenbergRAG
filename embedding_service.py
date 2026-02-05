@@ -6,7 +6,7 @@ import hashlib
 from typing import Any
 
 from llama_index.core.embeddings import BaseEmbedding
-from pydantic import Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict
 
 from config.params import EmbeddingDimension
 from embedding_pipeline import batch_texts_by_tokens, create_embeddings_async
@@ -15,14 +15,14 @@ from models.vector_db_model import EmbeddingVec
 Vector = list[float]
 
 
-class EmbeddingService(ABC):
+class AsyncEmbeddingService(BaseModel, ABC):
     @abstractmethod
     async def embed_texts(self, texts: list[str]) -> list[EmbeddingVec]:
         """Return embeddings for each input text."""
         raise NotImplementedError
 
 
-class AzureOpenAIEmbeddingService(EmbeddingService):
+class AzureOpenAIEmbeddingService(AsyncEmbeddingService):
     def __init__(
         self,
         *,
@@ -52,7 +52,7 @@ class AzureOpenAIEmbeddingService(EmbeddingService):
         )
 
 
-class MockEmbeddingService(EmbeddingService):
+class MockEmbeddingService(AsyncEmbeddingService):
     def __init__(
         self,
         *,
@@ -100,7 +100,7 @@ def _to_vector(v: Any) -> Vector:
 
 
 class EmbeddingServiceLlamaIndexAdapter(BaseEmbedding):
-    embedding_service: EmbeddingService = Field(exclude=True)
+    embedding_service: AsyncEmbeddingService = Field(exclude=True)
     embed_dim_value: int | None = Field(default=None)
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")

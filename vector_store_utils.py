@@ -17,59 +17,8 @@ from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.core import Document
 from embedding_service import EmbeddingServiceLlamaIndexAdapter
 
-def _split_by_size(data: list, chunk_size: int) -> list[list]:
-    return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
-
-# OLD fixed size chunking
-# async def upload_to_index_async(*, vec_store:AsyncVectorStore, 
-#                                 embed_client:AsyncAzureOpenAI, 
-#                                 token_limiter:Limiter,
-#                                 request_limiter:Limiter,
-#                                 raw_book_content: str,
-#                                 book_meta: GBBookMeta,
-#                             ) -> list[UploadChunk]:
-#     sett = get_settings()
-
-#     book_str = clean_headers(raw_book=raw_book_content) 
-#     if len(book_str) == 0:      
-#         print(f'** INFO No book content str extracted --- skipping {book_meta.title}')
-#         return []
-
-#     docs:list[UploadChunk] = []
-#     vector_items_added = []
-
-#     hp = sett.get_hyperparams().ingestion
-#     chunks = fixed_size_chunking(text=book_str, chunk_size=hp.chunk_size)
-#     batches = batch_texts_by_tokens(texts=chunks, max_tokens_per_request=hp.max_tokens_pr_req)
-
-#     embeddings = await create_embeddings_async(embed_client=embed_client, 
-#                                             model_deployed=sett.EMBED_MODEL_DEPLOYMENT,
-#                                             inp_batches=batches,
-#                                             tok_limiter=token_limiter,
-#                                             req_limiter=request_limiter
-#                                             )
-        
-#     assert len(chunks) == len(embeddings)
-
-#     for i, (chunk, emb_vec) in enumerate(zip(chunks, embeddings)):
-#         chapter_item = UploadChunk(
-#                             uuid_str= str(uuid.uuid4()),
-#                             book_name= book_meta.title,
-#                             book_id = book_meta.id,
-#                             chunk_nr= i,
-#                             content= chunk,
-#                             content_vector= emb_vec
-#                         )
-        
-#         docs.append(chapter_item)#.to_dict())
-#         vector_items_added.append(chapter_item)
-
-#     docs_splitted = _split_by_size(data=docs, chunk_size=hp.chunk_size)
-#     for doc_chunks in docs_splitted:
-#         await vec_store.upsert_chunks(chunks=doc_chunks)
-
-#     return vector_items_added
-
+# def _split_by_size(data: list, chunk_size: int) -> list[list]:
+#     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
 
 def calc_book_chunk_stats(all_chunks:list[UploadChunk], conf_id:int) -> DBBookChunkStats:
     token_counts = [c.token_count for c in all_chunks]

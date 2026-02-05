@@ -2,7 +2,7 @@ import asyncio
 from evals.timer_helper import Timer
 from openai import AzureOpenAI, AsyncAzureOpenAI
 from config.settings import Settings
-from embedding_service import EmbeddingService
+from embedding_service import AsyncEmbeddingService
 # from config.hyperparams import MIN_SEARCH_SCORE
 from db.vector_store_abstract import AsyncVectorStore
 from models.api_response_model import QueryResponse
@@ -32,7 +32,7 @@ class AnswerChunk(BaseModel):
 
 async def search_chunks(*, query: str, 
                         vector_store:AsyncVectorStore, 
-                        embedding_service: EmbeddingService,
+                        embedding_service: AsyncEmbeddingService,
                         keep_top_k:int,
                         ) -> list[SearchChunk]: 
     print(f'TOP K : {keep_top_k}')
