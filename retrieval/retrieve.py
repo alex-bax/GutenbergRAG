@@ -1,12 +1,11 @@
 import asyncio
 from evals.timer_helper import Timer
 from openai import AzureOpenAI, AsyncAzureOpenAI
-from config.settings import Settings, get_settings
-from pyrate_limiter import Limiter
+from config.settings import Settings
+from embedding_service import EmbeddingService
 # from config.hyperparams import MIN_SEARCH_SCORE
 from db.vector_store_abstract import AsyncVectorStore
 from models.api_response_model import QueryResponse
-from embedding_pipeline import create_embeddings_async
 from models.vector_db_model import SearchChunk
 from pydantic import Field, BaseModel
 from vector_store_utils import _split_by_size
@@ -33,20 +32,12 @@ class AnswerChunk(BaseModel):
 
 async def search_chunks(*, query: str, 
                         vector_store:AsyncVectorStore, 
-                        embed_client:AsyncAzureOpenAI, 
-                        embed_model_deployed:str, 
-                        tok_lim:Limiter,
-                        req_lim:Limiter,
+                        embedding_service: EmbeddingService,
                         keep_top_k:int,
                         ) -> list[SearchChunk]: 
     print(f'TOP K : {keep_top_k}')
 
-    query_emb_vec = await create_embeddings_async(inp_batches=[[query]], 
-                                                embed_client=embed_client, 
-                                                model_deployed=embed_model_deployed,
-                                                tok_limiter=tok_lim,
-                                                req_limiter=req_lim
-                                                )
+    query_emb_vec = await embedding_service.embed_texts([query])
 
     results:list[SearchChunk] = await vector_store.search_by_embedding(
                                                 embed_query_vector=query_emb_vec[0],
@@ -170,16 +161,13 @@ async def answer_rag(*, query: str,
                     timer:Timer
                     ) -> QueryResponse:
         
-    req_lim, tok_lim = sett.get_limiters()
     hp = sett.get_hyperparams()
+    embedding_service = sett.get_embedding_service()
 
     with timer.start_timer("search"):
         unranked_chunks = await search_chunks(query=query, 
                                             vector_store=await sett.get_vector_store(), 
-                                            embed_client=sett.get_async_emb_client(), 
-                                            embed_model_deployed=sett.EMBED_MODEL_DEPLOYMENT, 
-                                            tok_lim=tok_lim,
-                                            req_lim=req_lim,
+                                            embedding_service=embedding_service,
                                             keep_top_k=keep_top_k,
                                         )
     rag_stage_seconds.labels(stage="search").observe(timer.timings["search"])
