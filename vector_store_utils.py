@@ -4,22 +4,18 @@ from statistics import mean, median, stdev
 import asyncio
 # from azure.search.documents import SearchClient,SearchItemPaged
 
-from pyrate_limiter import Limiter
-from openai import AsyncAzureOpenAI
 from pathlib import Path
 from create_visualizations import plot_token_counts_bar
 from ingestion.preprocess_book import clean_headers 
-from ingestion.chunking import fixed_size_chunking
 from config.settings import Settings, get_settings
-from embedding_pipeline import _count_tokens, batch_texts_by_tokens, create_embeddings_async
+from embedding_pipeline import _count_tokens
 from models.api_response_model import GBBookMeta
-from models.vector_db_model import EmbeddingVec, UploadChunk
+from models.vector_db_model import UploadChunk
 from db.vector_store_abstract import AsyncVectorStore
-from config.params import EmbeddingDimension
 from models.schema import DBBookChunkStats
 from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.core import Document
-from rate_limited_llama_embedder import RateLimitedAzureEmbedding
+from embedding_service import EmbeddingServiceLlamaIndexAdapter
 
 def _split_by_size(data: list, chunk_size: int) -> list[list]:
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
@@ -102,9 +98,6 @@ def calc_book_chunk_stats(all_chunks:list[UploadChunk], conf_id:int) -> DBBookCh
 
 
 async def async_upload_book_to_index(*, vec_store:AsyncVectorStore, 
-                                embed_client:AsyncAzureOpenAI, 
-                                token_limiter:Limiter,
-                                request_limiter:Limiter,
                                 raw_book_content: str,
                                 book_meta: GBBookMeta,
                                 sett:Settings,
@@ -122,14 +115,11 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
     
     hp = sett.get_hyperparams()
 
-    embed_model = RateLimitedAzureEmbedding(
-                        embed_client=embed_client,
-                        deployment_name="text-embedding-3-small",
-                        tok_limiter=token_limiter,
-                        req_limiter=request_limiter,
-                        batch_size=hp.ingestion.max_tokens_pr_req,
-                        embed_dim_value=hp.ingestion.embed_dim,
-                    )
+    embedding_service = sett.get_embedding_service()
+    embed_model = EmbeddingServiceLlamaIndexAdapter(
+        embedding_service=embedding_service,
+        embed_dim_value=hp.ingestion.embed_dim,
+    )
 
     splitter = SemanticSplitterNodeParser(
                     embed_model=embed_model,
@@ -142,7 +132,7 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
     nodes = await asyncio.to_thread(splitter.get_nodes_from_documents, [doc])
 
     chunks: list[str] = [n.get_content() for n in nodes]
-    embeddings = await embed_model._aget_text_embeddings(chunks)
+    embeddings = await embedding_service.embed_texts(chunks)
     
     for i, (chunk, emb_vec) in enumerate(zip(chunks, embeddings)):
         chapter_item = UploadChunk(
@@ -151,7 +141,7 @@ async def async_upload_book_to_index(*, vec_store:AsyncVectorStore,
                             book_id=book_meta.id,
                             chunk_id=i,
                             content=chunk,
-                            content_vector=EmbeddingVec(vector=emb_vec, dim=EmbeddingDimension.SMALL),
+                            content_vector=emb_vec,
                             char_count=len(chunk),
                             token_count=_count_tokens(chunk, enc=tiktoken.get_encoding("cl100k_base"))
                         )
@@ -177,7 +167,6 @@ async def _try():
 
     # skip default vec population with is_test=True
     sett = get_settings(hyperparam_p=Path("config", "hp-sem-ch.json"))
-    req_lim, token_lim = sett.get_limiters()
     now = datetime.now().strftime("%d-%m-%Y_%H%M")
    
     p = Path("evals", "books", "alices-adventures-in-wonderland_carroll-lewis_11.json")
@@ -187,9 +176,6 @@ async def _try():
     
     s = await async_upload_book_to_index(
                     vec_store=await sett.get_vector_store(),
-                    embed_client=sett.get_async_emb_client(),
-                    token_limiter=token_lim,
-                    request_limiter=req_lim,
                     raw_book_content=book_content,
                     book_meta=cached_gb_meta,
                     sett=sett,
