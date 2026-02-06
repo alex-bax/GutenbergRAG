@@ -6,7 +6,7 @@ import hashlib
 from typing import Any
 
 from llama_index.core.embeddings import BaseEmbedding
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import Field, ConfigDict, BaseModel
 
 from config.params import EmbeddingDimension
 from embedding_pipeline import batch_texts_by_tokens, create_embeddings_async
@@ -15,62 +15,49 @@ from models.vector_db_model import EmbeddingVec
 Vector = list[float]
 
 
-class AsyncEmbeddingService(BaseModel, ABC):
+class EmbeddingService(BaseModel, ABC):
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
+
     @abstractmethod
     async def embed_texts(self, texts: list[str]) -> list[EmbeddingVec]:
         """Return embeddings for each input text."""
         raise NotImplementedError
 
 
-class AzureOpenAIEmbeddingService(AsyncEmbeddingService):
-    def __init__(
-        self,
-        *,
-        embed_client: Any,
-        deployment_name: str = "text-embedding-3-small",
-        tok_limiter: Any,
-        req_limiter: Any,
-        batch_size: int,
-    ) -> None:
-        self._embed_client = embed_client
-        self._deployment_name = deployment_name
-        self._tok_limiter = tok_limiter
-        self._req_limiter = req_limiter
-        self._batch_size = batch_size
+class AsyncAzureOpenAIEmbedService(EmbeddingService):
+    embed_client: Any = Field(exclude=True)
+    deployment_name: str = "text-embedding-3-small"
+    tok_limiter: Any = Field(exclude=True)
+    req_limiter: Any = Field(exclude=True)
+    batch_size: int
 
     async def embed_texts(self, texts: list[str]) -> list[EmbeddingVec]:
         inp_batches = batch_texts_by_tokens(
             texts=texts,
-            max_tokens_per_request=self._batch_size,
+            max_tokens_per_request=self.batch_size,
         )
         return await create_embeddings_async(
-            embed_client=self._embed_client,
-            model_deployed=self._deployment_name,
+            embed_client=self.embed_client,
+            model_deployed=self.deployment_name,
             inp_batches=inp_batches,
-            tok_limiter=self._tok_limiter,
-            req_limiter=self._req_limiter,
+            tok_limiter=self.tok_limiter,
+            req_limiter=self.req_limiter,
         )
 
 
-class MockEmbeddingService(AsyncEmbeddingService):
-    def __init__(
-        self,
-        *,
-        dim: EmbeddingDimension = EmbeddingDimension.SMALL,
-        salt: str = "mock",
-    ) -> None:
-        self._dim_enum = dim
-        self._dim = int(dim)
-        self._salt = salt
+class MockEmbedService(EmbeddingService):
+    dim: EmbeddingDimension = EmbeddingDimension.SMALL
+    salt: str = "mock"
 
     async def embed_texts(self, texts: list[str]) -> list[EmbeddingVec]:
         return [self._embed_text(text) for text in texts]
 
     def _embed_text(self, text: str) -> EmbeddingVec:
-        digest = hashlib.sha256(f"{self._salt}:{text}".encode("utf-8")).digest()
+        digest = hashlib.sha256(f"{self.salt}:{text}".encode("utf-8")).digest()
         base = [b / 255.0 for b in digest]
-        vector = [base[i % len(base)] for i in range(self._dim)]
-        return EmbeddingVec(vector=vector, dim=self._dim_enum)
+        dim_value = int(self.dim)
+        vector = [base[i % len(base)] for i in range(dim_value)]
+        return EmbeddingVec(vector=vector, dim=self.dim)
 
 
 def _run_async_only_if_no_loop(coro):
@@ -100,7 +87,7 @@ def _to_vector(v: Any) -> Vector:
 
 
 class EmbeddingServiceLlamaIndexAdapter(BaseEmbedding):
-    embedding_service: AsyncEmbeddingService = Field(exclude=True)
+    embedding_service: EmbeddingService = Field(exclude=True)
     embed_dim_value: int | None = Field(default=None)
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")

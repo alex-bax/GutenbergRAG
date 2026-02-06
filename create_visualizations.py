@@ -58,7 +58,9 @@ def plot_token_counts_bar(*, token_counts: list[int],
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_title(title)
 
-    save_plot(file_name=title.replace(" ", "_").replace('.','').replace(":","_"), 
+    file_name = title.replace(" ", "_").replace('.','').replace(":","_").replace("\n","_")
+    Path(file_name).mkdir(exist_ok=True, parents=True)
+    save_plot(file_name=file_name, 
               save_parent_p=save_folder_name)
 
 

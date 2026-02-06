@@ -10,9 +10,9 @@ from db.vector_store_abstract import AsyncVectorStore
 from openai import AsyncAzureOpenAI, AzureOpenAI
 from pyrate_limiter import Limiter, Rate, Duration, InMemoryBucket, BucketAsyncWrapper
 from embedding_service import (
-    AzureOpenAIEmbeddingService,
-    AsyncEmbeddingService,
-    MockEmbeddingService,
+    AsyncAzureOpenAIEmbedService,
+    EmbeddingService,
+    MockEmbedService,
 )
 
 # Initializes fields via .env file
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     _async_emb_client: AsyncAzureOpenAI | None = PrivateAttr(default=None)
     _emb_client: AzureOpenAI | None = PrivateAttr(default=None)
     _vector_store: AsyncVectorStore | None = PrivateAttr(default=None)
-    _embedding_service: AsyncEmbeddingService | None = PrivateAttr(default=None)
+    _embedding_service: EmbeddingService | None = PrivateAttr(default=None)
 
     _req_limiter: Limiter | None = PrivateAttr(default=None)
     _tok_limiter: Limiter | None = PrivateAttr(default=None)
@@ -158,20 +158,20 @@ class Settings(BaseSettings):
         return [self._req_limiter, self._tok_limiter]
 
 
-    def get_embedding_service(self) -> AsyncEmbeddingService:
+    def get_embedding_service(self) -> EmbeddingService:
         if self._embedding_service is None:
             hp = self.get_hyperparams()
             if self.is_test:
-                self._embedding_service = MockEmbeddingService(dim=hp.ingestion.embed_dim)
+                self._embedding_service = MockEmbedService(dim=hp.ingestion.embed_dim)
             else:
                 req_limiter, tok_limiter = self.get_limiters()
-                self._embedding_service = AzureOpenAIEmbeddingService(
-                    embed_client=self.get_async_emb_client(),
-                    deployment_name=self.EMBED_MODEL_DEPLOYMENT,
-                    tok_limiter=tok_limiter,
-                    req_limiter=req_limiter,
-                    batch_size=hp.ingestion.max_tokens_pr_req,
-                )
+                self._embedding_service = AsyncAzureOpenAIEmbedService(
+                                                embed_client=self.get_async_emb_client(),
+                                                deployment_name=self.EMBED_MODEL_DEPLOYMENT,
+                                                tok_limiter=tok_limiter,
+                                                req_limiter=req_limiter,
+                                                batch_size=hp.ingestion.max_tokens_pr_req,
+                                            )
 
         return self._embedding_service
 

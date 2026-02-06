@@ -17,8 +17,8 @@ from llama_index.core.node_parser import SemanticSplitterNodeParser
 from llama_index.core import Document
 from embedding_service import EmbeddingServiceLlamaIndexAdapter
 
-# def _split_by_size(data: list, chunk_size: int) -> list[list]:
-#     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
+def split_by_size(texts: list, chunk_size: int) -> list[list]:
+    return [texts[i:i + chunk_size] for i in range(0, len(texts), chunk_size)]
 
 def calc_book_chunk_stats(all_chunks:list[UploadChunk], conf_id:int) -> DBBookChunkStats:
     token_counts = [c.token_count for c in all_chunks]

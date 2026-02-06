@@ -36,8 +36,8 @@ async def get_vector_store() -> AsyncVectorStore:
     return await get_settings().get_vector_store()
 
 
-def get_async_emb_client() -> AsyncAzureOpenAI:
-    return get_settings().get_async_emb_client()
+# def get_async_emb_client() -> AsyncAzureOpenAI:
+#     return get_settings().get_async_emb_client()
 
 
 rag_generation_seconds = Histogram(

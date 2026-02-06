@@ -2,13 +2,13 @@ import asyncio
 from evals.timer_helper import Timer
 from openai import AzureOpenAI, AsyncAzureOpenAI
 from config.settings import Settings
-from embedding_service import AsyncEmbeddingService
+from embedding_service import EmbeddingService
 # from config.hyperparams import MIN_SEARCH_SCORE
 from db.vector_store_abstract import AsyncVectorStore
 from models.api_response_model import QueryResponse
 from models.vector_db_model import SearchChunk
 from pydantic import Field, BaseModel
-from vector_store_utils import _split_by_size
+from vector_store_utils import split_by_size
 from monitor_metrics.rag_metrics import rag_stage_seconds
 
 class RankedChunk(BaseModel):
@@ -32,7 +32,7 @@ class AnswerChunk(BaseModel):
 
 async def search_chunks(*, query: str, 
                         vector_store:AsyncVectorStore, 
-                        embedding_service: AsyncEmbeddingService,
+                        embedding_service: EmbeddingService,
                         keep_top_k:int,
                         ) -> list[SearchChunk]: 
     print(f'TOP K : {keep_top_k}')
@@ -59,7 +59,7 @@ async def async_llm_reranker(q:str, chunks:list[SearchChunk],
     assert all(c.uuid_str for c in chunks)
     uuid_to_chunk = {c.uuid_str:c for c in chunks}
 
-    n_chunks = _split_by_size(chunks, chunk_size=split_every_k)
+    n_chunks = split_by_size(chunks, chunk_size=split_every_k)
     sem = asyncio.Semaphore(max_concurrency)
 
     async def _rerank_batch(i:int, chs:list[SearchChunk]) -> None:
@@ -72,7 +72,7 @@ async def async_llm_reranker(q:str, chunks:list[SearchChunk],
 
         prompt = f"""
                     You are given {len(chs)} documents. For each document you MUST:
-                    - Assign a relevance score on a scale from 0 to 10 (10 = highly relevant, 0 = irrelevant), determining how relevant this document is to the query
+                    - Assign a relevance score on a scale from 0 to 10 (10 = highly relevant, 0 = irrelevant), determining how relevant this document is to the query.
 
                     Query: {q}
                     Documents: {contents_joined}
@@ -172,12 +172,16 @@ async def answer_rag(*, query: str,
                                         )
     rag_stage_seconds.labels(stage="search").observe(timer.timings["search"])
 
-    ranked_chunks = await async_llm_reranker(q=query, 
+    if not sett.is_test:
+        ranked_chunks = await async_llm_reranker(q=query, 
                                             chunks=unranked_chunks, 
                                             llm_client=sett.get_async_llm_client(), 
                                             llm_model=hp.rerank.model,
                                             split_every_k=hp.rerank.batch_size,
                                             timer=timer)
+    # TODO
+    # else:
+    #     ranked_chunks = 
     
     top_chunks = ranked_chunks[:hp.generation.num_context_chunks]      
     rag_stage_seconds.labels(stage="rerank_total").observe(timer.timings["rerank_total"])

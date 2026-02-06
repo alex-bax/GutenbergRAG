@@ -111,6 +111,7 @@ async def upload_missing_book_ids(*, book_ids:set[int],
                 logging.error(f"EXC: tried {str(gb_meta.path_to_content)} {exc}")
                 
         book_content = book_content[:1000] if sett.is_test else book_content
+        
         print(f'******* is test {sett.is_test}',  file=sys.stderr, flush=True)
         logging.info(f"*** Uploading Book id {b_id} to index")
 
