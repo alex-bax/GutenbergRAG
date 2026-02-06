@@ -14,6 +14,7 @@ from embedding_service import (
     EmbeddingService,
     MockEmbedService,
 )
+from llm_service import AzureOpenAILlmService, LlmService, MockLlmService
 
 # Initializes fields via .env file
 
@@ -54,6 +55,7 @@ class Settings(BaseSettings):
     _emb_client: AzureOpenAI | None = PrivateAttr(default=None)
     _vector_store: AsyncVectorStore | None = PrivateAttr(default=None)
     _embedding_service: EmbeddingService | None = PrivateAttr(default=None)
+    _llm_service: LlmService | None = PrivateAttr(default=None)
 
     _req_limiter: Limiter | None = PrivateAttr(default=None)
     _tok_limiter: Limiter | None = PrivateAttr(default=None)
@@ -156,6 +158,18 @@ class Settings(BaseSettings):
             self._tok_limiter = Limiter(tok_bucket)
 
         return [self._req_limiter, self._tok_limiter]
+
+
+    def get_llm_service(self) -> LlmService:
+        if self._llm_service is None:
+            if self.is_test:
+                self._llm_service = MockLlmService()
+            else:
+                self._llm_service = AzureOpenAILlmService(
+                    async_client=self.get_async_llm_client()
+                )
+
+        return self._llm_service
 
 
     def get_embedding_service(self) -> EmbeddingService:

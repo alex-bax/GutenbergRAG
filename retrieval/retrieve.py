@@ -1,33 +1,16 @@
-import asyncio
 from evals.timer_helper import Timer
 from openai import AzureOpenAI, AsyncAzureOpenAI
 from config.settings import Settings
 from embedding_service import EmbeddingService
 # from config.hyperparams import MIN_SEARCH_SCORE
 from db.vector_store_abstract import AsyncVectorStore
+from llm_service import LlmService
 from models.api_response_model import QueryResponse
+from models.llm_models import ChunkCitation
 from models.vector_db_model import SearchChunk
 from pydantic import Field, BaseModel
 from vector_store_utils import split_by_size
 from monitor_metrics.rag_metrics import rag_stage_seconds
-
-class RankedChunk(BaseModel):
-    score:int = Field(ge=0, le=10)
-    score_reason:str = Field(..., description="The reasoning for choosing the score")
-    # content:str
-    uuid_str:str
-
-class RankedChunks(BaseModel):
-    ranked_chunks:list[RankedChunk]
-
-class ChunkCitation(BaseModel):
-    book_name: str
-    chunk_content:str
-    chunk_nr:int
-
-class AnswerChunk(BaseModel):
-    answer:str
-    used_chunks:list[ChunkCitation]
 
 
 async def search_chunks(*, query: str, 
@@ -47,112 +30,39 @@ async def search_chunks(*, query: str,
     return results
 
 
-async def async_llm_reranker(q:str, chunks:list[SearchChunk], 
-                            llm_client:AsyncAzureOpenAI, 
-                            llm_model:str,
-                            split_every_k:int,
-                            timer:Timer,
-                            max_concurrency:int = 4
-                            ) -> list[SearchChunk]:
-    
-    scored_chunks:list[tuple[int, str, SearchChunk]] = []
-    assert all(c.uuid_str for c in chunks)
-    uuid_to_chunk = {c.uuid_str:c for c in chunks}
-
-    n_chunks = split_by_size(chunks, chunk_size=split_every_k)
-    sem = asyncio.Semaphore(max_concurrency)
-
-    async def _rerank_batch(i:int, chs:list[SearchChunk]) -> None:
-        contents_joined = " ".join(
-                                f"--- START #{i}, Document uuid:{c.uuid_str or 'Unknown'} ---\n"
-                                f"{c.content or 'Unknown'}\n"
-                                f"--- END #{i} Document {c.uuid_str or 'Unknown'} ---\n"
-                                for i, c in enumerate(chs)
-                            )
-
-        prompt = f"""
-                    You are given {len(chs)} documents. For each document you MUST:
-                    - Assign a relevance score on a scale from 0 to 10 (10 = highly relevant, 0 = irrelevant), determining how relevant this document is to the query.
-
-                    Query: {q}
-                    Documents: {contents_joined}
-                """
-
-        async with sem:
-            with timer.start_timer(f"rerank_{i}"):
-                resp = await llm_client.responses.parse(      
-                            model=llm_model,
-                            input=[
-                                {"role":"system","content":"You're a helpful assistant. Your task is to evaluate the relevance of EACH document to the given query"},
-                                {"role":"user", "content":prompt}
-                            ],
-                            text_format=RankedChunks
-                        )
-        
-        if resp.output_parsed and resp.output_parsed.ranked_chunks:
-            ranked_cs = resp.output_parsed.ranked_chunks
-            try:
-                for rc in ranked_cs:
-                    scored_chunks.append((rc.score, rc.score_reason, uuid_to_chunk[rc.uuid_str]))
-            except Exception as ex:
-                print(f'EX: {ex}\n{rc} \n{scored_chunks}\n{uuid_to_chunk}')
-        else:
-            print(f"Missing attrb in reranker {resp}")
-
+async def async_llm_reranker(
+    *,
+    q: str,
+    chunks: list[SearchChunk],
+    llm_service: LlmService,
+    llm_model: str,
+    split_every_k: int,
+    timer: Timer,
+    max_concurrency: int = 4,
+) -> list[SearchChunk]:
     with timer.start_timer("rerank_total"):
-        await asyncio.gather(*[_rerank_batch(i, chs) for i, chs in enumerate(n_chunks)])
-
-    scored_chunks = sorted(scored_chunks, key=lambda x:x[0], reverse=True)
-    
-    return [tup[-1] for tup in scored_chunks]
-
-
-# TODO: make async - use AzureAsync package
-def answer_with_context(*, query:str, 
-                        llm_client:AzureOpenAI, 
-                        llm_model_deployed:str,
-                        chunk_hits:list[SearchChunk]) -> tuple[str, list[SearchChunk]]:
-   
-    relevant_context = []
-
-    relev_chunk_hits = chunk_hits #[c for c in chunk_hits if c.search_score >= MIN_SEARCH_SCORE]        # TODO: remove?
-    assert all(c is not None for c in relev_chunk_hits)
-
-    for chunk_h in relev_chunk_hits:
-        chunk_format_str = f"[ book: {chunk_h.book_name} ; chunk_nr: {chunk_h.chunk_id} ] || {chunk_h.content} ||"
-        relevant_context.append(chunk_format_str)
-
-    ## TODO! work on this. the delims for contetn
-    system = """You answer using ONLY the provided list of content chunks. If the content chunks aren't relevant to answer the query, you reply with 'I dont know based on the given context.'
-                Each chunk has a header denoted by '[' and ']'. The content of the chunk is denoted by: '||'
-                Include a brief 'Sources' list with chunk uuids and their book_name.
-            """
-    joined_context = ">>".join(relevant_context)
-    joined_context[:joined_context.rfind(">> ")]
-    prompt = f"""Question: {query}
-                Context:
-                {joined_context}      
-                """
-
-    llm_answer = "No matches found with query. Ensure that book index is populated."
-    if len(relev_chunk_hits) == 0 and len(chunk_hits) > 0:
-        llm_answer = "Matches found, but none were relevant."
-        relev_chunk_hits = chunk_hits   
-
-    elif len(relev_chunk_hits) > 0:
-        # chat = llm_client.responses.create(
-        resp = llm_client.responses.parse(
-            model=llm_model_deployed,
-            input=[
-                # TODO: add role?
-                {"role":"system","content":system},
-                {"role":"user","content":prompt}
-            ],
-            text_format=AnswerChunk
+        return await llm_service.rerank_chunks(
+            query=q,
+            chunks=chunks,
+            llm_model=llm_model,
+            split_every_k=split_every_k,
+            timer=timer,
+            max_concurrency=max_concurrency,
         )
-        llm_answer = resp.output_parsed
 
-    return llm_answer.answer, llm_answer.used_chunks    # type:ignore
+
+async def answer_with_context(
+    *,
+    query: str,
+    llm_service: LlmService,
+    llm_model_deployed: str,
+    chunk_hits: list[SearchChunk],
+) -> tuple[str, list[ChunkCitation]]:
+    return await llm_service.answer_with_context(
+        query=query,
+        llm_model=llm_model_deployed,
+        chunk_hits=chunk_hits,
+    )
 
 
 async def answer_rag(*, query: str, 
@@ -163,6 +73,7 @@ async def answer_rag(*, query: str,
         
     hp = sett.get_hyperparams()
     embedding_service = sett.get_embedding_service()
+    llm_service = sett.get_llm_service()
 
     with timer.start_timer("search"):
         unranked_chunks = await search_chunks(query=query, 
@@ -172,27 +83,26 @@ async def answer_rag(*, query: str,
                                         )
     rag_stage_seconds.labels(stage="search").observe(timer.timings["search"])
 
-    if not sett.is_test:
-        ranked_chunks = await async_llm_reranker(q=query, 
-                                            chunks=unranked_chunks, 
-                                            llm_client=sett.get_async_llm_client(), 
-                                            llm_model=hp.rerank.model,
-                                            split_every_k=hp.rerank.batch_size,
-                                            timer=timer)
-    # TODO
-    # else:
-    #     ranked_chunks = 
+    ranked_chunks = await async_llm_reranker(
+        q=query,
+        chunks=unranked_chunks,
+        llm_service=llm_service,
+        llm_model=hp.rerank.model,
+        split_every_k=hp.rerank.batch_size,
+        timer=timer,
+    )
     
     top_chunks = ranked_chunks[:hp.generation.num_context_chunks]      
     rag_stage_seconds.labels(stage="rerank_total").observe(timer.timings["rerank_total"])
     
 
     with timer.start_timer("answer_with_contexts"):
-        llm_answer, relevant_chunks = answer_with_context(query=query, 
-                                                        llm_client=sett.get_llm_client(), 
-                                                        llm_model_deployed=sett.AZ_OPENAI_MODEL_DEPLOYMENT, 
-                                                        chunk_hits=top_chunks,
-                                                        )    
+        llm_answer, relevant_chunks = await answer_with_context(
+            query=query,
+            llm_service=llm_service,
+            llm_model_deployed=sett.AZ_OPENAI_MODEL_DEPLOYMENT,
+            chunk_hits=top_chunks,
+        )
     rag_stage_seconds.labels(stage="answer_with_contexts").observe(timer.timings["answer_with_contexts"])
 
     return QueryResponse(answer=llm_answer, citations=top_chunks)
