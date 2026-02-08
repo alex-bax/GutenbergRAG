@@ -12,7 +12,7 @@ import numpy as np
 
 class InMemoryVectorStore(AsyncVectorStore):
     """
-    Simple in-memory implementation of AsyncVectorStore for tests.
+    Simple in-memory/mock implementation of AsyncVectorStore for tests.
 
     Stores chunks in a dict keyed by book_id. Good enough for:
       - upload_missing_book_ids

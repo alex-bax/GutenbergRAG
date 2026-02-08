@@ -111,13 +111,11 @@ async def upload_missing_book_ids(*, book_ids:set[int],
                 logging.error(f"EXC: tried {str(gb_meta.path_to_content)} {exc}")
                 
         book_content = book_content[:1000] if sett.is_test else book_content
+        
         print(f'******* is test {sett.is_test}',  file=sys.stderr, flush=True)
         logging.info(f"*** Uploading Book id {b_id} to index")
 
         upload_chunks, db_b_stats = await async_upload_book_to_index(vec_store=vector_store, 
-                                                                    embed_client=sett.get_async_emb_client(),
-                                                                    token_limiter=token_lim,
-                                                                    request_limiter=req_lim,
                                                                     raw_book_content=book_content,
                                                                     book_meta=gb_meta,
                                                                     sett=sett,
