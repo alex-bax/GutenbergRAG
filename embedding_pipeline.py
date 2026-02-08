@@ -8,7 +8,7 @@ from tqdm import tqdm
 from models.vector_db_model import EmbeddingVec
 from config.params import EmbeddingDimension
 from openai import RateLimitError
-from pyrate_limiter import Duration, Rate, Limiter, BucketFullException
+from pyrate_limiter import Duration, Rate, Limiter
 from openai import AsyncAzureOpenAI
 
 
