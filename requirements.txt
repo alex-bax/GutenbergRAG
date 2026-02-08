@@ -14,7 +14,7 @@ python-dotenv
 tqdm
 numpy
 
-pyrate_limiter
+pyrate-limiter==4.0.2
 asyncio
 aiosqlite
 asyncpg
