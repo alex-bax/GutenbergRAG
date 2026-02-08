@@ -8,7 +8,7 @@ from tqdm import tqdm
 from models.vector_db_model import EmbeddingVec
 from config.params import EmbeddingDimension
 from openai import RateLimitError
-from pyrate_limiter import Duration, Rate, Limiter, BucketFullException
+from pyrate_limiter import Duration, Rate, Limiter
 from openai import AsyncAzureOpenAI
 
 
@@ -50,16 +50,10 @@ def batch_texts_by_tokens(*, texts: list[str],
     return batches
 
 async def _acquire_budget_async(*, tok_limiter:Limiter, req_limiter:Limiter, tokens_needed: int, identity: str = "embeddings"):
-    """Non-blocking: awaits until both token & request budgets allow the call."""
-    while True:
-        try:
-            await tok_limiter.try_acquire_async(f"{identity}_tpm", weight=tokens_needed)
-            await req_limiter.try_acquire_async(f"{identity}_rpm", weight=1)
-            return  # allowed
-        except BucketFullException as ex:
-            sleep_interval_secs = float(ex.rate.interval) / 1000        # precise wait suggested by the limiter
-            print(f"** Exceeding budget - async sleeping {sleep_interval_secs} secs")
-            await asyncio.sleep(sleep_interval_secs)
+    """Await until both token & request budgets allow the call."""
+    token_ok = await tok_limiter.try_acquire_async(f"{identity}_tpm", weight=tokens_needed, blocking=True)
+    req_ok = await req_limiter.try_acquire_async(f"{identity}_rpm", weight=1, blocking=True)
+    return token_ok and req_ok
 
 
 async def create_embeddings_async(*, embed_client:AsyncAzureOpenAI, 
