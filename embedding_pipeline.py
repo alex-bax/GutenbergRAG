@@ -81,4 +81,5 @@ async def create_embeddings_async(*, embed_client:AsyncAzureOpenAI,
         
         all_embeddings.extend(embs)
         
+        
     return all_embeddings
