@@ -1,0 +1,36 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  path_prefix: /loki
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-10-24
+      store: boltdb-shipper
+      object_store: azure
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/index
+    cache_location: /loki/index_cache
+    cache_ttl: 24h
+    shared_store: azure
+  azure:
+    account_name: ${STORAGE_ACCOUNT}
+    account_key: ${GB_STOR_ACC_KEY}
+    container_name: ${GEO_CONTAINER_NAME}
+    request_timeout: 20s
+
+ruler:
+  alertmanager_url: http://localhost:9093
