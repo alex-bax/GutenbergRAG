@@ -1,6 +1,11 @@
 local.file_match "fastapi_logs" {
   path_targets = [
-    { __path__ = "/var/log/app/app.log" },
+    {
+      __path__ = sys.env("ALLOY_LOG_PATH")
+      service  = sys.env("ALLOY_SERVICE_NAME")
+      env      = sys.env("ALLOY_ENVIRONMENT")
+      source   = "fastapi-webapp"
+    },
   ]
 }
 
@@ -11,6 +16,11 @@ loki.source.file "fastapi" {
 
 loki.write "default" {
   endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
+    url = sys.env("LOKI_PUSH_URL")
+  }
+
+  external_labels = {
+    job         = "webapp-logs",
+    environment = sys.env("ALLOY_ENVIRONMENT"),
   }
 }
