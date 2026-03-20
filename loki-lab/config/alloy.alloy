@@ -1,16 +1,55 @@
-local.file_match "fastapi_logs" {
-  path_targets = [
-    { __path__ = "/var/log/app/app.log" },
-  ]
+// Alloy config for Azure Event Hub -> Loki.
+// Required env vars:
+// - EVENTHUB_CONNECTION_STRING
+// - EVENTHUB_NAME
+// - EVENTHUB_CONSUMER_GROUP
+// - EVENTHUB_FULLY_QUALIFIED_NAMESPACE (e.g. "rageventhub.servicebus.windows.net")
+// - LOKI_PUSH_URL
+// - ALLOY_SERVICE_NAME
+// - ALLOY_ENVIRONMENT
+
+loki.source.azure_event_hubs "webapp" {
+  fully_qualified_namespace = sys.env("EVENTHUB_FULLY_QUALIFIED_NAMESPACE")
+  event_hubs                = [sys.env("EVENTHUB_NAME")]
+  group_id                  = $Default
+  connection_string         = sys.env("EVENTHUB_CONNECTION_STRING")
+
+  labels = {
+    service = sys.env("ALLOY_SERVICE_NAME"),
+    
+    source  = "eventhub",
+  }
+
+  forward_to = [loki.process.webapp_parse.receiver]
 }
 
-loki.source.file "fastapi" {
-  targets    = local.file_match.fastapi_logs.targets
+loki.process "webapp_parse" {
   forward_to = [loki.write.default.receiver]
+
+  stage.json {
+    expressions = {
+      ts      = "ts",
+      level   = "level",
+      logger  = "logger",
+      message = "message",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level  = "",
+      logger = "",
+    }
+  }
 }
 
 loki.write "default" {
   endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
+    url = sys.env("LOKI_PUSH_URL")
+  }
+
+  external_labels = {
+    job         = "webapp-logs",
+    environment = sys.env("ALLOY_ENVIRONMENT")
   }
 }
