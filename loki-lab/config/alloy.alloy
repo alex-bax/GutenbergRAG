@@ -11,12 +11,12 @@
 loki.source.azure_event_hubs "webapp" {
   fully_qualified_namespace = sys.env("EVENTHUB_FULLY_QUALIFIED_NAMESPACE")
   event_hubs                = [sys.env("EVENTHUB_NAME")]
-  group_id                  = sys.env("EVENTHUB_CONSUMER_GROUP")
+  group_id                  = $Default
   connection_string         = sys.env("EVENTHUB_CONNECTION_STRING")
 
   labels = {
     service = sys.env("ALLOY_SERVICE_NAME"),
-    env     = sys.env("ALLOY_ENVIRONMENT"),
+    
     source  = "eventhub",
   }
 
@@ -50,6 +50,6 @@ loki.write "default" {
 
   external_labels = {
     job         = "webapp-logs",
-    environment = sys.env("ALLOY_ENVIRONMENT"),
+    environment = sys.env("ALLOY_ENVIRONMENT")
   }
 }
