@@ -6,7 +6,7 @@ resources:
 
 variables:
   # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: '85684fdf-14bb-42cd-a573-b9ae36a30f16'
+  dockerRegistryServiceConnection: 'a04d49d9-f358-4f21-ba75-db646369d90a'
   imageRepository: 'gutenbergrag'
   containerRegistry: 'raggutenbergregistry.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
