@@ -11,7 +11,7 @@
 loki.source.azure_event_hubs "webapp" {
   fully_qualified_namespace = sys.env("EVENTHUB_FULLY_QUALIFIED_NAMESPACE")
   event_hubs                = [sys.env("EVENTHUB_NAME")]
-  group_id                  = $Default
+  group_id                  = sys.env("EVENTHUB_CONSUMER_GROUP")
   connection_string         = sys.env("EVENTHUB_CONNECTION_STRING")
 
   labels = {

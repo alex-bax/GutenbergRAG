@@ -1,0 +1,47 @@
+apiVersion: '2021-10-01'
+location: <azure-region>
+name: obs-ui
+properties:
+  osType: Linux
+  restartPolicy: Always
+  imageRegistryCredentials:
+    - server: <acr-login-server>
+      username: <acr-username>
+      password: <acr-password>
+  containers:
+    - name: grafana
+      properties:
+        image: <acr-login-server>/monitoring/grafana:2026-03-22.1
+        ports:
+          - protocol: TCP
+            port: 3000
+        environmentVariables:
+          - name: GF_SECURITY_ADMIN_USER
+            value: <grafana-admin-user>
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            secureValue: <grafana-admin-password>
+          - name: PROMETHEUS_URL
+            value: http://<obs-metrics-dns-label>.<azure-region>.azurecontainer.io:9090
+          - name: LOKI_URL
+            value: http://<obs-logs-dns-label>.<azure-region>.azurecontainer.io:3100
+        resources:
+          requests:
+            cpu: 1.0
+            memoryInGB: 1.5
+  ipAddress:
+    type: Public
+    dnsNameLabel: <obs-ui-dns-label>
+    ports:
+      - protocol: TCP
+        port: 3000
+  diagnostics:
+    logAnalytics:
+      workspaceId: <log-analytics-workspace-id>
+      workspaceKey: <log-analytics-workspace-key>
+      logType: ContainerInsights
+  sku: Standard
+  volumes: []
+tags:
+  stack: observability
+  role: ui
+type: Microsoft.ContainerInstance/containerGroups
