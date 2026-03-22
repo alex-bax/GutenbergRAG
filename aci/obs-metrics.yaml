@@ -1,0 +1,41 @@
+apiVersion: '2021-10-01'
+location: <azure-region>
+name: obs-metrics
+properties:
+  osType: Linux
+  restartPolicy: Always
+  imageRegistryCredentials:
+    - server: <acr-login-server>
+      username: <acr-username>
+      password: <acr-password>
+  containers:
+    - name: prometheus
+      properties:
+        image: <acr-login-server>/monitoring/prometheus:2026-03-22.1
+        ports:
+          - protocol: TCP
+            port: 9090
+        environmentVariables:
+          - name: TZ
+            value: UTC
+        resources:
+          requests:
+            cpu: 1.0
+            memoryInGB: 2.0
+  ipAddress:
+    type: Public
+    dnsNameLabel: <obs-metrics-dns-label>
+    ports:
+      - protocol: TCP
+        port: 9090
+  diagnostics:
+    logAnalytics:
+      workspaceId: <log-analytics-workspace-id>
+      workspaceKey: <log-analytics-workspace-key>
+      logType: ContainerInsights
+  sku: Standard
+  volumes: []
+tags:
+  stack: observability
+  role: metrics
+type: Microsoft.ContainerInstance/containerGroups

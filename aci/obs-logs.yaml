@@ -1,0 +1,83 @@
+apiVersion: '2021-10-01'
+location: <azure-region>
+name: obs-logs
+properties:
+  osType: Linux
+  restartPolicy: Always
+  imageRegistryCredentials:
+    - server: <acr-login-server>
+      username: <acr-username>
+      password: <acr-password>
+  containers:
+    - name: loki
+      properties:
+        image: <acr-login-server>/monitoring/loki:2026-03-22.2
+        command:
+          - -config.file=/etc/loki/config.yml
+        ports:
+          - protocol: TCP
+            port: 3100
+        environmentVariables:
+          - name: STORAGE_ACCOUNT
+            value: <storage-account-name>
+          - name: GB_STOR_ACC_KEY
+            secureValue: <storage-account-key>
+          - name: GEO_CONTAINER_NAME
+            value: <blob-container-name>
+        resources:
+          requests:
+            cpu: 1.0
+            memoryInGB: 2.0
+        volumeMounts:
+          - name: loki-scratch
+            mountPath: /loki
+    - name: alloy
+      properties:
+        image: <acr-login-server>/monitoring/alloy:2026-03-22.2
+        command:
+          - run
+          - --server.http.listen-addr=0.0.0.0:12345
+          - /etc/alloy/config.alloy
+        ports:
+          - protocol: TCP
+            port: 12345
+        environmentVariables:
+          - name: EVENTHUB_CONNECTION_STRING
+            secureValue: <eventhub-connection-string>
+          - name: EVENTHUB_NAME
+            value: <eventhub-name>
+          - name: EVENTHUB_CONSUMER_GROUP
+            value: <eventhub-consumer-group>
+          - name: EVENTHUB_FULLY_QUALIFIED_NAMESPACE
+            value: <eventhub-namespace>.servicebus.windows.net
+          - name: LOKI_PUSH_URL
+            value: http://localhost:3100/loki/api/v1/push
+          - name: ALLOY_SERVICE_NAME
+            value: gutenbergrag-api
+          - name: ALLOY_ENVIRONMENT
+            value: prod
+        resources:
+          requests:
+            cpu: 1.0
+            memoryInGB: 1.5
+  ipAddress:
+    type: Public
+    dnsNameLabel: <obs-logs-dns-label>
+    ports:
+      - protocol: TCP
+        port: 3100
+      - protocol: TCP
+        port: 12345
+  diagnostics:
+    logAnalytics:
+      workspaceId: <log-analytics-workspace-id>
+      workspaceKey: <log-analytics-workspace-key>
+      logType: ContainerInsights
+  sku: Standard
+  volumes:
+    - name: loki-scratch
+      emptyDir: {}
+tags:
+  stack: observability
+  role: logs
+type: Microsoft.ContainerInstance/containerGroups
