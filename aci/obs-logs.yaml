@@ -11,9 +11,9 @@ properties:
   containers:
     - name: loki
       properties:
-        image: <acr-login-server>/monitoring/loki:2026-03-22.1
+        image: <acr-login-server>/monitoring/loki:2026-03-22.2
         command:
-          - -config.file=/mnt/config/loki-azure.yml
+          - -config.file=/etc/loki/config.yml
         ports:
           - protocol: TCP
             port: 3100
@@ -29,18 +29,15 @@ properties:
             cpu: 1.0
             memoryInGB: 2.0
         volumeMounts:
-          - name: loki-config
-            mountPath: /mnt/config
-            readOnly: true
-          - name: loki-data
+          - name: loki-scratch
             mountPath: /loki
     - name: alloy
       properties:
-        image: <acr-login-server>/monitoring/alloy:2026-03-22.1
+        image: <acr-login-server>/monitoring/alloy:2026-03-22.2
         command:
           - run
           - --server.http.listen-addr=0.0.0.0:12345
-          - /mnt/config/alloy.alloy
+          - /etc/alloy/config.alloy
         ports:
           - protocol: TCP
             port: 12345
@@ -63,10 +60,6 @@ properties:
           requests:
             cpu: 1.0
             memoryInGB: 1.5
-        volumeMounts:
-          - name: loki-config
-            mountPath: /mnt/config
-            readOnly: true
   ipAddress:
     type: Public
     dnsNameLabel: <obs-logs-dns-label>
@@ -82,16 +75,8 @@ properties:
       logType: ContainerInsights
   sku: Standard
   volumes:
-    - name: loki-config
-      azureFile:
-        shareName: <azure-files-share-with-loki-and-alloy-config>
-        storageAccountName: <storage-account-name>
-        storageAccountKey: <storage-account-key>
-    - name: loki-data
-      azureFile:
-        shareName: <azure-files-share-for-loki-state>
-        storageAccountName: <storage-account-name>
-        storageAccountKey: <storage-account-key>
+    - name: loki-scratch
+      emptyDir: {}
 tags:
   stack: observability
   role: logs
